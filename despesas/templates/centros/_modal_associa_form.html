@@ -1,0 +1,175 @@
+<style>
+  /* Modal Container */
+  form {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  /* Modal Head */
+  .modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f9fafb;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .modal__head .close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+  }
+
+  /* Modal Content */
+  .modal__content {
+    padding: 1.5rem;
+  }
+
+  .modal__content p {
+    margin-bottom: 1rem;
+  }
+
+  .modal__content label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .modal__content select,
+  .modal__content input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #f3f4f6;
+    color: #111827;
+  }
+
+  /* Error Messages */
+  .modal__content .errorlist {
+    margin-top: 0.25rem;
+    color: #b91c1c;
+    font-size: 0.85rem;
+  }
+
+  /* Modal Footer */
+  .modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+  }
+
+  /* Buttons */
+  .btn,
+  .btn-outline {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn {
+    background-color: #2563eb;
+    color: #fff;
+    border: none;
+  }
+
+  .btn:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid #9ca3af;
+    color: #374151;
+  }
+
+  .btn-outline:hover {
+    background-color: #f3f4f6;
+  }
+  .modal-backdrop{
+    backdrop-filter: none;
+    background: none;
+  }
+</style>
+
+<form method="post" class="js-admin-form" action="{% url 'associar_analista_modal' centro.id %}">
+  <div class="modal__head">
+    <strong>Associar Analista — {{ centro.nome }}</strong>
+    <button type="button" class="close" data-close-modal>×</button>
+  </div>
+  <div class="modal__content">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <p>{{ form.usuario.label_tag }} {{ form.usuario }}</p>
+  </div>
+  <div class="modal__footer">
+    <button type="button" class="btn-outline" data-close-modal>fechar</button>
+    <button type="submit" class="btn js-submit">associar</button>
+  </div>
+</form>
+
+
+<script>
+  (() => {
+    const root = document.getElementById('modal-root');
+
+    // Intercepta o envio do formulário
+    document.addEventListener('submit', async (e) => {
+      const form = e.target.closest('.js-admin-form');
+      if (!form) return;
+
+      e.preventDefault(); // Impede envio padrão
+
+      const btn = form.querySelector('.js-submit');
+      const originalText = btn ? btn.textContent : '';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'salvando…';
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        // ✅ Se sucesso, recarrega a página
+        if (response.ok) {
+          window.location.reload();
+          return;
+        }
+
+        // Se houver erro, atualiza o modal com o HTML retornado
+        const html = await response.text();
+        const body = root.querySelector('.modal__body');
+        if (body) body.innerHTML = html;
+      } catch (err) {
+        console.error('Erro ao enviar formulário:', err);
+        alert('Erro ao salvar. Tente novamente.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+    });
+  })();
+</script>

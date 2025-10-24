@@ -1,0 +1,239 @@
+<style>
+    /* Modal Head */
+  .modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f3f4f6;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #111827;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+  }
+
+  /* Modal Body */
+  .modal__body-inner {
+    padding: 1.5rem;
+    background-color: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
+    color: #374151;
+  }
+
+  /* Messages */
+  .msgs {
+    padding: 0.75rem;
+    border-radius: 6px;
+    background-color: #e0f2fe;
+    color: #1e3a8a;
+  }
+
+  .msg {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Definition List */
+  .dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .dl dt {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .dl dd {
+    margin: 0;
+    color: #4b5563;
+  }
+
+  /* Switch Label */
+  .switch {
+    font-size: 0.95rem;
+    color: #374151;
+  }
+
+  /* Form Fields */
+  .js-admin-form p {
+    margin-bottom: 1rem;
+  }
+
+  .js-admin-form label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: #1f2937;
+  }
+
+  .js-admin-form input,
+  .js-admin-form select,
+  .js-admin-form textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: #f9fafb;
+    color: #111827;
+  }
+
+  .err {
+    margin-top: 0.25rem;
+    color: #b91c1c;
+    font-size: 0.85rem;
+  }
+
+  /* Modal Footer */
+  .modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn,
+  .btn-outline {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .btn {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+  }
+
+  .btn:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid #9ca3af;
+    color: #374151;
+  }
+
+  .btn-outline:hover {
+    background-color: #f3f4f6;
+  }
+
+  /* Lote List */
+  .lote-list {
+    font-size: 0.95rem;
+    background-color: #f9fafb;
+  }
+
+  .lote-list label.mini {
+    font-weight: 500;
+    color: #1f2937;
+  }
+  .modal{
+    top: 55% !important;
+  }
+</style>
+
+<div class="modal__head">
+  <strong>Despesa — {{ d.centro.nome|upper }}</strong>
+  <button class="btn-close" data-close-modal>×</button>
+</div>
+
+<div class="modal__body-inner">
+  {% if messages %}
+    <div class="msgs alert-primary" style="margin-bottom:10px">
+      {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  <dl class="dl">
+    <dt>Status atual:</dt><dd>{{ d.get_status_display }}</dd>
+    <dt>Título:</dt><dd>{{ d.titulo }}</dd>
+    <dt>Valor:</dt><dd>R$ {{ d.valor|floatformat:2 }}</dd>
+    <dt>Data do Fato:</dt><dd>{{ d.data_fato|date:"d/m/Y" }}</dd>
+    <dt>Colaborador:</dt><dd>{{ d.usuario.get_full_name|default:d.usuario.username }}</dd>
+    <dt>Data de Pagamento:</dt><dd>{{ d.pago_em|date:"d/m/Y"|default_if_none:"—" }}</dd>
+    <dt>Comprovante da Despesa:</dt>
+    <dd>{% if d.comprovante %}<a href="{{ d.comprovante.url }}" target="_blank">abrir</a>{% else %}—{% endif %}</dd>
+  </dl>
+
+  <hr>
+
+  <label class="switch" style="display:flex;align-items:center;gap:.5rem;margin:.5rem 0 1rem;">
+    <input type="checkbox" id="js-modo-lote" {% if modo_lote %}checked{% endif %}>
+    <span>Alterar em lote?</span>
+  </label>
+
+  {# --- Individual --- #}
+  <form method="post" enctype="multipart/form-data"
+        class="js-admin-form"
+        action="{% url 'despesa_modal_admin' d.pk %}"
+        id="form-individual"
+        {% if modo_lote %}hidden{% endif %}>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <p>
+        {{ field.label_tag }} {{ field }}
+        {% for e in field.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </p>
+    {% endfor %}
+    <div class="modal__footer">
+      <button type="button" class="btn-outline" data-close-modal>fechar</button>
+      <button type="submit" class="btn js-submit">salvar alterações</button>
+    </div>
+  </form>
+  {# --- Lote --- #}
+  <form method="post" enctype="multipart/form-data"
+        class="js-admin-form"
+        action="{% url 'despesa_modal_admin' d.pk %}"
+        id="form-lote"
+        {% if not modo_lote %}hidden{% endif %}>
+
+    {% csrf_token %}
+    <input type="hidden" name="modo" value="lote">
+
+    {{ form_lote.non_field_errors }}
+
+    <p>{{ form_lote.status.label_tag }} {{ form_lote.status }}</p>
+
+    {# Nomes CORRETOS dos campos do AdminLoteReembolsoForm #}
+    <p>
+      {{ form_lote.comprovante_pagamento.label_tag }}
+      {{ form_lote.comprovante_pagamento }}
+    </p>
+
+    <p>
+      {{ form_lote.pago_em.label_tag }}
+      {{ form_lote.pago_em }}
+      {% for e in form_lote.pago_em.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+
+    {{ form_lote.centro }} {{ form_lote.periodo_ref }}
+
+    <div class="lote-list" style="max-height:220px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin:8px 0;">
+      <label class="mini" style="display:block;margin-bottom:6px;">
+        <input type="checkbox" id="js-select-all"> SELECIONAR TODOS
+      </label>
+      {{ form_lote.despesas }}
+      {% for e in form_lote.despesas.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="modal__footer">
+      <button type="button" class="btn-outline" data-close-modal>fechar</button>
+      <button type="submit" class="btn js-submit">aplicar em lote</button>
+    </div>
+  </form>
+
+</div>

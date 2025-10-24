@@ -1,0 +1,160 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Relatório de Despesas — {{ centro.nome }} — {{ periodo_label }}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <style>
+    /* ======= PRINT A4 ======= */
+    @page { size: A4 portrait; margin: 14mm; }
+    @media print {
+      .no-print { display:none !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      thead { display: table-header-group; }     /* cabeçalho repete em cada página */
+      tfoot { display: table-footer-group; }
+      tr, img { page-break-inside: avoid; }
+    }
+
+    /* ======= BASE ======= */
+    :root{
+      --c-azul:#239FAB;
+      --c-laranja:#E57A34;
+      --c-verde:#21B928;
+      --c-cinza:#E9EEF0;
+      --c-txt:#1f2a30;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ font:14px/1.35 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--c-txt); }
+    .wrap{ max-width:690px; margin:0 auto; }
+
+    /* ======= HEADER ======= */
+    .brand{ display:flex; align-items:center; gap:14px; margin:8mm 0 6mm; }
+    .brand img{ height:42px; }
+    .title{ text-align:center; margin:4mm 0 8mm; }
+    .title h1{ font-size:22px; letter-spacing:1px; margin:0 0 6px; font-weight:800; }
+    .title p{ margin:2px 0; font-size:15px; }
+    .title strong{ font-weight:800; color:var(--c-azul); }
+
+    /* ======= KPIs ======= */
+    .kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:8mm 0 10mm; }
+    .kpi{ border:2px solid #d7e6ea; border-radius:12px; padding:10px 12px; text-align:center; box-shadow:0 2px 0 #e6f2f4 inset; }
+    .kpi__value{ font-size:20px; font-weight:900; margin-bottom:4px; color:#15803d; }
+    .kpi--total .kpi__value{ color:var(--c-azul); }
+    .kpi--pendente .kpi__value{ color:#0d9488; }
+    .kpi__label{ font-size:11px; opacity:.85 }
+
+    /* ======= PILL DO CENTRO ======= */
+    .pill{
+      margin:8mm 0 6mm; border:2px solid #e1e8eb; border-radius:999px; padding:10px 16px;
+      font-weight:800; letter-spacing:.8px; display:inline-block; min-width:80%; background:#f9fbfc;
+    }
+
+    /* ======= TABELA ======= */
+    table{ width:100%; border-collapse:collapse; }
+    thead th{
+      text-align:left; font-size:12px; letter-spacing:.5px; text-transform:uppercase;
+      color:#406a73; background:#eef6f8; border:1px solid #dbe9ee; padding:8px;
+    }
+    tbody td{ border:1px solid #e4eef1; padding:8px; vertical-align:top; }
+    tbody tr:nth-child(even) td{ background:#fbfdfe; }
+    .td-money{ text-align:right; font-weight:700; }
+    .status-ok{ color:#15803d; font-weight:700; }
+    .status-no{ color:#b91c1c; font-weight:700; }
+    .status-pend{ color:#0f766e; font-weight:700; }
+
+    /* ======= FOOTER / CONTROLES ======= */
+    .toolbar{ margin:10px 0 0; display:flex; gap:8px; }
+    .btn{
+      appearance:none; border:1px solid var(--c-azul); color:var(--c-azul);
+      background:#fff; border-radius:999px; padding:8px 14px; font-weight:600; cursor:pointer;
+    }
+    .btn-grad{ background:linear-gradient(90deg, var(--c-laranja), var(--c-azul)); border:none; color:#fff; }
+    .totais{ margin-top:8px; text-align:right; font-weight:800; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- (opcional na tela; some na impressão) -->
+  <div class="toolbar no-print">
+    {% if back_url %}
+      <a class="btn" href="{{ back_url }}">&larr; Voltar</a>
+    {% else %}
+      <a class="btn" href="{% url 'relatorio_centro' %}?centro={{ centro.id }}">&larr; Voltar</a>
+    {% endif %}
+    <button class="btn btn-grad" onclick="window.print()">Imprimir</button>
+  </div>
+
+
+    <div class="brand" style="display: flex; align-items: center; justify-content: center;">
+      <img src="{% static 'img/logo_conmac.png' %}"  style='height: 70px !important;' alt="CONMAC">
+    </div>
+
+    <div class="title">
+      <h1>RELATÓRIO DE DESPESAS</h1>
+      <p>CENTRO DE CUSTO: <strong>{{ centro.nome }}</strong></p>
+      <p>PERÍODO: <strong>{{ periodo_label }}</strong></p>
+    </div>
+
+    <section class="kpis">
+      <div class="kpi">
+        <div class="kpi__value">R$ {{ kpi_reemb|floatformat:2 }}</div>
+        <div class="kpi__label">Despesas Reembolsadas do Período</div>
+      </div>
+      <div class="kpi kpi--total">
+        <div class="kpi__value">R$ {{ kpi_total|floatformat:2 }}</div>
+        <div class="kpi__label">Despesas Totais do Período</div>
+      </div>
+      <div class="kpi kpi--pendente">
+        <div class="kpi__value">R$ {{ kpi_pend|floatformat:2 }}</div>
+        <div class="kpi__label">Despesas Pendentes do Período</div>
+      </div>
+    </section>
+
+    <div class="pill">{{ centro.nome }}</div>
+
+    <!-- ======= LISTA DE DESPESAS DO PERÍODO ======= -->
+    {% if despesas %}
+      <table aria-label="Despesas do período">
+        <thead>
+          <tr>
+            <th style="width:15%">Data</th>
+            <th style="width:40%">Título / Descrição</th>
+            <th style="width:25%">Colaborador</th>
+            <th style="width:10%">Status</th>
+            <th style="width:10%; text-align:right;">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in despesas %}
+            <tr>
+              <td>{{ d.data_fato|date:"d/m/Y" }}</td>
+              <td>
+                <div style="font-weight:700">{{ d.titulo }}</div>
+                {% if d.descricao %}<div style="opacity:.8">{{ d.descricao }}</div>{% endif %}
+              </td>
+              <td>{{ d.usuario.get_full_name|default:d.usuario.username }}</td>
+              <td>
+                {% if d.status == "APROVADA" %}
+                  <span class="status-ok">aprovada</span>
+                {% elif d.status == "REPROVADA" %}
+                  <span class="status-no">reprovada</span>
+                {% else %}
+                  <span class="status-pend">pendente</span>
+                {% endif %}
+              </td>
+              <td class="td-money">R$ {{ d.valor|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="totais">
+        TOTAL DO PERÍODO: R$ {{ kpi_total|floatformat:2 }}
+      </div>
+    {% else %}
+      <p style="margin-top:6mm; font-style:italic;">Não há despesas registradas para este período.</p>
+    {% endif %}
+  </div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Meus Centros · CONMAC{% endblock %}
+
+{% block content %}
+
+<section class="viagens-hero">
+  <div class="viagens-hero__title">
+    <div class="ico">
+      <img src="{% static 'img/ic_viagens_white.svg' %}" alt="">
+    </div>
+    <div class="txt txt_responsivo">
+      <h2>Municípios Vinculados </h2>
+      <p>Selecione um <b>município/cliente</b> para ver e lançar suas despesas.</p>
+    </div>
+  </div>
+
+  <div class="viagens-hero__kpis">
+    <div class="kpi">
+      <div class="kpi__value">R$ {{ total_reembolsadas|floatformat:2 }}</div>
+      <div class="kpi__label">Reembolsadas</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__value">R$ {{ total_mes|floatformat:2 }}</div>
+      <div class="kpi__label">Totais</div>
+    </div>
+    <div class="kpi kpi--pendente">
+      <div class="kpi__value">R$ {{ total_pendentes|floatformat:2 }}</div>
+      <div class="kpi__label">Pendentes</div>
+    </div>
+  </div>
+</section>
+
+<form class="viagens-filter" method="get" action="{% url 'viagens_centros' %}">
+  <label for="mes">Mês:</label>
+  <select id="mes" name="mes">
+    {% for m, label in meses_numeros %}
+      <option value="{{ m }}" {% if sel_mes == m %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="ano">Ano:</label>
+  <select id="ano" name="ano">
+    {% for ano in anos_disponiveis %}
+      <option value="{{ ano }}" {% if sel_ano == ano %}selected{% endif %}>
+        {% if ano == 0 %}TODOS{% else %}{{ ano }}{% endif %}
+      </option>
+    {% endfor %}
+  </select>
+
+  <button type="submit" class="btn-grad">filtrar</button>
+</form>
+
+<h3 class="viagens-section-title">{{ mes_corrente_label }}</h3>
+
+<section class="centros-grid">
+  {% for card in centros_cards %}
+    <article class="centro-card">
+      <header class="centro-card__head">
+        <strong class="centro-card__name">{{ card.centro.nome }}</strong>
+        <div class="centro-card__actions">
+          <a class="btn-round" title="Ver despesas"
+             href="{% url 'viagens_lista' %}?centro={{ card.centro.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}">→</a>
+        </div>
+      </header>
+      <div class="centro-card__body">
+        <ul class="list">
+          <li><b>Total:</b> R$ {{ card.k_total|floatformat:2 }}</li>
+          <li><b>Reembolsadas:</b> R$ {{ card.k_reemb|floatformat:2 }}</li>
+          <li><b>Pendentes:</b> R$ {{ card.k_pend|floatformat:2 }}</li>
+        </ul>
+        <div style="margin-top:25px; margin-bottom: 10px;">
+          <a class="btn" href="{% url 'viagens_lista' %}?centro={{ card.centro.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}">
+            abrir município/cliente
+          </a>
+        </div>
+      </div>
+    </article>
+  {% empty %}
+    <p class="mini">Você ainda não possui centros associados.</p>
+  {% endfor %}
+</section>
+
+{% endblock %}

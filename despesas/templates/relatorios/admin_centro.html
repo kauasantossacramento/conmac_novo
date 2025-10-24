@@ -1,0 +1,98 @@
+{# templates/relatorios/admin_centro.html #}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Relatório · Centro de Custo{% endblock %}
+
+{% block content %}
+<section class="viagens-hero">
+  <div class="viagens-hero__title">
+    <div class="ico"><img src="{% static 'img/ic_links.svg' %}" alt=""></div>
+    <div class="txt">
+      <h2>Relatório — {{ periodo_label }}</h2>
+      <p>Centro: <strong>{{ centro.nome }}</strong></p>
+    </div>
+  </div>
+  <div class="viagens-hero__kpis">
+    <div class="kpi"><div class="kpi__value">R$ {{ kpi_reemb|floatformat:2 }}</div><div class="kpi__label">Reembolsadas</div></div>
+    <div class="kpi"><div class="kpi__value">R$ {{ kpi_total|floatformat:2 }}</div><div class="kpi__label">Totais</div></div>
+    <div class="kpi kpi--pendente"><div class="kpi__value">R$ {{ kpi_pend|floatformat:2 }}</div><div class="kpi__label">Pendentes</div></div>
+  </div>
+</section>
+
+<form class="viagens-filter" method="get" action="{% url 'relatorio_centro' %}">
+  <input type="hidden" name="centro" value="{{ centro.id }}">
+  {# Preserve o colaborador filtrado no GET, se houver #}
+  {% if user_sel %}
+    <input type="hidden" name="user" value="{{ user_sel }}">
+  {% endif %}
+
+  <label>Mês:</label>
+  <select name="mes">
+    <option value="0" {% if sel_mes|default:0 == 0 %}selected{% endif %}>TODOS</option>
+    {% for m in meses_numeros %}
+      <option value="{{ m }}" {% if sel_mes|stringformat:'02d' == m %}selected{% endif %}>{{ m }}</option>
+    {% endfor %}
+  </select>
+
+  <label>Ano:</label>
+  <input type="number"
+         style="appearance:none;padding:10px 14px;border:1px solid #dfe6ee;border-radius:12px;background:#fff;"
+         name="ano" value="{{ sel_ano }}">
+
+  <button type="submit" class="btn-grad">filtrar</button>
+
+  {# Se existe colaborador filtrado -> manda para relatorio_colaborador; senão, relatório do centro #}
+  {% if colaborador %}
+    <a class="btn-grad"
+       href="{% url 'relatorio_colaborador' %}?centro={{ centro.id }}&user={{ colaborador.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}&modo=print"
+       target="_blank">Gerar Relatório</a>
+  {% else %}
+    <a class="btn-grad"
+       href="{% url 'relatorio_centro' %}?centro={{ centro.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}&modo=print"
+       target="_blank">Gerar Relatório</a>
+  {% endif %}
+</form>
+
+
+<section class="cards-grid">
+  <article class="card">
+    <header><strong>Totais por colaborador</strong></header>
+    <div class="card__body">
+      <ul class="list">
+        {% for u in por_usuario %}
+        <li>
+          <span class="avatar">{{ u.usuario__first_name|default:u.usuario__username|slice:":1" }}</span>
+          <a href="{% url 'relatorio_colaborador' %}?centro={{ centro.id }}&user={{ u.usuario__id }}&ano={{ sel_ano }}&mes={{ sel_mes }}">
+            {{ u.usuario__first_name }} {{ u.usuario__last_name }} ({{ u.usuario__username }})
+          </a>
+          <span class="money">R$ {{ u.total|floatformat:2 }}</span>
+        </li>
+
+        {% empty %}
+          <li class="mini">Sem lançamentos no período.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="table-wrap" style="margin-top:1rem">
+  <table class="table">
+    <thead><tr><th>Data</th><th>Colaborador</th><th>Título</th><th>Valor</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for d in itens %}
+        <tr>
+          <td>{{ d.data_fato|date:'d/m/Y' }}</td>
+          <td>{{ d.usuario.get_full_name|default:d.usuario.username }}</td>
+          <td>{{ d.titulo }}</td>
+          <td>R$ {{ d.valor|floatformat:2 }}</td>
+          <td>{{ d.get_status_display }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="mini">Sem lançamentos no período.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

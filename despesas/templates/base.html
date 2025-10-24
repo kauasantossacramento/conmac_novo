@@ -1,0 +1,296 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}CONMAC{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="{% static 'css/base.css' %}" rel="stylesheet">
+  <style>
+    .nav-history {
+      opacity: 80%;
+      margin: auto;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      max-width: 480px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      color: #434343;
+      flex-wrap: wrap;
+      text-align: center;
+      margin-bottom: -15px;
+    }
+      
+    #last-visited {
+      display: none;
+    }    
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #434343;
+      text-decoration: none;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+      transition: background-color 0.2s ease;
+    }
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.95rem;
+      text-decoration: none;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+      transition: background-color 0.2s ease;
+    }
+
+    .home-link:hover {
+      background-color: #eef2ff;
+    }
+
+    .home-link:hover {
+      background-color: #eef2ff;
+    }
+
+    .nav-history button {
+      background: none;
+      border: none;
+      color: #434343;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+  </style>
+
+</head>
+
+<body>
+  <header class="topbar">
+    <nav class="user">
+      {% if request.user.is_authenticated %}
+        <span>Olá, <strong>{{ request.user.first_name|default:request.user.username }}</strong></span>
+        <a href="{% url 'logout' %}">sair</a>
+      {% endif %}
+    </nav>
+  </header>
+
+{% if request.user.is_authenticated %}
+<div class="logo_home">
+  <a href="{% url 'home' %}" class="logo">
+    <img src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" height="34">
+  </a>
+</div>
+
+
+
+{% endif %}
+
+  {% if request.path != '/' %}
+    <div id="nav-history" class="nav-history" style="display:none;">
+      <button id="go-back" title="Voltar para a página anterior">← voltar</button>
+
+      <a href="/" title="Ir para a tela inicial" class="home-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="20" height="20" fill="#434343" style="vertical-align: middle;">
+          <path d="..."/>
+        </svg>
+        <span style="margin-left: 0.4rem;"> 🏠 início</span>
+      </a>
+
+      <span id="last-visited" style="font-size: 0.9rem;"></span>
+    </div>
+  {% endif %}
+
+  <main class="container ">
+    {% if messages %}
+      <div class="msgs alert-primary">
+        {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+      </div>
+    {% endif %} 
+
+
+    {% block content %}{% endblock %}
+  </main>
+  <p style="text-align: center;margin-top: 50px;font-size: 16px;padding: 25px;"> Equipe de Desenvolvimento da CONMAC - 2025</p>
+  <img class="conmac-watermark" src="{% static 'img/watermark_conmac.png' %}" alt="" aria-hidden="true">
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const box = document.querySelector('.msgs');
+        if (!box) return;
+        // se estiver vazia, remove de cara
+        if (!box.textContent.trim()) { box.remove(); return; }
+
+        // some após 5s com transição
+        setTimeout(() => {
+          box.style.transition = 'opacity .4s ease';
+          box.style.opacity = '0';
+          setTimeout(() => box.remove(), 450); // remove do DOM após o fade
+        }, 5000);
+
+        // (opcional) clique para fechar na hora
+        box.addEventListener('click', () => {
+          box.style.transition = 'opacity .2s ease';
+          box.style.opacity = '0';
+          setTimeout(() => box.remove(), 220);
+        });
+      });
+  </script>
+
+  <script src="{% static 'js/base.js' %}"></script>
+
+
+
+
+  <script>
+    (() => {
+      const root = document.getElementById('modal-root');
+
+      function closeModal() {
+        if (!root) return;
+        root.hidden = true;
+        root.innerHTML = '';
+      }
+
+      async function openModal(url) {
+        if (!root) return;
+        root.innerHTML = `
+          <div class="modal-backdrop" data-close-modal></div>
+          <div class="modal">
+            <div class="modal__body">Carregando…</div>
+          </div>`;
+        root.hidden = false;
+
+        try {
+          const response = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const html = await response.text();
+          root.querySelector('.modal__body').innerHTML = html;
+        } catch (error) {
+          console.error('Erro ao carregar modal:', error);
+          root.querySelector('.modal__body').innerHTML = '<p>Erro ao carregar conteúdo.</p>';
+        }
+      }
+
+      // Abrir e fechar modal
+      document.addEventListener('click', (e) => {
+        const trigger = e.target.closest('[data-modal-url]');
+        if (trigger) {
+          e.preventDefault();
+          openModal(trigger.getAttribute('data-modal-url'));
+          return;
+        }
+
+        if (
+          e.target.matches('[data-close-modal]') ||
+          e.target.classList.contains('modal-backdrop')
+        ) {
+          closeModal();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      // Submissão AJAX do formulário
+      document.addEventListener('submit', async (e) => {
+        const form = e.target.closest('.js-admin-form');
+        if (!form) return;
+
+        e.preventDefault();
+
+        const btn = form.querySelector('.js-submit');
+        const originalText = btn ? btn.textContent : '';
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'salvando…';
+        }
+
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const html = await response.text();
+          const body = root.querySelector('.modal__body');
+          if (body) body.innerHTML = html;
+
+          // Auto-remover mensagens após 4s
+          setTimeout(() => {
+            document.querySelectorAll('.msgs').forEach(msg => msg.remove());
+          }, 4000);
+        } catch (err) {
+          console.error('Erro ao salvar formulário:', err);
+          alert('Falha ao salvar. Tente novamente.');
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+          }
+        }
+      });
+
+      // Alternância entre modo individual/lote e seleção de todos
+      document.addEventListener('change', (e) => {
+        if (e.target.id === 'js-modo-lote') {
+          const isLote = e.target.checked;
+          const individualForm = document.getElementById('form-individual');
+          const loteForm = document.getElementById('form-lote');
+          if (individualForm) individualForm.hidden = isLote;
+          if (loteForm) loteForm.hidden = !isLote;
+        }
+
+        if (e.target.id === 'js-select-all') {
+          document.querySelectorAll('#form-lote input[type="checkbox"][name="despesas"]')
+            .forEach(chk => chk.checked = e.target.checked);
+        }
+      });
+    })();
+  </script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const lastVisitedKey = 'lastVisitedPage';
+    const currentPage = window.location.href;
+    const nav = document.getElementById('nav-history');
+    const backBtn = document.getElementById('go-back');
+    const display = document.getElementById('last-visited');
+
+    // Verifica se os elementos existem
+    if (!nav || !backBtn || !display) return;
+
+    // Salva a página atual ao sair, exceto se for a tela inicial
+    window.addEventListener('beforeunload', () => {
+      if (window.location.pathname !== '/') {
+        localStorage.setItem(lastVisitedKey, currentPage);
+      }
+    });
+
+    // Recupera a última página
+    const lastVisited = localStorage.getItem(lastVisitedKey);
+
+    // Só exibe se houver página anterior diferente da atual
+    if (lastVisited && lastVisited !== currentPage) {
+      nav.style.display = 'flex';
+      try {
+        const url = new URL(lastVisited);
+        display.innerHTML = `Última página: <em>${url.pathname}</em>`;
+      } catch {
+        display.innerHTML = `Última página: <em>${lastVisited}</em>`;
+      }
+
+      backBtn.addEventListener('click', () => {
+        window.location.href = lastVisited;
+      });
+    }
+  });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

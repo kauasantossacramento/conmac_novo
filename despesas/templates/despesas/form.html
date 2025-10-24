@@ -1,0 +1,26 @@
+
+{% extends "base.html" %}
+{% block title %}Edtar Despesa · CONMAC as{% endblock %}
+{% load static %}
+
+{% block content %}
+<style>
+    .alert-primary{
+        position: relative !important;
+    }
+</style>
+<div class="msgs alert-primary">
+    <b>ATENÇÃO!</b> Você está editando uma despesa!
+</div>
+
+<form method="post" action="{% url 'despesa_detail' obj.pk %}" enctype="multipart/form-data" class="form-page js-colab-form">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {{ form.as_p }}
+  <div>
+    <button class="btn">Salvar</button>
+    <a class="btn-outline" href="{% url 'viagens_lista' %}">cancelar</a>
+   </div>
+</form>
+
+{% endblock %}

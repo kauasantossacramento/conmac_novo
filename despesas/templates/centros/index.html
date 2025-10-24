@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Centros de Custo · CONMAC{% endblock %}
+
+{% block content %}
+
+<style>
+  .modal-backdrop{
+    background: none;
+    backdrop-filter: none;
+  }
+  .alert-primary{
+    position: relative !important;
+  }
+</style>
+
+<section class="viagens-hero">
+  <div class="viagens-hero__title">
+    <div class="ico">
+      <img src="{% static 'img/ic_viagens_white.svg' %}" alt="">
+    </div>
+    <div class="txt txt_responsivo">
+      <h2>Centros de Custo</h2>
+      <p>Adicione e gerencie os centros de custo da empresa.</p>
+    </div>
+  </div>
+
+  <div class="viagens-hero__kpis">
+    <div class="kpi">
+      <div class="kpi__value">R$ {{ total_reembolsadas|floatformat:2 }}</div>
+      <div class="kpi__label">Despesas Reembolsadas do Mês</div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi__value">R$ {{ total_mes|floatformat:2 }}</div>
+      <div class="kpi__label">Despesas Totais do Mês</div>
+    </div>
+
+  </div>
+</section>
+
+<form class="viagens-filter" style="padding-top: 10px; flex; flex-wrap: wrap; justify-content: center; align-items: center;" method="get" action="{% url 'centros_index' %}">
+  <label for="centro">Selecione o <strong>centro de custo/cliente</strong>:</label>
+  <select id="centro" name="centro">
+    {% for c in centros %}
+      <option value="{{ c.id }}" {% if centro_sel and c.id == centro_sel.id %}selected{% endif %}>{{ c.nome }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="mes">Mês:</label>
+  <select id="mes" name="mes">
+    {% for m,label in meses_numeros %}
+      <option value="{{ m }}" {% if sel_mes == m %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="ano">Ano:</label>
+  <select id="ano" name="ano">
+    {% for a in anos_disponiveis %}
+      <option value="{{ a }}" {% if sel_ano == a %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+
+  <button class="btn-grad" type="submit">filtrar</button>
+  <div style="padding: 5px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
+    <a class="btn-outline" href="#" data-modal-url="{% url 'centro_novo_modal' %}" style="margin-left:.75rem">
+      Adicionar <strong>Centro de Custo</strong>
+    </a>
+
+    {% if centro_sel %}
+      <a class="btn-outline" href="#" data-modal-url="{% url 'associar_analista_modal' centro_sel.id %}">
+        + Novo Analista
+      </a>
+      {# <a href="{% url 'usuario_create_modal' %}" class="btn-outline" data-modal-url>+ Novo Usuário</a> #}
+      <a class="btn-outline" href="{% url 'relatorio_centro' %}?centro={{ centro_sel.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}">
+        Gerar <strong>Relatório</strong>
+      </a>
+    {% endif %}
+  </div>
+</form>
+
+{% if centro_sel %}
+<div class="centro-admin__associados card" style="background:#279ca55c;border-radius:24px;padding:16px;color:#052e49;margin:10px 0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <strong>Analista(s) Associado(s):</strong>
+    <button id="reload-associados" title="Recarregar" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;">
+      🔄
+    </button>
+  </div>
+  <ul class="associados">
+    {% for a in associados %}
+      <li class="assoc">
+        <!-- <span class="avatar">{{ a.usuario.first_name|default:a.usuario.username|slice:":1" }}</span> -->
+        <span class="name">{{ a.usuario.get_full_name|default:a.usuario.username }}</span>
+        <form method="post" action="{% url 'centro_associacao_remover' a.pk %}" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button class="btn-link danger" onclick="return confirm('Remover este usuário do centro?')" style="background:#052e49;border-radius:20px;color:#fff;border:0;padding:6px 10px;">remover</button>
+        </form>
+      </li>
+    {% empty %}
+      <li class="mini">Sem analistas associados.</li>
+    {% endfor %}
+  </ul>
+</div>
+
+  <section class="centros-grid">
+    <article class="centro-card">
+      <header class="centro-card__head">
+        <strong class="centro-card__name">{{ centro_sel.nome }}</strong>
+      </header>
+
+      <div class="centro-card__body">
+        {% if despesas_mes %}
+          {% for d in despesas_mes %}
+            <button type="button" class="mov mov--btn" data-modal-url="{% url 'despesa_modal_admin' d.pk %}">
+              <div class="mov__title">{{ d.titulo }}</div>
+              <div class="mov__meta">
+                R$ {{ d.valor|floatformat:2 }} |
+                {{ d.data_fato|date:'d/m/Y' }}
+                {% if associados and associados|length > 1 %}
+                  | {{ d.usuario.get_full_name|default:d.usuario.username|upper }}
+                {% endif %}
+              </div>
+              <div class="mov__ops">
+                {% if d.status == "APROVADA" %}
+                  <span class="status status--ok">aprovada</span>
+                {% elif d.status == "REPROVADA" %}
+                  <span class="status status--no">reprovada</span>
+                {% else %}
+                  <span class="status">pendente</span>
+                {% endif %}
+                {% if d.comprovante %}
+                  <span class="ico" title="Comprovante">📎</span>
+                {% endif %}
+              </div>
+            </button>
+          {% endfor %}
+
+          {% if despesas_mes.paginator.num_pages > 1 %}
+            <nav class="pager">
+              {% if despesas_mes.has_previous %}
+                <a href="?centro={{ centro_sel.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}&p={{ despesas_mes.previous_page_number }}">←</a>
+              {% endif %}
+              <span>{{ despesas_mes.number }} / {{ despesas_mes.paginator.num_pages }}</span>
+              {% if despesas_mes.has_next %}
+                <a href="?centro={{ centro_sel.id }}&ano={{ sel_ano }}&mes={{ sel_mes }}&p={{ despesas_mes.next_page_number }}">→</a>
+              {% endif %}
+            </nav>
+          {% endif %}
+        {% else %}
+          <div class="mov mov--empty">Sem lançamentos nesse mês.</div>
+        {% endif %}
+      </div>
+    </article>
+  </section>
+
+{% endif %}
+
+<div id="modal-root" class="modal-root" hidden></div>
+
+<script>
+(function(){
+  const root = document.getElementById('modal-root');
+
+  async function openModal(url){
+    root.innerHTML =
+      '<div class="modal-backdrop" data-close-modal></div>' +
+      '<div class="modal" role="dialog" aria-modal="true"><div class="modal__body">Carregando…</div></div>';
+    root.hidden = false;
+    const html = await fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text());
+    root.querySelector('.modal__body').innerHTML = html;
+  }
+
+  document.addEventListener('click', (e)=>{
+    const trigger = e.target.closest('[data-modal-url]');
+    if (trigger){
+      e.preventDefault();
+      const url = trigger.getAttribute('data-modal-url') || trigger.getAttribute('href');
+      if (url) openModal(url);
+      return;
+    }
+    if (e.target.matches('[data-close-modal]') || e.target.classList.contains('modal-backdrop')){
+      root.hidden = true; root.innerHTML = '';
+    }
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape' && !root.hidden){
+      root.hidden = true; root.innerHTML = '';
+    }
+  });
+})();
+</script>
+
+<script>
+document.getElementById('reload-associados')?.addEventListener('click', async () => {
+  const container = document.querySelector('.centro-admin__associados');
+  if (!container) return;
+
+  try {
+    const url = window.location.pathname; // mesma URL da página atual
+    const response = await fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const html = await response.text();
+
+    // Extrai apenas o bloco atualizado de associados
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const updated = temp.querySelector('.centro-admin__associados');
+    if (updated) container.replaceWith(updated);
+  } catch (err) {
+    console.error('Erro ao recarregar associados:', err);
+    alert('Não foi possível atualizar os analistas.');
+  }
+});
+</script>
+
+
+<script>
+(() => {
+  const root = document.getElementById('modal-root');
+
+  // Intercepta qualquer formulário com a classe .js-centro-form
+  document.addEventListener('submit', async (e) => {
+    const form = e.target.closest('.js-centro-form');
+    if (!form) return;
+
+    e.preventDefault();
+
+    const btn = form.querySelector('button[type="submit"]');
+    const originalText = btn ? btn.textContent : '';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'salvando…';
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+
+      const html = await response.text();
+
+      // Se a resposta contiver o script de reload, executa diretamente
+      if (html.includes('window.location.reload')) {
+        window.location.reload();
+        return;
+      }
+
+      // Atualiza o conteúdo do modal com o HTML retornado (com erros, se houver)
+      const body = root.querySelector('.modal__body');
+      if (body) body.innerHTML = html;
+    } catch (err) {
+      console.error('Erro ao salvar centro:', err);
+      alert('Falha ao salvar. Tente novamente.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  });
+})();
+</script>
+
+{% endblock %}

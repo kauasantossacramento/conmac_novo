@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Editar Despesa · CONMAC{% endblock %}
+{% block content %}
+<style>
+    /* Container do formulário */
+  form.card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 24px;
+    max-width: 600px;
+    margin: 0 auto;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* Título */
+  h2 {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #052e49;
+  }
+
+  /* Campos do formulário */
+  form.card p {
+    margin-bottom: 1rem;
+  }
+
+  form.card label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  form.card input,
+  form.card select,
+  form.card textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #f9fafb;
+    color: #111827;
+  }
+
+  /* Botões */
+  form.card .btn,
+  form.card .btn-outline {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-right: 0.5rem;
+  }
+
+  form.card .btn {
+    background-color: #2563eb;
+    color: #fff;
+    border: none;
+  }
+
+  form.card .btn:hover {
+    background-color: #1d4ed8;
+  }
+
+  form.card .btn-outline {
+    background-color: transparent;
+    border: 1px solid #9ca3af;
+    color: #374151;
+  }
+
+  form.card .btn-outline:hover {
+    background-color: #f3f4f6;
+  }
+  .alert-primary{
+    position: relative !important;
+  }
+</style>
+
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+  <div style="text-align: center; max-width: fit-content;" class="alert-primary msg">
+    <b>ATENÇÃO!</b> Você está editando uma despesa! <br> Não adicione outro comprovante se deseja manter o anterior, apenas deixe em branco.
+  </div>
+</div>
+<h2>Editar Despesa</h2>
+<form method="post" enctype="multipart/form-data" class="card">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn">salvar</button>
+  <a class="btn-outline" href="{% url 'viagens_lista' %}">cancelar</a>
+</form>
+{% endblock %}

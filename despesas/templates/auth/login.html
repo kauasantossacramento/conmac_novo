@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Entrar · CONMAC{% endblock %}
+
+{% block content %}
+
+<style>
+    .container{
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: none;
+    }
+
+</style>
+<section class="auth-shell">
+  <!-- Lado esquerdo: imagem grande (desktop) -->
+  <div class="auth-visual" aria-hidden="true">
+    <img src="{% static 'img/login_side.jpg' %}" alt="">
+    <div class="auth-visual__fade"></div>
+  </div>
+
+  <!-- Lado direito: painel do formulário -->
+  <div class="auth-panel">
+    <div class="auth-panel__inner">
+      <img class="auth-logo" src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" width="210" height="auto">
+
+      <form method="post" class="auth-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="field">
+          {{ form.username }}
+        </div>
+        <div class="field">
+          {{ form.password }}
+        </div>
+
+        <div class="auth-actions" style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: end;">
+          <button type="submit" class="btn-grad">acessar</button>
+          <a class="link-muted" href="#">esqueci a senha</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  // placeholders amigáveis
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const u=document.getElementById('id_username'); if(u) u.placeholder='usuário / CPF';
+    const p=document.getElementById('id_password'); if(p) p.placeholder='senha';
+  });
+</script>
+{% endblock %}

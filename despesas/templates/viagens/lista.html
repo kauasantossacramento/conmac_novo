@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Viagens · CONMAC{% endblock %}
+
+{% block content %}
+
+<style>
+    .alert-primary{
+        position: relative !important;
+    }
+
+  .status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background-color: #f3f4f6;
+    color: #374151;
+  }
+
+  .status--ok {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .status--no {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+  @media (max-width: 530px){
+    .btn-outline{
+      width: 100%;
+    }
+  }
+</style>
+
+<section class="viagens-hero">
+  <div class="viagens-hero__title">
+    <div class="ico">
+      <img src="{% static 'img/ic_viagens_white.svg' %}" alt="">
+    </div>
+    <div class="txt txt_responsivo">
+      <h2>Viagens</h2>
+      <p>Adicione despesas das viagens realizadas mensalmente.</p>
+    </div>
+  </div>
+
+    <div class="viagens-hero__kpis">
+        <div class="kpi">
+            <div class="kpi__value">R$ {{ total_reembolsadas|floatformat:2 }}</div>
+            <div class="kpi__label">Despesas Reembolsadas do Período</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi__value">R$ {{ total_mes|floatformat:2 }}</div>
+            <div class="kpi__label">Despesas Totais do Período</div>
+        </div>
+        <div class="kpi kpi--pendente">
+            <div class="kpi__value">R$ {{ total_pendentes|floatformat:2 }}</div>
+            <div class="kpi__label">Despesas Pendentes do Período</div>
+        </div>
+    </div>
+
+</section>
+
+<form class="viagens-filter" method="get">
+  {% if centro_sel %}
+    <input type="hidden" name="centro" value="{{ centro_sel.id }}">
+  {% endif %}
+  <label for="mes">Mês:</label>
+  <select id="mes" name="mes">
+    {% for m, label in meses_numeros %}
+      <option value="{{ m }}" {% if sel_mes == m %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="ano">Ano:</label>
+  <select id="ano" name="ano">
+    {% for ano in anos_disponiveis %}
+      <option value="{{ ano }}" {% if sel_ano == ano %}selected{% endif %}>
+        {% if ano == 0 %}TODOS{% else %}{{ ano }}{% endif %}
+      </option>
+    {% endfor %}
+  </select>
+
+  <button type="submit" class="btn-grad">filtrar</button>
+  {% if centro_sel %}
+    <a class="btn-outline" href="{% url 'viagens_centros' %}?ano={{ sel_ano }}&mes={{ sel_mes }}">trocar município / cliente</a>
+    <a class="btn-outline" href="{% url 'viagens_lista' %}">visualizar todos os municípios / clientes</a>
+  {% else %}
+    <a class="btn-outline" href="{% url 'viagens_centros' %}?ano={{ sel_ano }}&mes={{ sel_mes }}">selecionar município / cliente</a>
+  {% endif %}
+</form>
+
+<h3 class="viagens-section-title">{{ mes_corrente_label }}</h3>
+
+<section class="centros-grid">
+  {% for bloco in centros_data %}
+  {% with c=bloco.centro itens=bloco.itens %}
+  <article class="centro-card">
+    <header class="centro-card__head">
+        <strong class="centro-card__name">{{ c.nome }}</strong>
+        <div class="centro-card__actions">
+            <a class="btn-round js-nova-despesa" title="Nova despesa"
+            href="{% url 'despesa_create' %}?centro={{ c.id }}">+</a>
+            <!-- <a class="btn-round" title="Relatório (CSV)" href="{% url 'relatorio' %}?ano={{ m.mref.ano }}&mes={{ m.mref.mes }}">⇩</a> -->
+        </div>
+    </header>
+
+
+    <div class="centro-card__body">
+        {% if itens %}
+            {% for d in itens %}
+            <button type="button" class="mov mov--btn" data-modal-url="{% url 'despesa_modal' d.pk %}">
+            <div class="mov__title">{{ d.titulo }}</div>
+            <div class="mov__meta">R$ {{ d.valor|floatformat:2 }} | {{ d.data_fato|date:"d/m/Y" }}</div>
+            <div class="mov__ops">
+                {% if d.status == "APROVADA" %}
+                <span class="status status--ok">aprovada</span>
+                {% elif d.status == "REPROVADA" %}
+                <span class="status status--no">reprovada</span>
+                {% else %}
+                <span class="status">pendente</span>
+                {% endif %}
+                {% if d.comprovante %}
+                <span class="ico" title="Comprovante">📎</span>
+                {% endif %}
+            </div>
+            </button>
+
+            {% endfor %}
+        {% else %}
+            <div class="mov mov--empty">Sem lançamentos para este centro neste mês.</div>
+        {% endif %}
+    </div>
+
+  </article>
+  {% endwith %}
+  {% endfor %}
+</section>
+
+{% if meses_anteriores %}
+<h3 class="viagens-section-title">OUTROS MESES</h3>
+<section class="anteriores-grid">
+  {% for m in meses_anteriores %}
+  <article class="mes-ant">
+    <header class="mes-ant__head">
+      <strong>{{ m.label }}</strong>
+      <a class="btn-round" title="Relatório (CSV)" href="{% url 'relatorio' %}?ano={{ m.mref.ano }}&mes={{ m.mref.mes }}">⇩</a>
+    </header>
+    <ul class="mes-ant__centros">
+      {% for c in m.centros %}
+        <li><a href="{% url 'relatorio' %}?centro={{ c.id }}&ano={{ m.mref.ano }}&mes={{ m.mref.mes }}"> {{ c.nome }}</a> <span class="mini">relatório</span></li>
+      {% empty %}
+        <li class="mini">Sem centros</li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endfor %}
+</section>
+
+
+{% endif %}
+
+<div id="modal-root" class="modal-root" hidden></div>
+
+<script>
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('.mov--btn');
+  if(!btn) return;
+  e.preventDefault();
+  const url = btn.getAttribute('data-modal-url');
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '<div class="modal-backdrop"></div><div class="modal"><div class="modal__body">Carregando…</div></div>';
+  root.hidden = false;
+  const html = await fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text());
+  root.querySelector('.modal__body').innerHTML = html;
+
+  root.addEventListener('click', (ev)=>{
+    if(ev.target.classList.contains('modal-backdrop') || ev.target.closest('[data-close-modal]')){
+      root.hidden = true; root.innerHTML = '';
+    }
+  });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('.viagens-filter');
+  if(!form) return;
+  form.querySelectorAll('select').forEach(sel => {
+    sel.addEventListener('change', () => form.submit());
+  });
+});
+</script>
+
+
+<script>
+(function(){
+  const root = document.getElementById('modal-root');
+
+  async function openModal(url){
+    root.innerHTML =
+      '<div class="modal-backdrop" data-close-modal></div>' +
+      '<div class="modal" role="dialog" aria-modal="true"><div class="modal__body">Carregando…</div></div>';
+    root.hidden = false;
+    const html = await fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text());
+    root.querySelector('.modal__body').innerHTML = html;
+  }
+
+  document.addEventListener('click', (e)=>{
+    const add = e.target.closest('a.js-nova-despesa');
+    if(add){
+      e.preventDefault();
+      // força modo modal via AJAX
+      openModal(add.href);
+      return;
+    }
+    if(e.target.matches('[data-close-modal]') || e.target.classList.contains('modal-backdrop')){
+      root.hidden = true; root.innerHTML = '';
+    }
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape' && !root.hidden){ root.hidden = true; root.innerHTML = ''; }
+  });
+})();
+</script>
+
+
+
+{% endblock %}

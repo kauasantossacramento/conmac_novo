@@ -1,0 +1,122 @@
+<style>
+  /* Modal container */
+  .modal {
+    background-color: #fff;
+    border-radius: 16px;
+    max-width: 480px;
+    margin: 10vh auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* Modal header */
+  .modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background-color: #f3f4f6;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .modal__head strong {
+    font-size: 1.1rem;
+    color: #052e49;
+  }
+
+  .modal__head .close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: #6b7280;
+    cursor: pointer;
+  }
+
+  /* Modal content */
+  .modal__content {
+    padding: 1.25rem;
+  }
+
+  .modal__content p {
+    margin-bottom: 1rem;
+  }
+
+  .modal__content label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .modal__content input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #f9fafb;
+    color: #111827;
+  }
+
+  /* Modal footer */
+  .modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+  }
+
+  /* Buttons */
+  .btn,
+  .btn-outline {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn {
+    background-color: #2563eb;
+    color: #fff;
+    border: none;
+  }
+
+  .btn:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid #9ca3af;
+    color: #374151;
+  }
+
+  .btn-outline:hover {
+    background-color: #f3f4f6;
+  }
+
+</style>
+
+<form method="post" action="{% url 'centro_novo_modal' %}" class="js-centro-form">
+  <div class="modal__head">
+    <strong>Adicionar Centro de Custo</strong>
+    <button type="button" class="close" data-close-modal>×</button>
+  </div>
+  <div class="modal__content">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <p>{{ form.nome.label_tag }} {{ form.nome }}</p>
+  </div>
+  <div class="modal__footer">
+    <button type="button" class="btn-outline" data-close-modal>fechar</button>
+    <button type="submit" class="btn">salvar</button>
+  </div>
+</form>
+
+
+
+

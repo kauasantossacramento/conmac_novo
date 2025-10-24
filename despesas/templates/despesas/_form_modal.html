@@ -1,0 +1,115 @@
+<div class="modal__header">
+  <h3>Adicionar Despesa</h3>
+  <button class="modal__close" data-close-modal>×</button>
+</div>
+
+<form id="form-despesa" method="post" enctype="multipart/form-data" action="{% url 'despesa_create' %}">
+  <div class="modal__content">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="form-grid">
+
+    <p>
+        {{ form.centro.label_tag }}
+        {{ form.centro }}
+        {% if form.centro.help_text %}<small class="help">{{ form.centro.help_text }}</small>{% endif %}
+        {% for e in form.centro.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+
+    <p>
+        {{ form.titulo.label_tag }}
+        {{ form.titulo }}
+        {% if form.titulo.help_text %}<small class="help">{{ form.titulo.help_text }}</small>{% endif %}
+        {% for e in form.titulo.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+
+    {# === AQUI forçamos type="date" e valor ISO === #}
+    <p>
+        <label for="{{ form.data_fato.id_for_label }}">{{ form.data_fato.label }}</label>
+
+        {% with v=form.data_fato.value %}
+            <input
+            type="date"
+            name="{{ form.data_fato.html_name }}"
+            id="{{ form.data_fato.id_for_label }}"
+            {% if v %}value="{{ v|date:'Y-m-d' }}"{% endif %}
+            {% if form.data_fato.field.required %}required{% endif %}
+            class="input"
+            >
+        {% endwith %}
+
+        {% if form.data_fato.help_text %}
+            <small class="help">{{ form.data_fato.help_text }}</small>
+        {% endif %}
+        {% for e in form.data_fato.errors %}
+            <div class="err">{{ e }}</div>
+        {% endfor %}
+    </p>
+
+
+    <p>
+        {{ form.valor.label_tag }}
+        {{ form.valor }}
+        {% if form.valor.help_text %}<small class="help">{{ form.valor.help_text }}</small>{% endif %}
+        {% for e in form.valor.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+
+    <p>
+        {{ form.descricao.label_tag }}
+        {{ form.descricao }}
+        {% if form.descricao.help_text %}<small class="help">{{ form.descricao.help_text }}</small>{% endif %}
+        {% for e in form.descricao.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+
+    <p>
+        {{ form.comprovante.label_tag }}
+        {{ form.comprovante }}
+        {% if form.comprovante.help_text %}<small class="help">{{ form.comprovante.help_text }}</small>{% endif %}
+        {% for e in form.comprovante.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+
+    </div>
+
+  </div>
+
+  <div class="modal__footer">
+    <button type="button" class="btn-outline" data-close-modal>fechar</button>
+    <button type="submit" class="btn">adicionar</button>
+  </div>
+</form>
+
+<script>
+(function(){
+  const form = document.getElementById('form-despesa');
+  if(!form) return;
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    try{
+      const resp = await fetch(form.action + window.location.search, {
+        method: 'POST',
+        headers: {'X-Requested-With':'XMLHttpRequest'},
+        body: fd
+      });
+      if(resp.status === 201){
+        const data = await resp.json();
+        // fecha o modal e recarrega a página
+        const root = document.getElementById('modal-root');
+        root.hidden = true; root.innerHTML = '';
+        window.location.assign(data.redirect || window.location.href);
+      }else{
+        // re-renderiza o HTML do form com erros
+        const html = await resp.text();
+        form.closest('.modal__body')?.insertAdjacentHTML('afterbegin','');
+        form.parentElement.parentElement.innerHTML = html;
+      }
+    }catch(err){
+      alert('Falha ao enviar. Verifique a conexão.');
+    }
+  });
+})();
+</script>
+
+
+<script>
+

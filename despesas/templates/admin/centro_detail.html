@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}{{ centro.nome }} · Admin{% endblock %}
+
+{% block content %}
+<h2>{{ centro.nome }}</h2>
+
+<section>
+  <h3>Despesas</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Título</th><th>Usuário</th><th>Valor</th><th>Status</th><th>Criado</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for d in despesas_page %}
+      <tr>
+        <td>{{ d.titulo }}</td>
+        <td>{{ d.usuario.get_full_name|default:d.usuario.username }}</td>
+        <td>R$ {{ d.valor }}</td>
+        <td>{{ d.status }}</td>
+        <td>{{ d.criado_em|date:"d/m/Y H:i" }}</td>
+        <td>
+          <a href="{% url 'aprovar_despesa' d.pk %}">aprovar</a> ·
+          <a href="{% url 'reprovar_despesa' d.pk %}">reprovar</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">Sem despesas.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if despesas_page.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if despesas_page.has_previous %}
+      <a href="?pd={{ despesas_page.previous_page_number }}&pa={{ associados_page.number }}">‹ Anterior</a>
+    {% endif %}
+    <span>Página {{ despesas_page.number }} de {{ despesas_page.paginator.num_pages }}</span>
+    {% if despesas_page.has_next %}
+      <a href="?pd={{ despesas_page.next_page_number }}&pa={{ associados_page.number }}">Próxima ›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<section style="margin-top:24px">
+  <h3>Associados</h3>
+  <ul class="list">
+    {% for a in associados_page %}
+      <li>{{ a.usuario.get_full_name|default:a.usuario.username }}</li>
+    {% empty %}
+      <li>Sem associados ativos.</li>
+    {% endfor %}
+  </ul>
+
+  {% if associados_page.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if associados_page.has_previous %}
+      <a href="?pa={{ associados_page.previous_page_number }}&pd={{ despesas_page.number }}">‹ Anterior</a>
+    {% endif %}
+    <span>Página {{ associados_page.number }} de {{ associados_page.paginator.num_pages }}</span>
+    {% if associados_page.has_next %}
+      <a href="?pa={{ associados_page.next_page_number }}&pd={{ despesas_page.number }}">Próxima ›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+

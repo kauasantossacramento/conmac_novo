@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Relatório de Despesas{% endblock %}
+
+{% block content %}
+<style>
+/* ——— Layout A4 ——— */
+.report-wrap{
+  max-width: 820px; /* A4 ~ 794pt / 1123px a 96dpi; mantemos margem */
+  margin: 0 auto;
+  background: #fff;
+  padding: 24px 28px 56px;
+}
+.report-head{
+  text-align:center; margin-top:6px; margin-bottom:18px; display: flex;flex-direction: column;justify-content: center; align-items: center;}
+.report-head .logo{
+  height: 54px; margin-bottom: 10px;
+}
+.report-title{
+  font-weight: 800; letter-spacing: .5px; color:#2f6775; margin: 4px 0 2px; font-size: 26px;
+}
+.report-meta{ margin: 0; color:#2f6775; font-size: 18px; }
+.report-meta strong{ font-weight:800; }
+
+.report-kpis{
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 22px;
+}
+.kpi2{
+  border:1px solid #e4edf3; border-radius:14px; padding:10px 12px; text-align:center;
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+.kpi2 .v{ font-size: 28px; font-weight: 800; color:#1fb065; }
+.kpi2 .l{ font-size: 12px; color:#6b8794; margin-top:4px; }
+.kpi2--total .v{ color:#239FAB; }
+.kpi2--pend .v{ color:#E57A34; }
+
+.report-center{
+  margin-top: 18px; margin-bottom: 14px;
+}
+.center-tag{
+  display:block; width:100%;
+  border:1px solid #dfe6ee; border-radius:22px; padding:10px 18px; background:#f6fafb;
+  color:#3c5663; font-weight:800; letter-spacing:.4px;
+}
+
+/* tabela de itens */
+.table{
+  width:100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 14px;
+}
+.table th, .table td{
+  border-bottom:1px solid #edf2f6; padding:8px 10px; font-size: 13px;
+}
+.table th{ text-align:left; color:#5a7682; font-weight:700; background:#fbfdfe; }
+.table td.r{ text-align:right; }
+.status{ font-size:12px; color:#7a8e98; }
+.status--ok{ color:#18b26e; }
+.status--no{ color:#d33a2c; }
+
+.subtot{
+  text-align:right; font-weight:800; color:#2b5160; padding:6px 10px; border:1px solid #edf2f6; border-radius:10px;
+}
+
+/* BOTÕES de tela (não imprimem) */
+.report-actions{ display:flex; gap:10px; justify-content:flex-end; margin-bottom:10px; }
+.btn{ background:#239FAB; color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
+.btn-outline{ border:1px solid #239FAB; color:#239FAB; background:#fff; padding:10px 14px; border-radius:10px; }
+
+/* PRINT */
+@media print {
+  .topbar, .logo_home, .report-actions { display:none !important; }
+  .report-wrap{ padding:0; box-shadow:none; }
+  @page{ size: A4 portrait; margin:12mm; }
+}
+</style>
+
+<div class="report-wrap">
+  <div class="report-head">
+    <img class="logo" src="{% static 'img/logo_conmac.png' %}" alt="CONMAC">
+    <h1 class="report-title">RELATÓRIO DE DESPESAS</h1>
+    <p class="report-meta">ANALISTA: <strong>{{ analista }}</strong></p>
+    <p class="report-meta">PERÍODO: <strong>{{ periodo_label }}</strong></p>
+  </div>
+
+  <div class="report-actions">
+    <a class="btn-outline" href="{% url 'viagens_centros' %}">Voltar</a>
+    <button class="btn-outline" onclick="window.print()">Imprimir</button>
+    {# <a class="btn" href="{% url 'relatorio_csv' %}?{{ request.GET.urlencode }}">Baixar CSV</a> #}
+  </div>
+
+  <section class="report-kpis">
+    <div class="kpi2">
+      <div class="v">R$ {{ total_reemb|floatformat:2 }}</div>
+      <div class="l">Despesas Reembolsadas do Período</div>
+    </div>
+    <div class="kpi2 kpi2--total">
+      <div class="v">R$ {{ total_periodo|floatformat:2 }}</div>
+      <div class="l">Despesas Totais do Período</div>
+    </div>
+    <div class="kpi2 kpi2--pend">
+      <div class="v">R$ {{ total_pend|floatformat:2 }}</div>
+      <div class="l">Despesas Pendentes do Período</div>
+    </div>
+  </section>
+
+  {% for bloco in centros_blocos %}
+    <section class="report-center">
+      <span class="center-tag">{{ bloco.centro.nome }}</span>
+
+      {% if bloco.itens %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:36%">Título</th>
+              <th style="width:22%">Data</th>
+              <th style="width:18%">Status</th>
+              <th style="width:24%" class="r">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in bloco.itens %}
+            <tr>
+              <td>{{ d.titulo }}</td>
+              <td>{{ d.data_fato|date:"d/m/Y" }}</td>
+              <td>
+                {% if d.status == "APROVADA" %}<span class="status status--ok">aprovada</span>
+                {% elif d.status == "REPROVADA" %}<span class="status status--no">reprovada</span>
+                {% else %}<span class="status">pendente</span>{% endif %}
+              </td>
+              <td class="r">R$ {{ d.valor|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="subtot">Subtotal {{ bloco.centro.nome }}: R$ {{ bloco.subtotal|floatformat:2 }}</div>
+      {% else %}
+        <div class="status" style="margin:8px 2px 0">Sem despesas neste período.</div>
+      {% endif %}
+    </section>
+  {% empty %}
+    <div class="status" style="margin-top:18px">Nenhum centro com despesas no período.</div>
+  {% endfor %}
+</div>
+{% endblock %}

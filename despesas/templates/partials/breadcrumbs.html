@@ -1,0 +1,40 @@
+{% load static %}
+{% load url from future %}
+{% url 'viagens_lista' as _fallback_home %}
+
+{# 
+  Props opcionais esperadas:
+  - trail: lista de pares [("Rótulo","/url"), ...]; se url vazio, rende como texto.
+  - back_url: URL para o botão "Voltar"; se não vier, usa HTTP_REFERER; se não tiver, cai no _fallback_home.
+  - title: rótulo final (se quiser forçar um título diferente do último item da trail)
+#}
+
+{% with back_href=back_url|default:request.META.HTTP_REFERER|default:_fallback_home %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a class="crumbs__back" href="{{ back_href }}">← voltar</a>
+
+  {% if trail %}
+    <ol class="crumbs__list">
+      {% for label, url in trail %}
+        <li class="crumbs__item">
+          {% if url %}
+            <a href="{{ url }}">{{ label }}</a>
+          {% else %}
+            <span aria-current="page">{{ label }}</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+      {% if title %}
+        <li class="crumbs__item"><span aria-current="page">{{ title }}</span></li>
+      {% endif %}
+    </ol>
+  {% else %}
+    {# sem trail: mostra só o título se fornecido #}
+    {% if title %}
+      <ol class="crumbs__list">
+        <li class="crumbs__item"><span aria-current="page">{{ title }}</span></li>
+      </ol>
+    {% endif %}
+  {% endif %}
+</nav>
+{% endwith %}

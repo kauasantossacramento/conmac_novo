@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Início · CONMAC{% endblock %}
+
+{% block content %}
+
+<style>
+    .alert-primary{
+        position: relative;
+    }
+</style>
+<section class="hero hero--home">
+  <div class="hero__bg">
+    <!-- imagem de capa (placeholder) → substitua o arquivo depois -->
+    <img src="{% static 'img/home_cover_placeholder.jpg' %}" alt="" aria-hidden="true">
+  </div>
+  <div class="hero__content">
+    <h2 class="hero__quote">“A <strong>contabilidade</strong> é a linguagem dos negócios – cada número conta uma história.”</h2>
+    <div class="hero__mathmark">
+      <span class="mark plus">+</span>
+      <span class="mark minus">−</span>
+      <span class="mark times">×</span>
+      <span class="mark divide">÷</span>
+    </div>
+  </div>
+</section>
+
+<section class="home-cards">
+  {% if request.user.is_staff or request.user.is_superuser %}
+    {# ===================== ÁREA ADMIN ===================== #}
+
+    <a class="home-card home-card--viagens" href="{% url 'centros_index' %}">
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_viagens.svg' %}" alt="">
+      </div>
+      <div class="home-card__text">
+        <h3>Centros de Custo</h3>
+        <p>adicione e gerencie os centros de custo da empresa.</p>
+      </div>
+    </a>
+
+    <a class="home-card home-card--notificacoes" href="{% url 'notificacoes' %}">
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_notificacoes.svg' %}" alt="">
+      </div>
+      <div class="home-card__text">
+        <h3>Notificações</h3>
+        <p>notifique a abertura de planilhas, fechamentos e aberturas de sistemas.</p>
+      </div>
+    </a>
+    <a class="home-card home-card--links"  target="_blank" href="https://sistemas.clientes.conmac.com.br/">
+    <!--<a class="home-card home-card--links" href="{% url 'links' %}">-->
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_links.svg' %}" alt="">
+      </div>
+      <div class="home-card__text">
+        <h3>Painel de Links</h3>
+        <p>painel de links dos sistemas dos clientes da CONMAC.</p>
+      </div>
+    </a>
+
+  {% else %}
+    {# ===================== COLABORADOR / ANALISTA ===================== #}
+
+    <a class="home-card home-card--viagens" href="{% url 'viagens_centros' %}">
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_viagens.svg' %}" alt="">
+      </div>
+      <div class="home-card__text">
+        <h3>Viagens</h3>
+        <p>visualize as viagens direcionadas pela CONMAC.</p>
+      </div>
+    </a>
+    <!--
+    <a class="home-card home-card--reembolsos" href="{% url 'viagens_lista' %}#aprovadas">
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_reembolsos.svg' %}" alt="">
+      </div>
+      
+      <div class="home-card__text">
+        <h3>Reembolsos Aprovados</h3>
+        <p>aqui estarão as viagens aprovadas e com valores repassados para você.</p>
+      </div> 
+      {% if tem_aprovadas %}<span class="home-card__badge">novos</span>{% endif %}
+
+    </a>
+    -->
+
+    <a class="home-card home-card--notificacoes" href="{% url 'notificacoes' %}">
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_notificacoes.svg' %}" alt="">
+      </div>
+      <div class="home-card__text">
+        <h3>Notificações</h3>
+        <p>fechamentos e aberturas de sistemas.</p>
+      </div>
+    </a>
+
+    <!--<a class="home-card home-card--links" href="{% url 'links' %}"> -->
+      <a class="home-card home-card--links" target="_blank" href="https://sistemas.clientes.conmac.com.br/">
+      <div class="home-card__icon">
+        <img src="{% static 'img/ic_links.svg' %}" alt="">
+      </div>
+      <div class="home-card__text">
+        <h3>Painel de Links</h3>
+        <p>painel de links dos sistemas dos clientes da CONMAC.</p>
+      </div>
+    </a>
+  {% endif %}
+</section>
+
+<section class="checklist">
+  <div class="checklist__head">
+    <h3>Tarefas / Checklist</h3>
+  </div>
+
+  <form method="post" action="{% url 'checklist_add' %}" class="checklist__form">
+    {% csrf_token %}
+    {{ checklist_form.texto }}
+    <button type="submit" aria-label="adicionar">➜</button>
+  </form>
+
+  <ul class="checklist__list">
+    {% for item in checklist_pendentes %}
+      <li class="checklist__item">
+        <form method="post" action="{% url 'checklist_done' item.pk %}">
+          {% csrf_token %}
+          <input class="checklist__check" type="checkbox" onchange="this.form.submit()">
+          <span class="checklist__text">{{ item.texto }}</span>
+          <span class="checklist__date">{{ item.criado_em|date:"d/m/Y" }}</span>
+        </form>
+      </li>
+    {% empty %}
+      <li class="checklist__empty">Sem tarefas pendentes.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

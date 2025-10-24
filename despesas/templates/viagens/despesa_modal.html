@@ -1,0 +1,189 @@
+<style>
+    /* Modal Container */
+  .modal__header,
+  .modal__content,
+  .modal__footer {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fff;
+    color: #1f2937;
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  /* Header */
+  .modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1rem;
+  }
+
+  .modal__header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .modal__close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* Content */
+  .modal__content {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .kv dt {
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .kv dd {
+    margin: 0;
+    color: #4b5563;
+  }
+
+  /* Status Tags */
+  .status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background-color: #f3f4f6;
+    color: #374151;
+  }
+
+  .status--ok {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .status--no {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  /* Footer */
+  .modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 1rem;
+  }
+
+  /* Buttons */
+  .btn,
+  .btn-outline {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn {
+    background-color: #2563eb;
+    color: #fff;
+    border: none;
+  }
+
+  .btn:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid #9ca3af;
+    color: #374151;
+  }
+
+  .btn-outline:hover {
+    background-color: #f3f4f6;
+  }
+  @media (max-width: 470px){
+    .modal__header, .modal__content, .modal__footer{
+      padding: 0px !important;
+    }
+  }
+</style>
+
+<div class="modal__header">
+  <h3>Detalhes da Despesa</h3>
+  <button class="modal__close" data-close-modal>×</button>
+</div>
+
+<div class="modal__content">
+  <dl class="kv">
+    <dt>Status</dt>
+    <dd>
+      {% if obj.status == "APROVADA" %}<span class="status status--ok">aprovada</span>
+      {% elif obj.status == "REPROVADA" %}<span class="status status--no">reprovada</span>
+      {% else %}<span class="status">pendente</span>{% endif %}
+    </dd>
+
+    <dt>Título</dt><dd>{{ obj.titulo }}</dd>
+    <dt>Descrição</dt><dd>{{ obj.descricao|default:"—" }}</dd>
+    <dt>Valor</dt><dd>R$ {{ obj.valor|floatformat:2 }}</dd>
+    <dt>Data do Fato</dt><dd>{{ obj.data_fato|date:"d/m/Y" }}</dd>
+    <dt>Data de Cadastro</dt><dd>{{ obj.criado_em|date:"d/m/Y H:i" }}</dd>
+
+    <dt>Comprovante da Despesa</dt>
+    <dd>{% if obj.comprovante %}<a href="{{ obj.comprovante.url }}" target="_blank">abrir comprovante</a>{% else %}—{% endif %}</dd>
+
+    <dt>Data de Pagamento</dt>
+    <dd>
+      {% if obj.pago_em %}
+        {{ obj.pago_em|date:"d/m/Y" }}
+      {% elif lote_pag and lote_pag.pago_em %}
+        {{ lote_pag.pago_em|date:"d/m/Y" }}
+      {% else %}
+        —
+      {% endif %}
+    </dd>
+
+    <dt>Comprovante de Pagamento</dt>
+    <dd>
+      {% if obj.comprovante_pagamento %}
+        <a href="{{ obj.comprovante_pagamento.url }}" target="_blank">abrir comprovante</a>
+        {% if obj.pago_em %}<small>(pago em {{ obj.pago_em|date:"d/m/Y" }})</small>{% endif %}
+      {% elif lote_pag and lote_pag.comprovante_reembolso %}
+        <a href="{{ lote_pag.comprovante_reembolso.url }}" target="_blank">abrir comprovante</a>
+        {% if lote_pag.pago_em %}<small>(pago em {{ lote_pag.pago_em|date:"d/m/Y" }})</small>{% endif %}
+      {% else %}
+        —
+      {% endif %}
+    </dd>
+    <dt>Observação</dt>
+    <dd>{{ obj.observacao_admin|default:"—"|linebreaksbr }}</dd>
+
+
+  </dl>
+</div>
+
+<div style="padding-top:10px" class="modal__footer">
+  {% if pode_editar %}
+    <a class="btn-outline" href="{% url 'despesa_edit' obj.pk %}">editar</a>
+  {% else %}
+    <div class="mini" style="margin-right:auto; color:#b91c1c; font-weight:600;">
+      Você não pode editar mais esta despesa.
+      {% if obj.edit_count %}Você editou {{ obj.edit_count }} vezes.{% endif %}
+    </div>
+  {% endif %}
+  <button class="btn" data-close-modal>fechar</button>
+</div>

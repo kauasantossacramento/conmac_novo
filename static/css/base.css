@@ -1,0 +1,690 @@
+/* ====== Reset & base ====== */
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; }
+body { font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f8fb; color:#163042; }
+a { color:inherit; text-decoration:none; }
+.container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+img { max-width:100%; display:block; }
+
+
+.container_login {margin: 0 auto; padding: 0; }
+
+/* ====== Topbar ====== */
+.topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:linear-gradient(90deg,#1f9eb9 0%, #2bbed1 35%, #f28c52 100%); color:#fff; }
+.topbar .logo img{ height:34px; }
+.topbar .user a{ margin-left:14px; color:#fff; }
+
+/* ====== Hero ====== */
+.hero--home{ position:relative; border-radius:22px; overflow:hidden; background:#eaf2f6; margin-bottom: 20px;}
+.hero--home .hero__bg{ position:absolute; inset:0; background: #163042 }
+@media (max-width: 350px){
+    .hero--home .hero__bg{
+        background: #052e49;
+    }
+}
+.hero--home .hero__bg img{ width:100%; height:100%; object-fit:cover; opacity:.55; filter:saturate(0.8); }
+.hero--home .hero__content{ position:relative; padding:36px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.hero__quote{ font-weight:600; color:#ffffff; max-width: 600px; line-height:1.28; }
+.hero__quote strong{ color: #ff9f61; }
+.hero__mathmark{ display:grid; grid-template-columns: repeat(2, 48px); gap:14px; opacity:.65; }
+.mark{ display:grid; place-items:center; width:48px; height:48px; border-radius:12px; background:#ffffff; box-shadow:0 10px 22px rgba(0,0,0,.08); font-size:26px; }
+
+/* ====== Home Cards ====== */
+.logo_home{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px;
+}
+
+.alert-primary{
+
+    background-color: #052e49cb;
+    color: rgb(183, 213, 232);
+    border: 1px solid #001b2c;
+    margin: 20px;
+    padding: 15px;
+    border-radius: 15px;
+    position: absolute;
+    z-index: 999;
+    
+}
+
+.logo_home img{
+    width: 235px;
+    height: 77px;
+}
+
+
+
+/* === HOME CARDS · estilo 1:1 protótipo === */
+/* Paleta */
+:root{
+  --c-azul: #239FAB;
+  --c-laranja: #E57A34;
+  --c-verde: #21B928;
+  --c-vermelho: #E13A35;
+}
+
+/* base do card */
+.home-card{
+  position:relative;
+  display:flex; align-items:center; gap:14px;
+  padding:18px 20px;
+  border-radius:18px;
+  color:#fff;                        /* texto branco */
+  border:none;                       /* sem borda */
+  background:#239FAB;                /* fallback */
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.home-card:hover{
+  transform: translateY(-2px);
+  box-shadow:0 18px 40px rgba(0,0,0,.22);
+  filter: brightness(1.03);
+}
+
+/* ícone: quadradinho branco translúcido */
+.home-card__icon{
+  width:60px; height:60px; flex:0 0 auto;
+  display:grid; place-items:center;
+  background: rgba(255,255,255,.18);
+  border-radius:14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+.home-card__icon img{ width:38px; height:38px; }
+
+/* tipografia */
+.home-card__text h3{ margin:0 0 4px; font-size:1.18rem; font-weight:800; letter-spacing:.2px; }
+.home-card__text p{ margin:0; font-size:.95rem; opacity:.95; }
+
+
+
+/* ====== GRID AUTO-RESPONSIVO DOS WIDGETS ====== */
+.home-cards{
+  display: grid;
+  /* cada card tem largura mínima (ajuste se quiser) e ocupa 1fr; 
+     o grid cria 1,2,3,4... colunas conforme a tela, SEM sobras */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  width: 100%;
+  align-items: stretch;      /* altura dos cards igual por linha */
+  justify-items: stretch;    /* ocupa 100% da célula */
+}
+
+/* garante que cada card preencha a célula por completo */
+.home-cards .home-card{
+  width: 100%;
+  height: 100%;
+}
+
+/* se quiser cards um pouco mais altos, defina uma altura mínima */
+.home-card{
+  min-height: 110px;         /* opcional – ajuste conforme o visual do Figma */
+}
+
+/* badges e gradientes — mantêm do jeito que você já tem */
+.home-card__badge{
+  position:absolute; top:10px; right:12px;
+  background:#1bbf6b; color:#fff; padding:3px 10px;
+  border-radius:999px; font-size:.75rem; box-shadow:0 2px 10px rgba(0,0,0,.2);
+}
+.home-card--viagens{      background: linear-gradient(90deg,#E57A34 0%, #239FAB 100%); }
+.home-card--reembolsos{   background: linear-gradient(90deg,#21B928 0%, #239FAB 100%); }
+.home-card--notificacoes{ background: linear-gradient(90deg,#E13A35 0%, #239FAB 100%); }
+.home-card--links{        background: linear-gradient(90deg,#E57A34 0%, #239FAB 100%); }
+
+
+/* ====== Checklist ====== */
+.checklist{ margin-top: 8px; }
+.checklist__head{ display:flex; align-items:center; gap:10px; margin: 6px 0 10px; }
+.checklist__head h3{ margin:0; font-size:1.05rem; color:#334e5c; margin-top: 20px; }
+.checklist__form{ display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+.checklist__form input[type=text]{ flex:1; padding:14px 16px; border-radius:999px; border:1px solid #dfe7ee; background:#fff; box-shadow:0 8px 18px rgba(0,0,0,.05) inset; }
+.checklist__form button{ width:58px; height:46px; border:none; border-radius:999px; background:#1f9eb9; color:#fff; font-size:20px; cursor:pointer; }
+.checklist__list{ list-style:none; padding:15px; margin:0; display:flex; flex-direction:column; gap:10px; background: #f0f0f0f0; border-radius: 30px; }
+.checklist__item{ background:#fff; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; box-shadow:0 10px 22px rgba(0,0,0,.06); border:1px solid #eef2f6; }
+.checklist__check{ width:20px; height:20px; }
+.checklist__text{ flex:1; }
+.checklist__date{ opacity:.6; font-size:.9rem; }
+.checklist__empty{ color:#6c7a86; opacity:.8; }
+
+/* ====== Auth ====== */
+.auth .card{ max-width:380px; }
+.auth input{ width:100%; padding:12px; border:1px solid #dce3ea; border-radius:10px; }
+.auth button{ width:100%; padding:10px; border:none; border-radius:10px; background:#1f9eb9; color:#fff; }
+
+/* ====== Responsive ====== */
+@media (max-width: 1100px){
+  .home-cards{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px){
+  .hero--home .hero__content{ flex-direction:column; align-items:flex-start;}
+  .home-cards{ grid-template-columns: 1fr; }
+}
+
+.table{ width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 8px 18px rgba(0,0,0,.06); }
+.table th, .table td{ padding:12px 10px; border-bottom:1px solid #eef1f4; text-align:left; font-size:.95rem; }
+.table th{ background:#f9fbfd; color:#546672; }
+.pager{ margin-top:10px; display:flex; gap:10px; align-items:center; }
+.pager a{ padding:6px 10px; border-radius:8px; background:#e9f7fb; color:#127d93; }
+.list{ list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+.list li{ background:#fff; padding:10px 12px; border-radius:10px; box-shadow:0 6px 14px rgba(0,0,0,.05); }
+
+
+/* Marca d’água fixa no canto inferior direito */
+.conmac-watermark{
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 140px;                /* ajuste conforme desejar */
+  opacity: .08;                /* “levemente” visível */
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+@media (max-width: 640px){
+  .conmac-watermark{ display:none; }   /* some no celular, se preferir */
+}
+
+
+/* ====== Layout do Login ====== */
+.auth-shell{
+  display:grid;
+  grid-template-columns: 1.1fr 1fr;  /* imagem : painel */
+  min-height: calc(110vh - 64px);    /* desconta a topbar */
+  border-radius: 0px;
+  overflow:hidden;
+  background:#fff;
+  
+}
+
+/* Imagem à esquerda */
+.auth-visual{ position:relative; overflow:hidden; }
+.auth-visual img{
+  width:100%; height:100%; object-fit:cover;
+  filter: saturate(.9) brightness(.96);
+}
+.auth-visual__fade{
+  position:absolute; inset:0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,.85) 70%, #fff 100%);
+}
+
+/* Painel do formulário à direita */
+.auth-panel{
+  display:grid; place-items:center;
+  padding: 28px 24px;
+}
+.auth-panel__inner{
+  width: min(420px, 100%);
+}
+.auth-logo{ display:block; margin: 0 auto 18px auto; }
+
+/* Campos arredondados */
+.auth-form .field input{
+  width:100%;
+  padding:14px 16px;
+  border:1px solid #dfe6ee;
+  border-radius: 999px;
+  font-size: 16px;
+  outline:none;
+  background:#fff;
+  margin: 8px 0;
+}
+.auth-form .field input:focus{
+  box-shadow: 0 0 0 3px rgba(35,159,171,.18);
+  border-color:#239FAB;
+}
+
+/* Botão gradiente (protótipo) + link */
+.auth-actions{
+  display:flex; align-items:center; gap:14px; margin-top: 10px;
+}
+.btn-grad{
+  border:none; color:#fff; padding:12px 22px; border-radius:999px; cursor:pointer;
+  background: linear-gradient(90deg, #E57A34 0%, #239FAB 100%);
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+  font-weight:700; text-transform:lowercase;
+}
+.link-muted{ color:#239FAB; border:1px solid #239FAB; padding:10px 16px; border-radius:999px; }
+.link-muted:hover{ background:#e9f7fb; }
+
+/* ====== Responsivo: mobile sem imagem, painel vira card ====== */
+@media (max-width: 900px){
+  .auth-shell{
+    grid-template-columns: 1fr;
+    background: transparent;
+  }
+  .auth-visual{ display:none; }
+  .auth-panel{ padding: 20px; }
+  .auth-panel__inner{
+    background:#fff;
+    border-radius: 22px;
+    padding: 18px 16px 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.12);
+  }
+}
+
+@media (max-width: 900px){
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; border-radius: 18px; }
+    .auth-shell{margin: 0;}
+}
+
+
+/* ====== VIAGENS ====== */
+.viagens-hero{
+  margin-top:10px;
+  background: linear-gradient(90deg,#945f34 0%, #239FAB 100%);
+  border-radius:24px; overflow:hidden; color:#fff;
+  padding: 22px 24px; display:flex; align-items:center; justify-content:space-between; gap:20px;
+  box-shadow:0 18px 38px rgba(0,0,0,.16);
+}
+.viagens-hero__title{ display:flex; align-items:center; gap:16px; }
+.viagens-hero__title .ico{ width:64px; height:64px; display:grid; place-items:center; }
+.viagens-hero__title .txt h2{ margin:0; font-size:2rem; line-height:1; }
+.viagens-hero__title .txt p{ margin:2px 0 0 0; opacity:.9; }
+
+.kpi{ background:#fff; color:#239FAB; border-radius:16px; padding:12px 18px; min-width:220px; text-align:center; }
+.kpi__value{ font-size:1.6rem; font-weight:800; color:#14a05a; }
+.kpi__label{ font-size:.85rem; color:#5e7a87; }
+
+.viagens-section-title{ margin:24px 0 10px; text-transform:uppercase; letter-spacing:1px; color:#2a5060; }
+
+/* Centros do mês: grid fluido (cards iguais) */
+.centros-grid{
+  display:grid; gap:16px;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+}
+
+/* Card do centro */
+.centro-card{ background:#fff; border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,.10); overflow:hidden; }
+.centro-card__head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-bottom:1px solid #eef2f6; background:#f9fbfd;
+}
+.centro-card__name{ font-weight:800; color:#526876; letter-spacing:.3px; }
+.centro-card__actions{ display:flex; gap:8px; }
+.btn-round{
+  display:grid; place-items:center; width:32px; height:32px; border-radius:999px;
+  background:#239FAB; color:#fff; box-shadow:0 6px 14px rgba(0,0,0,.12);
+}
+
+/* Lista de movimentos */
+.centro-card__body{ padding:8px 12px 12px; }
+.mov{ display:flex; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px dashed #edf1f5; }
+.mov:last-child{ border-bottom:none; }
+.mov__title{ font-weight:600; }
+.mov__meta{ color:#78909c; font-size:.92rem; }
+.mov__ops{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+.status{ font-size:.78rem; color:#8a98a1; }
+.status--ok{ color:#18b26e; }
+.status--no{ color:#d33a2c; }
+.mov--empty{ color:#8b9aa5; }
+
+/* Meses anteriores */
+.anteriores-grid{ display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); }
+.mes-ant{ background:#fff; border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,.10); }
+.mes-ant__head{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #eef2f6; background:#f9fbfd; }
+.mes-ant__centros{ list-style:none; padding:10px 12px 12px; margin:0; display:grid; gap:8px; }
+.mes-ant__centros li .mini{ color:#8aa0ad; font-size:.9rem; }
+
+/* Responsivo */
+@media (max-width: 720px){
+  .viagens-hero{ flex-direction:column; align-items:flex-start; }
+  .viagens-hero__kpis{ width:100%; display:grid; grid-template-columns:1fr; }
+}
+
+
+
+/* ===== filtro de mês/ano (abaixo da capa) ===== */
+.viagens-filter{
+  margin: 10px 0 6px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.viagens-filter label{ font-size:.92rem; color:#4a6473; }
+.viagens-filter select{
+  appearance:none;
+  padding:10px 14px; border:1px solid #dfe6ee; border-radius:12px; background:#fff;
+}
+.viagens-filter .btn-grad{ padding:10px 16px; }
+
+/* KPI pendente com cor de alerta suave */
+.kpi--pendente .kpi__value{ color:#E57A34; }  /* laranja do protótipo */
+  
+
+.mov--btn{ width:100%; text-align:left; background:transparent; border:0; padding:0; cursor:pointer; }
+.modal-root{ position:fixed; inset:0; z-index:1000; }
+.modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
+.modal{ position:absolute; inset:10% 50% auto 50%; transform:translate(-50%,0); width:min(720px, 92vw);
+        background:#fff; border-radius:18px; box-shadow:0 30px 80px rgba(0,0,0,.35); }
+.modal__header{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid #eef2f6; }
+.modal__close{ border:0; background:transparent; font-size:22px; cursor:pointer; }
+.modal__content{ padding:14px 16px; }
+.modal__footer{ display:flex; justify-content:flex-end; gap:10px; padding:12px 16px; border-top:1px solid #eef2f6; }
+.kv{ display:grid; grid-template-columns: 180px 1fr; gap:8px 14px; }
+.kv dt{ color:#5c7480; }
+.btn{ background:#239FAB; color:#fff; border:none; padding:10px 16px; border-radius:10px; }
+.btn-outline{ border:1px solid #239FAB; color:#239FAB; padding:10px 16px; border-radius:10px; background:#fff; }
+@media (max-width:640px){
+  .kv{ grid-template-columns: 1fr; }
+  .modal{ inset:6% 4%; transform:none; width:auto; }
+}
+
+
+/* Reset visual do botão da linha */
+.mov--btn{
+  display:flex; align-items:center; gap:10px; width:100%;
+  background:transparent; border:0; padding:8px 6px; cursor:pointer;
+  text-align:left;
+}
+.mov--btn:hover{ background: #f7fbfd; border-radius:10px; }
+
+/* Container do modal */
+.modal-root{ position:fixed; inset:0; z-index:1000; }
+.modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
+.modal{
+  position:absolute; top:10%; left:50%; transform:translateX(-50%);
+  width:min(720px, 92vw); background:#fff; border-radius:18px;
+  box-shadow:0 30px 80px rgba(0,0,0,.35);
+}
+.modal__header{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid #eef2f6; }
+.modal__close{ border:0; background:transparent; font-size:22px; cursor:pointer; }
+.modal__content{ padding:14px 16px; }
+.modal__footer{ display:flex; justify-content:flex-end; gap:10px; padding:12px 16px; border-top:1px solid #eef2f6; }
+.kv{ display:grid; grid-template-columns: 180px 1fr; gap:8px 14px; }
+.kv dt{ color:#5c7480; }
+.btn{ background:#239FAB; color:#fff; border:none; padding:10px 16px; border-radius:10px; }
+.btn-outline{ border:1px solid #239FAB; color:#239FAB; padding:10px 16px; border-radius:10px; background:#fff; }
+
+/* Filtro compacto */
+.viagens-filter{
+  margin: 10px 0 6px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.viagens-filter select{
+  appearance:none; padding:10px 14px; border:1px solid #dfe6ee; border-radius:12px; background:#fff;
+}
+
+/* Cores dos KPIs (novo pendente em laranja) */
+.kpi--pendente .kpi__value{ color:#E57A34; }
+
+
+.mov--btn{
+  display:flex; align-items:center; gap:10px; width:100%;
+  background:transparent; border:0; padding:8px 6px; cursor:pointer; text-align:left;
+}
+.mov--btn:hover{ background:#f7fbfd; border-radius:10px; }
+
+
+/* ====== VIAGENS — GRID/CARDS ====== */
+.viagens-hero{
+  margin-top:10px;
+  background: linear-gradient(90deg,#945f34 0%, #239FAB 100%);
+  border-radius:24px; overflow:hidden; color:#fff;
+  padding: 22px 24px; display:flex; align-items:center; justify-content:space-between; gap:20px;
+  box-shadow:0 18px 38px rgba(0,0,0,.16);
+}
+.viagens-hero__title{ display:flex; align-items:center; gap:16px; }
+.viagens-hero__title .ico{ width:64px; height:64px; display:grid; place-items:center; }
+.viagens-hero__title .txt h2{ margin:0; font-size:2rem; line-height:1; }
+.viagens-hero__title .txt p{ margin:2px 0 0 0; opacity:.9; }
+.viagens-hero__kpis{ display:flex; gap:24px; }
+.kpi{ background:#fff; color:#239FAB; border-radius:16px; padding:12px 18px; min-width:220px; text-align:center; }
+.kpi__value{ font-size:1.6rem; font-weight:800; color:#14a05a; }
+.kpi__label{ font-size:.85rem; color:#5e7a87; }
+.kpi--pendente .kpi__value{ color:#E57A34; }
+
+.viagens-section-title{ margin:24px 0 10px; text-transform:uppercase; letter-spacing:1px; color:#2a5060; }
+
+.viagens-filter{
+  margin: 10px 0 6px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.viagens-filter select{
+  appearance:none; padding:10px 14px; border:1px solid #dfe6ee; border-radius:12px; background:#fff;
+}
+
+/* GRID dos centros (cards iguais, quebrando) */
+.centros-grid{
+  display:grid; gap:16px;
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+}
+
+/* Card de centro */
+.centro-card{
+  background:#fff; border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,.10); overflow:hidden;
+}
+.centro-card__head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-bottom:1px solid #eef2f6; background:#f9fbfd;
+}
+.centro-card__name{ font-weight:800; color:#526876; letter-spacing:.3px; }
+.centro-card__actions{ display:flex; gap:8px; }
+.btn-round{
+  display:grid; place-items:center; width:32px; height:32px; border-radius:999px;
+  background:#239FAB; color:#fff; box-shadow:0 6px 14px rgba(0,0,0,.12);
+}
+
+/* Linhas de movimento (despesas) */
+.centro-card__body{ padding:8px 12px 12px; }
+.mov{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 6px; border-bottom:1px dashed #edf1f5;
+}
+.mov:last-child{ border-bottom:none; }
+.mov__title{ font-weight:600; }
+.mov__meta{ color:#78909c; font-size:.92rem; }
+.mov__ops{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+.status{ font-size:.78rem; color:#8a98a1; }
+.status--ok{ color:#18b26e; }
+.status--no{ color:#d33a2c; }
+.mov--empty{ color:#8b9aa5; }
+
+/* Quando a linha é "botão" (para abrir modal) */
+.mov--btn{
+  width:100%; background:transparent; border:0; padding:0; cursor:pointer; text-align:left;
+}
+.mov--btn:hover{ background:#f7fbfd; border-radius:10px; }
+
+/* Meses anteriores */
+.anteriores-grid{ display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); }
+.mes-ant{ background:#fff; border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,.10); }
+.mes-ant__head{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #eef2f6; background:#f9fbfd; }
+.mes-ant__centros{ list-style:none; padding:10px 12px 12px; margin:0; display:grid; gap:8px; }
+
+/* ====== MODAL ====== */
+.modal-root{ position:fixed; inset:0; z-index:1000; }
+.modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
+.modal{
+  position:absolute; top:10%; left:50%; transform:translateX(-50%);
+  width:min(720px, 92vw); background:#fff; border-radius:18px;
+  box-shadow:0 30px 80px rgba(0,0,0,.35);
+  z-index: 99999999 Impo !important;
+  height: fit-content;
+  margin-top: -40px;
+}
+.modal__header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 16px; border-bottom:1px solid #eef2f6;
+}
+.modal__close{ border:0; background:transparent; font-size:22px; cursor:pointer; }
+.modal__content{ padding:14px 16px; }
+.modal__footer{
+  display:flex; justify-content:flex-end; gap:10px;
+  padding:12px 16px; border-top:1px solid #eef2f6;
+}
+.kv{ display:grid; grid-template-columns: 180px 1fr; gap:8px 14px; }
+.kv dt{ color:#5c7480; }
+.btn{ background:#239FAB; color:#fff; border:none; padding:10px 16px; border-radius:10px; }
+.btn-outline{ border:1px solid #239FAB; color:#239FAB; padding:10px 16px; border-radius:10px; background:#fff; }
+@media (max-width:640px){
+  .kv{ grid-template-columns: 1fr; }
+  .modal{ top:6%; left:4%; right:4%; transform:none; width:auto; }
+}
+
+
+
+/* ===== RESPONSIVO – VIAGENS ===== */
+
+/* KPIs em grid que quebra sozinho */
+.viagens-hero__kpis{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.kpi{ min-width: 0; } /* deixa o card encolher */
+
+/* Hero com layout mais compacto no mobile */
+@media (max-width: 1024px){
+  .viagens-hero{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 18px;
+  }
+  .viagens-hero__title{
+    gap: 2px;
+  }
+  .viagens-hero__title .ico{ width:52px; height:52px; }
+  .viagens-hero__title .txt h2{ font-size:1.6rem; }
+}
+
+/* Telefones: KPIs 1 por linha, menos padding */
+@media (max-width: 720px){
+  .viagens-hero{ padding: 14px; border-radius: 18px; }
+  .viagens-hero__kpis{ grid-template-columns: 1fr; gap: 12px; }
+  .kpi{ padding: 10px 14px; }
+  .kpi__value{ font-size: 1.4rem; }
+}
+
+/* Grid de centros e "anteriores" mais flexível */
+.centros-grid{
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.anteriores-grid{
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* Telefones: cards em 1 coluna full */
+@media (max-width: 560px){
+  .centros-grid,
+  .anteriores-grid{
+    grid-template-columns: 1fr;
+  }
+  .centro-card__head{ padding: 8px 10px; }
+  .centro-card__body{ padding: 6px 10px 10px; }
+  .btn-round{ width: 30px; height: 30px; }
+}
+
+/* Linha da despesa clicável com hit-area confortável */
+.mov{ padding: 10px 6px; }
+.mov__title{ font-size: .98rem; }
+.mov__meta{ font-size: .88rem; }
+
+/* Filtro alinhado e quebrando bem */
+.viagens-filter{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+}
+@media (max-width: 560px){
+  .viagens-filter{ gap:8px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;}
+  .viagens-filter select{ padding:8px 10px; border-radius:10px; }
+  .btn-grad{ padding:8px 12px; border-radius:10px; }
+}
+
+/* Modal 100% utilizável no mobile */
+@media (max-width: 640px){
+  .modal{
+    top: 6%;
+    left: 4%;
+    right: 4%;
+    transform: none;
+    width: auto;
+  }
+  .kv{ grid-template-columns: 1fr; }
+}
+
+
+@media (min-width: 1025px){
+  .viagens-hero__kpis{ display:flex; gap:24px; }
+  .kpi{
+    min-width: 255px !important;
+  }
+}
+
+
+.form-grid p{ margin:0 0 12px; }
+.form-grid label{ display:block; font-weight:600; color:#4c6470; margin-bottom:6px; }
+.form-grid input[type="text"],
+.form-grid input[type="number"],
+.form-grid input[type="date"],
+.form-grid input[type="file"],
+.form-grid select,
+.form-grid textarea{
+  width:100%; padding:10px 12px; border:1px solid #dfe6ee; border-radius:10px; background:#fff;
+}
+
+
+.form-page{
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  background: white;
+  max-width: 100%;
+  border-radius: 30px;
+  padding: 30px;
+}
+.form-page input{
+  border-radius: 20px;
+  border: 1px solid gray;
+  padding: 10px;
+}
+
+.form-page div{
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+
+}
+
+
+@media (max-width: 650px){
+
+  .modal__body{
+      height: fit-content;
+      max-height: 90vh;
+      overflow: scroll;
+      padding: 20px;
+  }
+
+}
+
+
+/* Modal shell já usado no projeto; reforço aqui para consistência */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.35); backdrop-filter: blur(1px);
+}
+.modal{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:min(800px, 92vw); max-height:90vh; overflow:auto;
+  background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.25);
+}
+.modal__head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid #eee; font-weight:700;
+}
+.modal__content{ padding: 16px 20px; }
+.modal__footer{
+  display:flex; gap:12px; justify-content:flex-end;
+  padding: 12px 20px 20px; border-top:1px solid #eee;
+}
+.details{ display:grid; grid-template-columns: 180px 1fr; gap:6px 12px; margin: 0 0 12px 0; }
+.details dt{ color:#777; }
+.details dd{ margin:0; }
+p>label{display:block; font-weight:600; margin-bottom:6px;}
+p>input[type="file"], p>select, p>textarea, p>input[type="text"]{ width:100%; }
+.close{ background:transparent; border:0; font-size:20px; line-height:1; cursor:pointer; }
