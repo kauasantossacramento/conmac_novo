@@ -77,6 +77,22 @@
   </article>
 </section>
 
+<form method="get" class="relatorio-filtros" style="margin-bottom:1rem;display:flex;gap:1rem;flex-wrap:wrap;margin: 15px;align-items: center;justify-content: center;">
+  <input type="hidden" name="centro" value="{{ centro.id }}">
+  <input type="hidden"  name="ano" value="{{ sel_ano }}">
+  <input type="hidden" name="mes" value="{{ sel_mes }}">
+  {% if user_sel %}
+    <input type="hidden" name="user" value="{{ user_sel }}">
+  {% endif %}
+
+  <input type="text" name="q" placeholder="Buscar por título ou descrição" value="{{ q }}" style="padding:0.4rem 0.6rem; border-radius:8px; border:1px solid #ccc; min-width:200px;">
+
+  <input type="date" name="de" placeholder="De: dd/mm/aaaa" value="{{ request.GET.de }}" style="padding:0.4rem 0.6rem; border-radius:8px; border:1px solid #ccc;">
+  <input type="date" name="ate" placeholder="Até: dd/mm/aaaa" value="{{ request.GET.ate }}" style="padding:0.4rem 0.6rem; border-radius:8px; border:1px solid #ccc;">
+
+  <button type="submit" class="btn">Pesquisar</button>
+</form>
+
 <section class="table-wrap" style="margin-top:1rem">
   <table class="table">
     <thead><tr><th>Data</th><th>Colaborador</th><th>Título</th><th>Valor</th><th>Status</th></tr></thead>

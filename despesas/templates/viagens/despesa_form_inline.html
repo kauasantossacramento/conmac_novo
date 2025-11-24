@@ -89,7 +89,21 @@
 <form method="post" enctype="multipart/form-data" class="card">
   {% csrf_token %}
   {{ form.as_p }}
+  <input type="hidden" name="next" value="{{ request.GET.next|default:request.META.HTTP_REFERER }}">
   <button class="btn">salvar</button>
-  <a class="btn-outline" href="{% url 'viagens_lista' %}">cancelar</a>
+  <a class="btn-outline" id="cancelar-edicao" href="#">cancelar</a>
 </form>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const cancelarBtn = document.getElementById('cancelar-edicao');
+    if (cancelarBtn) {
+      cancelarBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        history.back();
+      });
+    }
+  });
+</script>
+
 {% endblock %}

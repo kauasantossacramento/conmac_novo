@@ -1,0 +1,70 @@
+{# templates/centros/_pendentes_summary.html #}
+{% load i18n %}
+
+{% if pendentes_analise or pendentes_pagamento %}
+  <div style="margin:.75rem 0;">
+    <div style="border-radius:24px;padding:25px;background:#FFFFFF;border:1px solid #ececec;">
+      <strong style="display:block;margin-bottom:10px;font-size:1rem;">Despesas pendentes — resumo por colaborador</strong>
+
+      <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        {# LEFT: PENDENTES DE ANÁLISE #}
+        <div style="flex:1;min-width:260px;">
+          <div style="background:#FFF9F6;border:1px solid #F6E0D0;padding:10px;border-radius:8px;">
+            <div style="font-weight:700;margin-bottom:8px;">PENDENTES DE ANÁLISE</div>
+
+            {% if pendentes_analise %}
+              {% for p in pendentes_analise %}
+                <a href="{% if qs_base %}?{{ qs_base }}&user={{ p.usuario.id }}{% else %}?user={{ p.usuario.id }}{% endif %}"
+                   style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:6px;text-decoration:none;color:inherit;background:#fff;border:1px solid #f2f2f2;margin-bottom:8px;">
+                  <div style="font-weight:600;">{{ p.usuario.get_full_name|default:p.usuario.username }}</div>
+                  <div style="text-align:right;">
+                    <div style="font-weight:700">R$ {{ p.valor_pend_analise|floatformat:2 }}</div>
+                    <div style="font-size:.78rem;opacity:.7;">{{ p.qtd_total }} item(s)</div>
+                  </div>
+                </a>
+              {% endfor %}
+            {% else %}
+              <div style="color:#666;padding:8px;font-size:.95rem;">— Nenhuma pendência de avaliação no momento</div>
+            {% endif %}
+
+            {# total abaixo da coluna #}
+            <div style="border-top:1px dashed #e6e6e6;margin-top:8px;padding-top:8px;font-weight:700;">
+              Total (avaliação): R$ {{ pendentes_analise_total|floatformat:2 }}
+            </div>
+          </div>
+        </div>
+
+        {# RIGHT: PENDENTES DE PAGAMENTO #}
+        <div style="flex:1;min-width:260px;">
+          <div style="background:#F7FBFF;border:1px solid #D9EDF7;padding:10px;border-radius:8px;">
+            <div style="font-weight:700;margin-bottom:8px;">PENDENTES DE PAGAMENTO</div>
+
+            {% if pendentes_pagamento %}
+              {% for p in pendentes_pagamento %}
+                <a href="{% if qs_base %}?{{ qs_base }}&user={{ p.usuario.id }}{% else %}?user={{ p.usuario.id }}{% endif %}"
+                   style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:6px;text-decoration:none;color:inherit;background:#fff;border:1px solid #f2f2f2;margin-bottom:8px;">
+                  <div style="font-weight:600;">{{ p.usuario.get_full_name|default:p.usuario.username }}</div>
+                  <div style="text-align:right;">
+                    <div style="font-weight:700">R$ {{ p.valor_pend_pagto|floatformat:2 }}</div>
+                    <div style="font-size:.78rem;opacity:.7;">{{ p.qtd_total }} item(s)</div>
+                  </div>
+                </a>
+              {% endfor %}
+            {% else %}
+              <div style="color:#666;padding:8px;font-size:.95rem;">— Nenhuma pendência de pagamento no momento</div>
+            {% endif %}
+
+            {# total abaixo da coluna #}
+            <div style="border-top:1px dashed #e6e6e6;margin-top:8px;padding-top:8px;font-weight:700;">
+              Total (pagamento): R$ {{ pendentes_pagamento_total|floatformat:2 }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;font-size:.85rem;color:#666;">
+        Clique em um colaborador para filtrar as despesas por usuário.
+      </div>
+    </div>
+  </div>
+{% endif %}

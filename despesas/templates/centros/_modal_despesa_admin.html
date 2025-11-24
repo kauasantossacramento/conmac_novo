@@ -143,12 +143,60 @@
   .modal{
     top: 55% !important;
   }
+
+  .modal__head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+    flex-wrap:wrap;            /* importante p/ caber em telas menores */
+  }
+  .modal__head form.js-modal-nav{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    flex-wrap:wrap;            /* evita overflow */
+  }
+  .modal__head .btn-outline{ white-space:nowrap; }
+
 </style>
 
+
+<!--
 <div class="modal__head">
   <strong>Despesa — {{ d.centro.nome|upper }}</strong>
-  <button class="btn-close" data-close-modal>×</button>
+  <div style="display:flex;gap:.5rem;align-items:center;">
+    {% if prev_url %}
+      <button class="btn-outline"
+              type="submit"
+              form="form-individual"
+              name="__go"
+              value="prev"
+              title="Salvar e ir para anterior">
+        &larr; anterior
+      </button>
+    {% endif %}
+    {% if next_url %}
+      <button class="btn-outline"
+              type="submit"
+              form="form-individual"
+              name="__go"
+              value="next"
+              title="Salvar e ir para próxima">
+        próxima &rarr;
+      </button>
+    {% endif %}
+    <button class="btn-close" data-close-modal>×</button>
+  </div>
 </div>
+
+
+{% if fora_do_filtro %}
+  <div class="msgs alert-primary mini" style="margin:.5rem 0">
+    Esta despesa não atende mais ao filtro atual; navegação desativada.
+  </div>
+{% endif %}
+
 
 <div class="modal__body-inner">
   {% if messages %}
@@ -160,6 +208,7 @@
   <dl class="dl">
     <dt>Status atual:</dt><dd>{{ d.get_status_display }}</dd>
     <dt>Título:</dt><dd>{{ d.titulo }}</dd>
+    <dt>Descrição:</dt><dd>{{ d.descricao|default:"—"|linebreaksbr }}</dd>
     <dt>Valor:</dt><dd>R$ {{ d.valor|floatformat:2 }}</dd>
     <dt>Data do Fato:</dt><dd>{{ d.data_fato|date:"d/m/Y" }}</dd>
     <dt>Colaborador:</dt><dd>{{ d.usuario.get_full_name|default:d.usuario.username }}</dd>
@@ -170,70 +219,179 @@
 
   <hr>
 
-  <label class="switch" style="display:flex;align-items:center;gap:.5rem;margin:.5rem 0 1rem;">
-    <input type="checkbox" id="js-modo-lote" {% if modo_lote %}checked{% endif %}>
-    <span>Alterar em lote?</span>
-  </label>
+<form method="post"
+      action="{{ form_action }}"
+      enctype="multipart/form-data"
+      class="js-admin-form"
+      id="form-individual"
+      {% if modo_lote %}hidden{% endif %}>
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <p>
+      {{ field.label_tag }} {{ field }}
+      {% for e in field.errors %}<div class="err">{{ e }}</div>{% endfor %}
+    </p>
+  {% endfor %}
+  <div class="modal__footer">
+    <button type="button" class="btn-outline" data-close-modal>fechar</button>
+    <button type="submit" class="btn js-submit">salvar alterações</button>
+  </div>
+</form>
 
-  {# --- Individual --- #}
-  <form method="post" enctype="multipart/form-data"
-        class="js-admin-form"
-        action="{% url 'despesa_modal_admin' d.pk %}"
-        id="form-individual"
-        {% if modo_lote %}hidden{% endif %}>
+
+{# --- Lote --- #}
+<form method="post"
+      action="{{ form_action }}"
+      enctype="multipart/form-data"
+      class="js-admin-form"
+      id="form-lote"
+      {% if not modo_lote %}hidden{% endif %}>
+  {% csrf_token %}
+  <input type="hidden" name="modo" value="lote">
+
+  {{ form_lote.non_field_errors }}
+
+  <p>{{ form_lote.status.label_tag }} {{ form_lote.status }}</p>
+
+  <p>
+    {{ form_lote.comprovante_pagamento.label_tag }}
+    {{ form_lote.comprovante_pagamento }}
+  </p>
+
+  <p>
+    {{ form_lote.pago_em.label_tag }}
+    {{ form_lote.pago_em }}
+    {% for e in form_lote.pago_em.errors %}<div class="err">{{ e }}</div>{% endfor %}
+  </p>
+
+  {{ form_lote.centro }} {{ form_lote.periodo_ref }}
+
+  <div class="lote-list" style="max-height:220px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin:8px 0;">
+    <label class="mini" style="display:block;margin-bottom:6px;">
+      <input type="checkbox" id="js-select-all"> SELECIONAR TODOS
+    </label>
+    {{ form_lote.despesas }}
+    {% for e in form_lote.despesas.errors %}<div class="err">{{ e }}</div>{% endfor %}
+  </div>
+
+  <div class="modal__footer">
+    <button type="button" class="btn-outline" data-close-modal>fechar</button>
+    <button type="submit" class="btn js-submit">aplicar em lote</button>
+  </div>
+</form>
+
+</div>
+
+-->
+
+<div class="modal__head" data-modal-partial="despesa">
+  <strong>Despesa — {{ d.centro.nome|upper }}</strong>
+
+  <form class="js-modal-nav" method="post" action="{{ nav_action }}">
     {% csrf_token %}
-    {{ form.non_field_errors }}
-    {% for field in form %}
-      <p>
-        {{ field.label_tag }} {{ field }}
-        {% for e in field.errors %}<div class="err">{{ e }}</div>{% endfor %}
-      </p>
-    {% endfor %}
-    <div class="modal__footer">
-      <button type="button" class="btn-outline" data-close-modal>fechar</button>
-      <button type="submit" class="btn js-submit">salvar alterações</button>
+    <input type="hidden" name="centro" value="{{ request.GET.centro|default_if_none:'' }}">
+    <input type="hidden" name="user"   value="{{ request.GET.user|default_if_none:'' }}">
+    <input type="hidden" name="ano"    value="{{ request.GET.ano|default_if_none:'' }}">
+    <input type="hidden" name="mes"    value="{{ request.GET.mes|default_if_none:'' }}">
+    <input type="hidden" name="st"     value="{{ request.GET.st|default_if_none:'' }}">
+
+
+    <div style="display:flex; gap:.5rem; align-items:center;">
+      <button type="submit" name="nav" value="prev" class="btn-outline" {% if not has_prev %}disabled{% endif %}>← anterior</button>
+      <button type="submit" name="nav" value="next" class="btn-outline" {% if not has_next %}disabled{% endif %}>próxima →</button>
     </div>
   </form>
-  {# --- Lote --- #}
-  <form method="post" enctype="multipart/form-data"
-        class="js-admin-form"
-        action="{% url 'despesa_modal_admin' d.pk %}"
-        id="form-lote"
-        {% if not modo_lote %}hidden{% endif %}>
+</div>
 
-    {% csrf_token %}
-    <input type="hidden" name="modo" value="lote">
 
-    {{ form_lote.non_field_errors }}
 
-    <p>{{ form_lote.status.label_tag }} {{ form_lote.status }}</p>
+{% if fora_do_filtro %}
+  <div class="msgs alert-primary mini" style="margin:.5rem 0">
+    Esta despesa não atende mais ao filtro atual; navegação desativada.
+  </div>
+{% endif %}
 
-    {# Nomes CORRETOS dos campos do AdminLoteReembolsoForm #}
-    <p>
-      {{ form_lote.comprovante_pagamento.label_tag }}
-      {{ form_lote.comprovante_pagamento }}
-    </p>
-
-    <p>
-      {{ form_lote.pago_em.label_tag }}
-      {{ form_lote.pago_em }}
-      {% for e in form_lote.pago_em.errors %}<div class="err">{{ e }}</div>{% endfor %}
-    </p>
-
-    {{ form_lote.centro }} {{ form_lote.periodo_ref }}
-
-    <div class="lote-list" style="max-height:220px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin:8px 0;">
-      <label class="mini" style="display:block;margin-bottom:6px;">
-        <input type="checkbox" id="js-select-all"> SELECIONAR TODOS
-      </label>
-      {{ form_lote.despesas }}
-      {% for e in form_lote.despesas.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<div class="modal__body-inner">
+  {% if messages %}
+    <div class="msgs alert-primary" style="margin-bottom:10px">
+      {% for m in messages %}
+        <div class="msg {{ m.tags }}">{{ m }}</div>
+      {% endfor %}
     </div>
+  {% endif %}
 
-    <div class="modal__footer">
-      <button type="button" class="btn-outline" data-close-modal>fechar</button>
-      <button type="submit" class="btn js-submit">aplicar em lote</button>
-    </div>
-  </form>
+  <dl class="dl">
+    <dt>Status atual:</dt><dd>{{ d.get_status_display }}</dd>
+    <dt>Título:</dt><dd>{{ d.titulo }}</dd>
+    <dt>Descrição:</dt><dd>{{ d.descricao|default:"—"|linebreaksbr }}</dd>
+    <dt>Valor:</dt><dd>R$ {{ d.valor|floatformat:2 }}</dd>
+    <dt>Data do Fato:</dt><dd>{{ d.data_fato|date:"d/m/Y" }}</dd>
+    <dt>Colaborador:</dt><dd>{{ d.usuario.get_full_name|default:d.usuario.username }}</dd>
+    <dt>Data de Pagamento:</dt><dd>{{ d.pago_em|date:"d/m/Y"|default_if_none:"—" }}</dd>
+    <dt>Comprovante da Despesa:</dt>
+    <dd>
+      {% if d.comprovante %}
+        <a href="{{ d.comprovante.url }}" target="_blank">abrir</a>
+      {% else %}
+        —
+      {% endif %}
+    </dd>
+  </dl>
 
+  <hr>
+
+
+    <form method="post"
+          enctype="multipart/form-data"
+          class="js-admin-form"
+          action="{{ form_action }}"
+          id="form-individual"
+          {% if modo_lote %}hidden{% endif %}>
+
+      {% csrf_token %}
+      {# Filtros preservados #}
+      {% for key, value in preserved.items %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+      {% endfor %}
+
+      {{ form.non_field_errors }}
+
+      {# Render dos campos comuns #}
+      {% for field in form %}
+        {% if field.name != 'marcar_analisada' %}
+          <p>
+            {{ field.label_tag }} {{ field }}
+            {% for e in field.errors %}<div class="err">{{ e }}</div>{% endfor %}
+          </p>
+        {% endif %}
+      {% endfor %}
+
+      {# Mostrar o checkbox DENTRO do form, somente se status atual for PENDENTE #}
+      {% if d.status == "PENDENTE" and form.marcar_analisada %}
+        <p>
+          <label style="display:inline-flex; gap:.4rem; align-items:center;">
+            {{ form.marcar_analisada }} Marcar como analisada
+          </label>
+          {% for e in form.marcar_analisada.errors %}<div class="err">{{ e }}</div>{% endfor %}
+        </p>
+      {% endif %}
+ <!--
+      <div class="modal__footer">
+        {% if has_prev %}
+          <button class="btn-outline" type="submit" name="__go" value="prev" form="form-individual" title="Salvar e ir para anterior">
+            &larr; anterior
+          </button>
+        {% endif %}
+        {% if has_next %}
+
+          <button class="btn-outline" type="submit" name="__go" value="next" form="form-individual" title="Salvar e ir para próxima">
+            próxima &rarr;
+          </button>
+        {% endif %}
+-->
+        <button type="button" class="btn-outline" data-close-modal>fechar</button>
+        <button type="submit" class="btn js-submit">salvar alterações</button>
+      </div>
+    </form>
 </div>

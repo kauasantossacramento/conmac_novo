@@ -64,8 +64,20 @@
   text-align:right; font-weight:800; color:#2b5160; padding:6px 10px; border:1px solid #edf2f6; border-radius:10px;
 }
 
+@media (max-width: 768px) {
+  .report-center {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-center .table {
+    min-width: 600px; /* ou maior se necessário */
+    display: block;
+  }
+}
+
 /* BOTÕES de tela (não imprimem) */
-.report-actions{ display:flex; gap:10px; justify-content:flex-end; margin-bottom:10px; }
+.report-actions{ display:flex; gap:10px; justify-content:center; align-items: center; margin-bottom:10px; }
 .btn{ background:#239FAB; color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
 .btn-outline{ border:1px solid #239FAB; color:#239FAB; background:#fff; padding:10px 14px; border-radius:10px; }
 
@@ -86,7 +98,7 @@
   </div>
 
   <div class="report-actions">
-    <a class="btn-outline" href="{% url 'viagens_centros' %}">Voltar</a>
+    <!-- <a class="btn-outline" href="{% url 'viagens_centros' %}">Voltar</a> -->
     <button class="btn-outline" onclick="window.print()">Imprimir</button>
     {# <a class="btn" href="{% url 'relatorio_csv' %}?{{ request.GET.urlencode }}">Baixar CSV</a> #}
   </div>

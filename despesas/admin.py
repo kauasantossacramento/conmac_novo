@@ -25,3 +25,40 @@ class LoteReembolsoAdmin(admin.ModelAdmin):
     list_filter = ("centro", "pago_em")
     search_fields = ("periodo_ref", "centro__nome")
     filter_horizontal = ("despesas",)
+
+
+# despesas/admin.py
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth import get_user_model
+from .models import UsuarioPerfil
+
+User = get_user_model()
+
+@admin.register(UsuarioPerfil)
+class UsuarioPerfilAdmin(admin.ModelAdmin):
+    list_display = ("user", "cpf")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "cpf")
+
+class UsuarioPerfilInline(admin.StackedInline):
+    model = UsuarioPerfil
+    fk_name = "user"
+    can_delete = False
+    max_num = 1
+    extra = 0                 # <<< não apresenta formulário em branco
+    fields = ("cpf",)         # <<< mostra CPF no inline
+    verbose_name = "Usuário Perfil"
+    verbose_name_plural = "Usuário Perfil"
+
+class UserAdmin(DjangoUserAdmin):
+    inlines = [UsuarioPerfilInline]
+
+    # No add_view (sem obj) não mostra inline. No change_view mostra.
+    def get_inline_instances(self, request, obj=None):
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
+
+# Registrar o User com o inline
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)

@@ -6,69 +6,127 @@
   <title>{% block title %}CONMAC{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="{% static 'css/base.css' %}" rel="stylesheet">
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#007bff">
+
   <style>
-    .nav-history {
-      opacity: 80%;
-      margin: auto;
-      border-radius: 12px;
-      font-size: 0.95rem;
-      max-width: 480px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-      color: #434343;
-      flex-wrap: wrap;
-      text-align: center;
-      margin-bottom: -15px;
-    }
-      
-    #last-visited {
-      display: none;
-    }    
-    .home-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: #434343;
-      text-decoration: none;
-      padding: 0.4rem 0.6rem;
-      border-radius: 8px;
-      transition: background-color 0.2s ease;
-    }
-    .home-link {
-      display: inline-flex;
-      align-items: center;
-      font-size: 0.95rem;
-      text-decoration: none;
-      padding: 0.4rem 0.6rem;
-      border-radius: 8px;
-      transition: background-color 0.2s ease;
-    }
 
-    .home-link:hover {
-      background-color: #eef2ff;
-    }
+/* Base para ícones e links */
+.app-nav__link,
+.app-btmnav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  transition: all 0.3s ease;
+}
 
-    .home-link:hover {
-      background-color: #eef2ff;
-    }
+.app-nav__link .ico,
+.app-btmnav__item .ico {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 4px;
+}
 
-    .nav-history button {
-      background: none;
-      border: none;
-      color: #434343;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 1rem;
+/* Navegação desktop flutuante em linha */
+.app-nav {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 0.75rem 1rem;
+}
+
+.app-nav__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-nav__links {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* Botão voltar no estilo dos links */
+.app-nav__back {
+  all: unset;
+  cursor: pointer;
+}
+
+/* Navegação mobile elegante — permanece inalterada */
+.app-btmnav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-nav {
+    display: none;
+  }
+
+  .app-btmnav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-top: 1px solid #ddd;
+    z-index: 1000;
+    padding: 0.5rem 0;
+    justify-content: space-around;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 1rem 1rem 0 0;
+    height: 76px;
+  }
+
+  .app-btmnav__item {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    margin: 0 0.25rem;
+    background: #f9f9f9;
+    transition: background 0.3s ease;
+    font-size: 11px;
+    border: 0;
+  }
+
+  .app-btmnav__item:hover,
+  .app-btmnav__item.is-active {
+    background: #e0e0e0;
+  }
+
+  .app-btmnav__item .ico {
+    margin-bottom: 4px;
+  }
+}
+
+@media print {
+    .app-btmnav {
+      display: none !important;
     }
+}
+
+
   </style>
 
 </head>
 
 <body>
+
   <header class="topbar">
     <nav class="user">
       {% if request.user.is_authenticated %}
@@ -85,36 +143,112 @@
   </a>
 </div>
 
-
+<div id="pwa-alert" style="position:fixed;bottom:20px;left:50%;transform: translateX(-50%) translateY(-100px); background:#007bff;color:#fff;padding:15px 20px;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.2);z-index:999;display:none;">
+  <span>Instale o web app da CONMAC para uma experiência melhor!</span>
+  <div style='display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 6px;'>
+      <button id="install-btn" style="margin-left:10px;background:#fff;color:#007bff;border:none;padding:5px 7px;border-radius:5px;">Instalar</button>
+      <button onclick="dismissPWA()" style="margin-left:5px;background:#fff;color:#007bff;border:none;padding:5px 7px;border-radius:5px;">Fechar</button>
+  </div>
+</div>
 
 {% endif %}
 
-  {% if request.path != '/' %}
-    <div id="nav-history" class="nav-history" style="display:none;">
-      <button id="go-back" title="Voltar para a página anterior">← voltar</button>
-
-      <a href="/" title="Ir para a tela inicial" class="home-link">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="20" height="20" fill="#434343" style="vertical-align: middle;">
-          <path d="..."/>
-        </svg>
-        <span style="margin-left: 0.4rem;"> 🏠 início</span>
-      </a>
-
-      <span id="last-visited" style="font-size: 0.9rem;"></span>
-    </div>
-  {% endif %}
 
   <main class="container ">
     {% if messages %}
       <div class="msgs alert-primary">
         {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
       </div>
-    {% endif %} 
+    {% endif %}
+
+{% if request.user.is_authenticated %}
+
+<!-- Navegação para computador -->
+<nav class="app-nav" role="navigation" aria-label="Navegação principal">
+  <div class="app-nav__inner">
+    <ul class="app-nav__links">
+
+      <li>
+        <button type="button" class="app-nav__link" id="js-back-btn" aria-label="Voltar">
+          <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+            <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Voltar</span>
+        </button>
+      </li>
+
+      <li>
+        <a href="{% url 'home' %}" class="app-nav__link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" aria-label="Início">
+          <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+            <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Início</span>
+        </a>
+      </li>
+
+      {% if request.user.is_staff %}
+        <li>
+          <a href="https://conmac.pythonanywhere.com/centros/" class="app-nav__link">
+            <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+              <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Meus Centros</span>
+          </a>
+        </li>
+      {% else %}
+        <li>
+          <a href="{% url 'viagens_centros' %}" class="app-nav__link {% if request.resolver_match.url_name == 'viagens_centros' %}is-active{% endif %}">
+            <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+              <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Meus Centros</span>
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+
+<!-- Navegação para celular -->
+<nav class="app-btmnav" role="navigation" aria-label="Navegação móvel">
+  <button type="button" class="app-btmnav__item" id="js-back-btn-mobile" aria-label="Voltar">
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+      <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Voltar</span>
+  </button>
+
+  <a href="{% url 'home' %}" class="app-btmnav__item {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" aria-label="Início">
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+      <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Início</span>
+  </a>
+
+  <a href="{% if request.user.is_staff %}https://conmac.pythonanywhere.com/centros/{% else %}{% url 'viagens_centros' %}{% endif %}"
+     class="app-btmnav__item {% if request.resolver_match.url_name == 'viagens_centros' %}is-active{% endif %}"
+     aria-label="Meus Centros">
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+      <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Meus Centros</span>
+  </a>
+</nav>
+
+{% endif %}
+
 
 
     {% block content %}{% endblock %}
   </main>
-  <p style="text-align: center;margin-top: 50px;font-size: 16px;padding: 25px;"> Equipe de Desenvolvimento da CONMAC - 2025</p>
+
+    {% if request.user.is_authenticated %}
+      <p style="text-align: center;margin-top: 50px;font-size: 16px;padding: 25px;margin-bottom: 70px;"> Equipe de Desenvolvimento da CONMAC - 2025</p>
+    {% endif %}
+
   <img class="conmac-watermark" src="{% static 'img/watermark_conmac.png' %}" alt="" aria-hidden="true">
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -253,44 +387,162 @@
       });
     })();
   </script>
+  <script>
+  (function(){
+    function goBack(fallbackUrl){
+      if (window.history.length > 1) { window.history.back(); }
+      else { window.location.href = fallbackUrl; }
+    }
+    const btnDesktop = document.getElementById('js-back-btn');
+    const btnMobile  = document.getElementById('js-back-btn-mobile');
+    const fallback   = "{% url 'viagens_lista' %}";
+
+    if (btnDesktop) btnDesktop.addEventListener('click', ()=>goBack(fallback));
+    if (btnMobile)  btnMobile.addEventListener('click',  ()=>goBack(fallback));
+  })();
+  </script>
 
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const lastVisitedKey = 'lastVisitedPage';
-    const currentPage = window.location.href;
-    const nav = document.getElementById('nav-history');
-    const backBtn = document.getElementById('go-back');
-    const display = document.getElementById('last-visited');
+      (function(){
+        function goBack(fallbackUrl){
+          if (history.length > 1) { history.back(); }
+          else { location.href = fallbackUrl; }
+        }
+        const btnDesktop = document.getElementById('js-back-btn');
+        const btnMobile  = document.getElementById('js-back-btn-mobile');
+        const fallback   = "{% url 'viagens_lista' %}";
+        if (btnDesktop) btnDesktop.addEventListener('click', ()=>goBack(fallback));
+        if (btnMobile)  btnMobile.addEventListener('click',  ()=>goBack(fallback));
+      })();
+  </script>
 
-    // Verifica se os elementos existem
-    if (!nav || !backBtn || !display) return;
-
-    // Salva a página atual ao sair, exceto se for a tela inicial
-    window.addEventListener('beforeunload', () => {
-      if (window.location.pathname !== '/') {
-        localStorage.setItem(lastVisitedKey, currentPage);
+  <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/serviceworker.js');
       }
-    });
+  </script>
 
-    // Recupera a última página
-    const lastVisited = localStorage.getItem(lastVisitedKey);
+<script>
+  let deferredPrompt = null;
 
-    // Só exibe se houver página anterior diferente da atual
-    if (lastVisited && lastVisited !== currentPage) {
-      nav.style.display = 'flex';
-      try {
-        const url = new URL(lastVisited);
-        display.innerHTML = `Última página: <em>${url.pathname}</em>`;
-      } catch {
-        display.innerHTML = `Última página: <em>${lastVisited}</em>`;
-      }
+  // Detectar se o app está em modo standalone (instalado)
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
 
-      backBtn.addEventListener('click', () => {
-        window.location.href = lastVisited;
-      });
+  // Fechar ALERTA azul (flutuante)
+  function dismissPWA() {
+    const el = document.getElementById('pwa-alert');
+    if (el) el.style.display = 'none';
+    localStorage.setItem('pwaDismissed', 'true');
+  }
+
+  // Fechar lembrete fixo
+  function dismissPWAReminderStatic() {
+    const el = document.getElementById('pwa-reminder-static');
+    if (el) el.style.display = 'none';
+    localStorage.setItem('pwaReminderStaticDismissed', 'true');
+  }
+
+  // Evento principal do PWA
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    const dismissedAlert   = localStorage.getItem('pwaDismissed') === 'true';
+    const dismissedStatic  = localStorage.getItem('pwaReminderStaticDismissed') === 'true';
+    const isInstalled      = isStandalone();
+
+    // Mostrar ALERTA azul (se permitido)
+    if (!isInstalled && !dismissedAlert) {
+      const alertBox = document.getElementById('pwa-alert');
+      if (alertBox) alertBox.style.display = 'block';
+    }
+
+    // Mostrar lembrete ESTÁTICO (fixo) onde você colocou no layout
+    if (!isInstalled && !dismissedStatic) {
+      const reminder = document.getElementById('pwa-reminder-static');
+      if (reminder) reminder.style.display = 'block';
+    }
+
+    // Botão instalar do alerta azul
+    const alertInstallButton = document.getElementById('install-btn');
+    if (alertInstallButton) {
+      alertInstallButton.onclick = function() {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choice) => {
+          if (choice.outcome === 'accepted') console.log("PWA instalado!");
+          else console.log("Instalação recusada");
+          dismissPWA();
+          deferredPrompt = null;
+        });
+      };
+    }
+
+    // Botão instalar do lembrete estático
+    const staticInstallButton = document.getElementById('pwa-reminder-static-install');
+    if (staticInstallButton) {
+      staticInstallButton.onclick = function() {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choice) => {
+          if (choice.outcome === 'accepted') console.log("PWA instalado via lembrete fixo!");
+          dismissPWAReminderStatic();
+          deferredPrompt = null;
+        });
+      };
     }
   });
-  </script>
+
+  // Botão fechar do alerta azul
+  const alertCloseButton = document.querySelector('#pwa-alert button[onclick]');
+  if (alertCloseButton) {
+    alertCloseButton.onclick = dismissPWA;
+  }
+
+  // Botão fechar do lembrete fixo
+  document.addEventListener("DOMContentLoaded", () => {
+    const closeStatic = document.getElementById('pwa-reminder-static-close');
+    if (closeStatic) closeStatic.onclick = dismissPWAReminderStatic;
+
+    // Ocultar tudo se já estiver instalado ou já dispensado
+    if (isStandalone()) {
+      const alertBox = document.getElementById('pwa-alert');
+      const reminder = document.getElementById('pwa-reminder-static');
+      if (alertBox) alertBox.style.display = 'none';
+      if (reminder) reminder.style.display = 'none';
+    }
+
+    if (localStorage.getItem('pwaDismissed') === 'true') {
+      const alertBox = document.getElementById('pwa-alert');
+      if (alertBox) alertBox.style.display = 'none';
+    }
+
+    if (localStorage.getItem('pwaReminderStaticDismissed') === 'true') {
+      const reminder = document.getElementById('pwa-reminder-static');
+      if (reminder) reminder.style.display = 'none';
+    }
+  });
+</script>
+
+
+
+<script>
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  window.onload = function() {
+    if (isStandalone()) {
+      const backBtn = document.getElementById('js-back-btn');
+      if (backBtn) {
+        backBtn.style.display = 'none';
+      }
+    }
+  };
+</script>
+
+
   {% block scripts %}{% endblock %}
 </body>
 </html>

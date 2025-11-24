@@ -33,6 +33,55 @@
       width: 100%;
     }
   }
+
+
+    /* Paginação dentro de cada centro-card */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 8px;
+      border-top: 1px solid #eaeef2;
+      font-size: 14px;
+      color: #4a5a67;
+    }
+
+    .pagination a.btn-outline {
+      padding: 6px 12px;
+      border: 1px solid #cdd7e1;
+      border-radius: 6px;
+      background: #f9fbfc;
+      color: #2f6775;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background 0.2s ease;
+    }
+
+    .pagination a.btn-outline:hover {
+      background: #e6f0f5;
+    }
+
+    .page-label {
+      font-weight: 600;
+      color: #3c5663;
+    }
+
+
+  .dup-alert {
+        position: fixed; right: 16px; left: 16px; bottom: 16px; z-index: 9999;
+        background: #fff8e1; border: 1px solid #f59e0b; color: #92400e;
+        max-width: 420px; padding: 12px 14px; border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.12);
+        font-size: 14px; line-height: 1.35;
+   }
+
+  .dup-alert h4 { margin: 0 0 6px; font-size: 15px; color: #78350f; }
+  .dup-alert .dup-group { background:#fff; border:1px dashed #f59e0b; border-radius:8px; padding:8px; margin-top:8px; }
+  .dup-alert .dup-items a { display:block; text-decoration:none; padding:4px 0; }
+  .dup-alert .dup-close { background:none; border:none; color:#92400e; cursor:pointer; margin-left:8px; }
+
 </style>
 
 <section class="viagens-hero">
@@ -64,9 +113,16 @@
 </section>
 
 <form class="viagens-filter" method="get">
-  {% if centro_sel %}
-    <input type="hidden" name="centro" value="{{ centro_sel.id }}">
-  {% endif %}
+  <label for="centro">Município / Cliente:</label>
+  <select id="centro" name="centro">
+    <option value="">TODOS</option>
+    {% for c in centros_vinculados %}
+      <option value="{{ c.id }}" {% if centro_sel and centro_sel.id == c.id %}selected{% endif %}>
+        {{ c.nome }}
+      </option>
+    {% endfor %}
+  </select>
+  <br>
   <label for="mes">Mês:</label>
   <select id="mes" name="mes">
     {% for m, label in meses_numeros %}
@@ -84,60 +140,147 @@
   </select>
 
   <button type="submit" class="btn-grad">filtrar</button>
+
   {% if centro_sel %}
-    <a class="btn-outline" href="{% url 'viagens_centros' %}?ano={{ sel_ano }}&mes={{ sel_mes }}">trocar município / cliente</a>
-    <a class="btn-outline" href="{% url 'viagens_lista' %}">visualizar todos os municípios / clientes</a>
-  {% else %}
-    <a class="btn-outline" href="{% url 'viagens_centros' %}?ano={{ sel_ano }}&mes={{ sel_mes }}">selecionar município / cliente</a>
+    <a class="btn-outline" style='opacity: 0; position: absolute;' href="{% url 'viagens_lista' %}?ano={{ sel_ano }}&mes={{ sel_mes }}">visualizar todos os municípios / clientes</a>
   {% endif %}
 </form>
 
+
+
+
 <h3 class="viagens-section-title">{{ mes_corrente_label }}</h3>
+
+
+
+{% if tem_reprovadas_recentes %}
+<div style="margin:.75rem 0;">
+  <div style="
+    padding:12px;
+    background:#FFF5F5;
+    border:1px solid #F3C2C2;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    color:#7A1F1F;
+  ">
+    <svg width="20" height="20" viewBox="0 0 24 24" style="fill:#D9534F;">
+      <path d="M1 21h22L12 2 1 21zm12-3h-2v2h2v-2zm0-8h-2v6h2v-6z"/>
+    </svg>
+    <div>
+      <strong>Você possui despesas REPROVADAS recentemente.</strong><br>
+      {{ reprovadas_info.quantidade }} despesa(s), total de
+      <strong>R$ {{ reprovadas_info.valor_total|floatformat:2 }}</strong>
+      <br>
+     Verifique as observações das despesas reprovadas.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if tem_aprovadas_recentes %}
+<div style="margin:.75rem 0;">
+  <div style="
+    padding:12px;
+    background:#F3FFF4;
+    border:1px solid #C8F0D6;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    color:#1B6E2B;
+  ">
+    <svg width="20" height="20" viewBox="0 0 24 24" style="fill:#28a745;">
+      <!-- ícone de check dentro de círculo -->
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 14.5l-4.5-4.5 1.4-1.4L11 13.7l5.6-5.6 1.4 1.4L11 16.5z"/>
+    </svg>
+    <div>
+      <strong>Despesas aprovadas/pagas recentemente.</strong><br>
+      {{ aprovadas_info.quantidade }} despesa(s), total de
+      <strong>R$ {{ aprovadas_info.valor_total|floatformat:2 }}</strong>
+      <br>
+      Você pode consultar o comprovante de pagamento clicando na despesa.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
 
 <section class="centros-grid">
   {% for bloco in centros_data %}
-  {% with c=bloco.centro itens=bloco.itens %}
-  <article class="centro-card">
-    <header class="centro-card__head">
+    {% with c=bloco.centro itens=bloco.itens page_obj=bloco.page_obj %}
+    <article class="centro-card">
+      <header class="centro-card__head">
         <strong class="centro-card__name">{{ c.nome }}</strong>
         <div class="centro-card__actions">
-            <a class="btn-round js-nova-despesa" title="Nova despesa"
-            href="{% url 'despesa_create' %}?centro={{ c.id }}">+</a>
-            <!-- <a class="btn-round" title="Relatório (CSV)" href="{% url 'relatorio' %}?ano={{ m.mref.ano }}&mes={{ m.mref.mes }}">⇩</a> -->
+          <a class="btn-round js-nova-despesa" title="Nova despesa"
+             href="{% url 'despesa_create' %}?centro={{ c.id }}">+</a>
         </div>
-    </header>
+      </header>
 
-
-    <div class="centro-card__body">
+      <div class="centro-card__body" style='overflow-x: auto;'>
         {% if itens %}
-            {% for d in itens %}
-            <button type="button" class="mov mov--btn" data-modal-url="{% url 'despesa_modal' d.pk %}">
-            <div class="mov__title">{{ d.titulo }}</div>
-            <div class="mov__meta">R$ {{ d.valor|floatformat:2 }} | {{ d.data_fato|date:"d/m/Y" }}</div>
-            <div class="mov__ops">
-                {% if d.status == "APROVADA" %}
-                <span class="status status--ok">aprovada</span>
-                {% elif d.status == "REPROVADA" %}
-                <span class="status status--no">reprovada</span>
-                {% else %}
-                <span class="status">pendente</span>
-                {% endif %}
-                {% if d.comprovante %}
-                <span class="ico" title="Comprovante">📎</span>
-                {% endif %}
+          {% for d in itens %}
+            <div class="mov-wrap" style="display:flex; align-items:center; gap:.5rem;">
+              <button type="button"
+                      class="mov mov--btn"
+                      data-modal-url="{% url 'despesa_modal' d.pk %}"
+                      style="flex:1;">
+                <div class="mov__title">{{ d.titulo }}</div>
+                <div class="mov__meta">R$ {{ d.valor|floatformat:2 }} | {{ d.data_fato|date:"d/m/Y" }}</div>
+                <div class="mov__ops">
+                  {% if d.status == "APROVADA" %}
+                    <span class="status status--ok">aprovada</span>
+                  {% elif d.status == "REPROVADA" %}
+                    <span class="status status--no">reprovada</span>
+                  {% else %}
+                    <span class="status">pendente</span>
+                  {% endif %}
+                  {% if d.comprovante %}
+                    <span class="ico" style='margin-right: -8px;' title="Comprovante">📎</span>
+                  {% endif %}
+                </div>
+              </button>
+
+              {% if d.status == "PENDENTE" %}
+                <form method="post"
+                      action="{% url 'despesa_delete' d.pk %}"
+                      class="js-del-form"
+                      style="margin:0;">
+                  {% csrf_token %}
+                  {# preserva o retorno com os filtros e paginações atuais #}
+                  <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
+                  <button type="submit" class="btn-outline" title="Excluir"
+                          style="white-space:nowrap; border: 0 !important; padding-left: 2px !important;">🗑️</button>
+                </form>
+              {% endif %}
             </div>
-            </button>
+          {% endfor %}
 
-            {% endfor %}
+          {% if page_obj.has_other_pages %}
+            {% with base_qs=request.GET.urlencode %}
+            <div class="pagination">
+              {% if page_obj.has_previous %}
+                <a class="btn-outline" href="?{{ base_qs }}&page_{{ c.id }}={{ page_obj.previous_page_number }}">← anterior</a>
+              {% endif %}
+              <span class="page-label">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+              {% if page_obj.has_next %}
+                <a class="btn-outline" href="?{{ base_qs }}&page_{{ c.id }}={{ page_obj.next_page_number }}">próxima →</a>
+              {% endif %}
+            </div>
+            {% endwith %}
+          {% endif %}
         {% else %}
-            <div class="mov mov--empty">Sem lançamentos para este centro neste mês.</div>
+          <div class="mov mov--empty">Sem lançamentos para este centro neste mês.</div>
         {% endif %}
-    </div>
-
-  </article>
-  {% endwith %}
+      </div>
+    </article>
+    {% endwith %}
   {% endfor %}
 </section>
+
 
 {% if meses_anteriores %}
 <h3 class="viagens-section-title">OUTROS MESES</h3>
@@ -224,6 +367,116 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Escape' && !root.hidden){ root.hidden = true; root.innerHTML = ''; }
   });
+})();
+</script>
+
+<script>
+document.addEventListener('click', (e) => {
+  const f = e.target.closest('form.js-del-form');
+  if (!f) return;
+  // Se o clique foi no botão submit do form de exclusão, confirma:
+  const btn = e.target.closest('button[type="submit"]');
+  if (!btn) return;
+  if (!confirm('Excluir esta despesa pendente?')) {
+    e.preventDefault();
+  }
+});
+</script>
+
+<script>
+(function(){
+  const endpoint = "{% url 'api_pendentes_ultimas5_duplicadas' %}";
+
+  // Usa o mesmo abridor de modal do projeto (data-modal-url)
+  function openModalLinkHandler(e) {
+    const a = e.target.closest('a[data-modal-url]');
+    if (!a) return;
+    e.preventDefault();
+    const url = a.getAttribute('data-modal-url') || a.getAttribute('href');
+    if (!url) return;
+    const root = document.getElementById('modal-root');
+    if (!root) { window.location.href = url; return; }
+    root.innerHTML =
+      '<div class="modal-backdrop" data-close-modal></div>' +
+      '<div class="modal" role="dialog" aria-modal="true"><div class="modal__body">Carregando…</div></div>';
+    root.hidden = false;
+    fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(r => r.text())
+      .then(html => { root.querySelector('.modal__body').innerHTML = html; })
+      .catch(() => { root.querySelector('.modal__body').innerHTML = '<p>Erro ao abrir modal.</p>'; });
+  }
+
+  function renderAlert(dups){
+    // evita múltiplos alerts
+    if (document.querySelector('.dup-alert')) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'dup-alert';
+    wrap.setAttribute('role','alert');
+
+    const title = document.createElement('h4');
+    title.textContent = 'Possíveis despesas duplicadas (últimas 5 pendentes)';
+    wrap.appendChild(title);
+
+    dups.forEach(group => {
+      const g = document.createElement('div');
+      g.className = 'dup-group';
+
+      const meta = document.createElement('div');
+      meta.innerHTML = `<strong>Chave:</strong> ${group.key.titulo_norm} • R$ ${group.key.valor} • ${group.key.data_fato}`;
+      g.appendChild(meta);
+
+      const list = document.createElement('div');
+      list.className = 'dup-items';
+      group.items.forEach(it => {
+        const a = document.createElement('a');
+        a.href = it.modal_url;
+        a.setAttribute('data-modal-url', it.modal_url);
+        a.textContent = `#${it.id} — ${it.titulo}`;
+        list.appendChild(a);
+      });
+      g.appendChild(list);
+
+      wrap.appendChild(g);
+    });
+
+    const footer = document.createElement('div');
+    footer.style.marginTop = '8px';
+    footer.innerHTML = '<small>Verifique e ajuste se necessário.</small>';
+    const close = document.createElement('button');
+    close.className = 'dup-close';
+    close.type = 'button';
+    close.textContent = 'fechar';
+    close.addEventListener('click', () => wrap.remove());
+    footer.appendChild(close);
+    wrap.appendChild(footer);
+
+    document.body.appendChild(wrap);
+
+    // Links do alert abrem no modal
+    wrap.addEventListener('click', openModalLinkHandler);
+  }
+
+  async function checkDuplicates(){
+    try{
+      const r = await fetch(endpoint, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data && data.count > 0) {
+        renderAlert(data.duplicates);
+      }
+    }catch(e){
+      // silencia erros aqui para não atrapalhar UX
+      console.warn('dup-check fail', e);
+    }
+  }
+
+  // dispara após carregar a página
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkDuplicates);
+  } else {
+    checkDuplicates();
+  }
 })();
 </script>
 

@@ -47,7 +47,7 @@ img { max-width:100%; display:block; }
     border-radius: 15px;
     position: absolute;
     z-index: 999;
-    
+
 }
 
 .logo_home img{
@@ -103,7 +103,7 @@ img { max-width:100%; display:block; }
 /* ====== GRID AUTO-RESPONSIVO DOS WIDGETS ====== */
 .home-cards{
   display: grid;
-  /* cada card tem largura mínima (ajuste se quiser) e ocupa 1fr; 
+  /* cada card tem largura mínima (ajuste se quiser) e ocupa 1fr;
      o grid cria 1,2,3,4... colunas conforme a tela, SEM sobras */
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
@@ -196,7 +196,7 @@ img { max-width:100%; display:block; }
   border-radius: 0px;
   overflow:hidden;
   background:#fff;
-  
+
 }
 
 /* Imagem à esquerda */
@@ -241,12 +241,12 @@ img { max-width:100%; display:block; }
   display:flex; align-items:center; gap:14px; margin-top: 10px;
 }
 .btn-grad{
-  border:none; color:#fff; padding:12px 22px; border-radius:999px; cursor:pointer;
+  border:none; color:#fff; padding:12px 22px; border-radius:900px; cursor:pointer;
   background: linear-gradient(90deg, #E57A34 0%, #239FAB 100%);
   box-shadow: 0 10px 22px rgba(0,0,0,.12);
   font-weight:700; text-transform:lowercase;
 }
-.link-muted{ color:#239FAB; border:1px solid #239FAB; padding:10px 16px; border-radius:999px; }
+.link-muted{ color:#239FAB; border:1px solid #239FAB; padding:5px 12px; border-radius:900px; }
 .link-muted:hover{ background:#e9f7fb; }
 
 /* ====== Responsivo: mobile sem imagem, painel vira card ====== */
@@ -350,7 +350,7 @@ img { max-width:100%; display:block; }
 
 /* KPI pendente com cor de alerta suave */
 .kpi--pendente .kpi__value{ color:#E57A34; }  /* laranja do protótipo */
-  
+
 
 .mov--btn{ width:100%; text-align:left; background:transparent; border:0; padding:0; cursor:pointer; }
 .modal-root{ position:fixed; inset:0; z-index:1000; }
@@ -574,6 +574,7 @@ img { max-width:100%; display:block; }
   .centros-grid,
   .anteriores-grid{
     grid-template-columns: 1fr;
+    margin-bottom: 90px;
   }
   .centro-card__head{ padding: 8px 10px; }
   .centro-card__body{ padding: 6px 10px 10px; }
@@ -592,7 +593,7 @@ img { max-width:100%; display:block; }
 @media (max-width: 560px){
   .viagens-filter{ gap:8px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;}
   .viagens-filter select{ padding:8px 10px; border-radius:10px; }
-  .btn-grad{ padding:8px 12px; border-radius:10px; }
+  .btn-grad{ padding:8px 12px; border-radius:900px; }
 }
 
 /* Modal 100% utilizável no mobile */
@@ -688,3 +689,25 @@ img { max-width:100%; display:block; }
 p>label{display:block; font-weight:600; margin-bottom:6px;}
 p>input[type="file"], p>select, p>textarea, p>input[type="text"]{ width:100%; }
 .close{ background:transparent; border:0; font-size:20px; line-height:1; cursor:pointer; }
+
+
+
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  min-width: 600px; /* garante que a tabela tenha largura mínima */
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .06);
+
+
+
+.modal { opacity: 0; transition: opacity .12s ease; }
+.modal-root:not([hidden]) .modal { opacity: 1; }

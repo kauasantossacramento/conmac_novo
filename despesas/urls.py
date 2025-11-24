@@ -1,6 +1,9 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from django.views.generic import TemplateView
+
+
 
 urlpatterns = [
     # auth
@@ -54,5 +57,16 @@ urlpatterns = [
     path("viagens/centros/", views.viagens_centros, name="viagens_centros"),
     path("despesas/<int:pk>/editar/", views.despesa_edit, name="despesa_edit"),
     path("despesas/<int:pk>/editar/", views.despesa_edit, name="despesa_editar"),
+
+    path("despesas/lote-modal/", views.despesas_lote_modal, name="despesas_lote_modal"),
+    path("centros/despesa/<int:pk>/", views.despesa_modal_admin, name="despesa_modal_admin"),
+    path("centros/despesa/<int:pk>/nav/", views.despesa_modal_nav, name="despesa_modal_nav"),
+    path("despesas/<int:pk>/excluir/", views.despesa_delete, name="despesa_delete"),
+    path("despesas/api/pendentes-ultimas5-duplicadas/", views.api_pendentes_ultimas5_duplicadas,
+         name="api_pendentes_ultimas5_duplicadas"),
+    path('manifest.json', TemplateView.as_view(template_name="manifest.json", content_type='application/json')),
+    path("centros/pendentes-summary/", views.centros_pendentes_summary, name="centros_pendentes_summary"),
+
+
 
 ]

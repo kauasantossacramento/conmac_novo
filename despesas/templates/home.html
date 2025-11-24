@@ -76,11 +76,11 @@
       <div class="home-card__icon">
         <img src="{% static 'img/ic_reembolsos.svg' %}" alt="">
       </div>
-      
+
       <div class="home-card__text">
         <h3>Reembolsos Aprovados</h3>
         <p>aqui estarão as viagens aprovadas e com valores repassados para você.</p>
-      </div> 
+      </div>
       {% if tem_aprovadas %}<span class="home-card__badge">novos</span>{% endif %}
 
     </a>
@@ -135,4 +135,27 @@
     {% endfor %}
   </ul>
 </section>
+
+<div id="pwa-reminder-static"
+     style="display:none; border:1px solid #ddd; background:#fff; padding:12px 16px;
+            border-radius:24px; margin:20px 0; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+
+    <div style="font-weight:600; margin-bottom:6px; font-size:0.95rem;">
+        Instale o app para facilitar o acesso diário!
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+        <button id="pwa-reminder-static-install"
+                style="padding:6px 12px; background:#007bff; color:white;
+                       border:none; border-radius:6px; cursor:pointer;">
+            Instalar
+        </button>
+
+    </div>
+</div>
+
+
+
+
+
 {% endblock %}

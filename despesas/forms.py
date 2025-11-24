@@ -60,8 +60,12 @@ class AdminReembolsoForm(forms.ModelForm):
         self.fields["comprovante_pagamento"].widget.attrs.update({"accept": ".pdf,image/*"})
 
 '''
+#este é um form que é usado para alterar status de despesa
 
+# despesas/forms.py
 class AdminReembolsoForm(forms.ModelForm):
+    marcar_analisada = forms.BooleanField(required=False, label="Marcar como analisada")  # NOVO
+
     class Meta:
         model = Despesa
         fields = ["status", "comprovante_pagamento", "pago_em", "observacao_admin"]
@@ -75,13 +79,35 @@ class AdminReembolsoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # (opcional) reforça o label via código, caso prefira:
         self.fields["observacao_admin"].label = "Observação"
-        # (opcional) aceita dd/mm/yyyy também
         self.fields["pago_em"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
-        # (opcional) aceitação de tipos no upload
         if "comprovante_pagamento" in self.fields:
             self.fields["comprovante_pagamento"].widget.attrs.update({"accept": ".pdf,image/*"})
+        # pré-marca se já foi avaliada
+        self.fields["marcar_analisada"].initial = bool(self.instance and self.instance.foi_avaliada)
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+
+        # Se o admin marcou como analisada, garante flags/ts
+        if self.cleaned_data.get("marcar_analisada"):
+            if not obj.foi_avaliada:
+                obj.foi_avaliada = True
+            if not obj.primeira_analise_em:
+                obj.primeira_analise_em = timezone.now()
+
+        # OBS: você pode usar o status "PENDENTE_PAGTO" como etapa intermediária do fluxo:
+        # - Ex.: ao analisar mas ainda não pagar: setar status = PENDENTE_PAGTO
+        # Isso fica a seu critério de UX; mantive a decisão por quem usa o form (via select).
+
+        if self.cleaned_data.get("marcar_analisada") and obj.status == Despesa.Status.PENDENTE:
+            obj.status = Despesa.Status.PENDENTE_PAGTO
+
+        if commit:
+            obj.save()
+        return obj
+
+
 
 '''
 class AdminLoteReembolsoForm(forms.Form):
@@ -172,32 +198,59 @@ class DespesaCheckboxes(forms.ModelMultipleChoiceField):
             return f"{base} · {nome}"
         return base
 
+# despesas/forms.py
+from django import forms
+from django.db import transaction
+from django.utils import timezone
+
+# ... seus imports existentes ...
 
 class AdminLoteReembolsoForm(forms.Form):
     status = forms.ChoiceField(choices=Despesa.Status.choices, label="Novo status")
     comprovante_pagamento = forms.FileField(required=False, label="Comprovante de Pagamento (lote)")
     pago_em = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    # 'despesas' será definido no __init__ usando DespesaCheckboxes
+
+    # campos “decorativos”/compat com o template
+    centro = forms.CharField(required=False, disabled=True)
+    periodo_ref = forms.CharField(required=False, disabled=True)
 
     def __init__(self, *args, **kwargs):
         centro = kwargs.pop("centro", None)
-        ano = kwargs.pop("ano", None)
-        mes = kwargs.pop("mes", None)
+        ano    = kwargs.pop("ano", None)
+        mes    = kwargs.pop("mes", None)
+        user   = kwargs.pop("user", None)       # pode ser instância
+        user_id = kwargs.pop("user_id", None)   # ...ou id
         super().__init__(*args, **kwargs)
 
-        qs = Despesa.objects.filter(centro=centro, data_fato__year=ano)
+        # resolve user se vier somente id
+        if user is None and user_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                user = None
+
+        # Base: apenas PENDENTE_DE_PAGAMENTO
+        qs = Despesa.objects.filter(
+            data_fato__year=ano,
+            status=Despesa.Status.PENDENTE_PAGTO,
+        )
         if mes:
             qs = qs.filter(data_fato__month=mes)
+        if centro:
+            qs = qs.filter(centro=centro)
+        if user:
+            qs = qs.filter(usuario=user)
 
         qs = qs.select_related("usuario").order_by("-data_fato", "-criado_em", "-id")
 
-        # Mostra o nome do usuário somente se houver mais de um distinto
         multi_usuarios = qs.values("usuario_id").distinct().count() > 1
 
         self.fields["despesas"] = DespesaCheckboxes(
             queryset=qs,
             widget=forms.CheckboxSelectMultiple(attrs={"class": "chk-lote"}),
-            label="Despesas a alterar",
+            label="Despesas a alterar (apenas PENDENTE DE PAGAMENTO)",
             show_user=multi_usuarios,
             required=True,
         )
@@ -205,46 +258,89 @@ class AdminLoteReembolsoForm(forms.Form):
         self.fields["pago_em"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
         self.fields["comprovante_pagamento"].widget.attrs.update({"accept": ".pdf,image/*"})
 
+        # Apenas pode ir para APROVADA (paga) ou REPROVADA
+        self.fields["status"].choices = [
+            (Despesa.Status.APROVADA, "Aprovada (paga)"),
+            (Despesa.Status.REPROVADA, "Reprovada"),
+        ]
+
+        # Preenche campos “decorativos” do template (sem mudar nada de lógica)
+        self.fields["centro"].initial = centro.nome if centro else ""
+        if ano and mes:
+            from datetime import date
+            try:
+                ref = date(int(ano), int(mes), 1)
+                self.fields["periodo_ref"].initial = ref.strftime("%m/%Y")
+            except Exception:
+                self.fields["periodo_ref"].initial = ""
+
     def clean_despesas(self):
         qs = self.cleaned_data.get("despesas")
         if not qs or not qs.exists():
-            raise forms.ValidationError("Selecione ao menos uma despesa para aplicar em lote.")
+            raise forms.ValidationError("Selecione ao menos uma despesa (pendente de pagamento) para aplicar em lote.")
+        # Garante que permanecem PENDENTE_PAGTO
+        if qs.exclude(status=Despesa.Status.PENDENTE_PAGTO).exists():
+            raise forms.ValidationError("A seleção contém itens que não estão mais PENDENTES DE PAGAMENTO. Atualize a página.")
         return qs
 
     @transaction.atomic
     def aplicar(self) -> int:
-        """
-        Aplica:
-          - novo 'status' (update em lote)
-          - 'pago_em' (se informado)
-          - mesmo 'comprovante_pagamento' para todas (se enviado)
-        Retorna a quantidade de despesas atualizadas.
-        """
         despesas = list(self.cleaned_data["despesas"])
-        status = self.cleaned_data["status"]
+        novo_status = self.cleaned_data["status"]
         pago_em = self.cleaned_data.get("pago_em")
         comp = self.cleaned_data.get("comprovante_pagamento")
 
         ids = [d.pk for d in despesas]
 
-        # 1) status / pago_em
-        update_kwargs = {"status": status}
-        if pago_em is not None:
-            update_kwargs["pago_em"] = pago_em
-        Despesa.objects.filter(pk__in=ids).update(**update_kwargs)
+        # Revalida no banco (evita race)
+        alvo_qs = Despesa.objects.filter(pk__in=ids, status=Despesa.Status.PENDENTE_PAGTO)
+        if alvo_qs.count() != len(ids):
+            raise forms.ValidationError("Algumas despesas não estão mais PENDENTES DE PAGAMENTO. Recarregue a lista.")
 
-        # 2) comprovante (salva 1x e usa a mesma path em todas)
-        if comp:
+        update_kwargs = {
+            "status": novo_status,
+            "foi_avaliada": True,
+        }
+
+        # Se for aprovada (paga), aceita 'pago_em'; se reprovada, ignora 'pago_em'
+        if novo_status == Despesa.Status.APROVADA and pago_em is not None:
+            update_kwargs["pago_em"] = pago_em
+        else:
+            update_kwargs["pago_em"] = None  # evita data de pagamento em reprovadas
+
+        # aplica status/pagamento
+        alvo_qs.update(**update_kwargs)
+
+        # 1ª análise (se ainda não tinha)
+        from django.utils import timezone
+        Despesa.objects.filter(pk__in=ids, primeira_analise_em__isnull=True)\
+                       .update(primeira_analise_em=timezone.now())
+
+        # Comprovante em lote: só faz sentido se APROVADA
+        if comp and novo_status == Despesa.Status.APROVADA:
+            from django.core.files.storage import default_storage
+            from uuid import uuid4
             folder = timezone.now().strftime("reembolsos/%Y/%m/")
             filename = f"lote_{uuid4().hex}_{comp.name}"
             saved_path = default_storage.save(folder + filename, comp)
-
             instancias = list(Despesa.objects.filter(pk__in=ids))
             for d in instancias:
                 d.comprovante_pagamento.name = saved_path
             Despesa.objects.bulk_update(instancias, ["comprovante_pagamento"])
+        elif novo_status == Despesa.Status.REPROVADA:
+            # limpa comprovante se por acaso tinha algo
+            instancias = list(Despesa.objects.filter(pk__in=ids))
+            any_change = False
+            for d in instancias:
+                if d.comprovante_pagamento:
+                    d.comprovante_pagamento.delete(save=False)
+                    d.comprovante_pagamento = None
+                    any_change = True
+            if any_change:
+                Despesa.objects.bulk_update(instancias, ["comprovante_pagamento"])
 
         return len(ids)
+
 
 # despesas/forms.py
 from django import forms
@@ -267,16 +363,15 @@ class BRDateInput(forms.DateInput):
         })
         super().__init__(*args, **kwargs)
 
+from django import forms
+from django.core.exceptions import ValidationError
+
 class DespesaForm(forms.ModelForm):
     """
     Formulário do COLABORADOR (criar/editar).
-    - Não mostra nem aceita campos administrativos.
-    - Usa FileInput simples para 'comprovante' (sem "Modificar/Limpar").
-    - Oferece um checkbox opcional para remover o comprovante atual.
+    Campos obrigatórios: valor, data_fato e comprovante*.
+    * comprovante é obrigatório quando a despesa ainda não possui arquivo.
     """
-    #remover_comprovante = forms.BooleanField(
-    #    required=False, label="Remover comprovante atual"
-    #)
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -291,32 +386,42 @@ class DespesaForm(forms.ModelForm):
         # aceita dd/mm/aaaa e yyyy-mm-dd
         self.fields["data_fato"].input_formats = ["%d/%m/%Y", "%Y-%m-%d"]
 
-        # nunca mostre campos administrativos (por segurança)
+        # reforça obrigatoriedade
+        self.fields["valor"].required = True
+        self.fields["data_fato"].required = True
+
+        # input simplificado de arquivo
+        self.fields["comprovante"].widget = forms.FileInput(attrs={"accept": ".pdf,image/*"})
+
+        # comprovante obrigatório se ainda não existe um salvo
+        ja_tem_comprovante = bool(self.instance and getattr(self.instance, "comprovante"))
+        self.fields["comprovante"].required = not ja_tem_comprovante
+
+        # nunca mostre/aceite campos administrativos
         for admin_field in ("pago_em", "comprovante_pagamento", "status", "observacao_admin"):
             if admin_field in self.fields:
                 self.fields.pop(admin_field)
 
-        # só mostra o checkbox de remover se já existe arquivo
-        if not (self.instance and getattr(self.instance, "comprovante")):
-            self.fields.pop("remover_comprovante", None)
-
-        # estiliza e simplifica o input de arquivo do comprovante (sem "limpar/modificar")
-        self.fields["comprovante"].widget = forms.FileInput(
-            attrs={"accept": ".pdf,image/*"}
-        )
-
     def clean(self):
         cleaned = super().clean()
-        data_fato = cleaned.get("data_fato")
 
+        # fechamento de período
+        data_fato = cleaned.get("data_fato")
         if data_fato and not inserir_permitido_para_data_fato(data_fato):
             raise ValidationError("Lançamentos para o mês selecionado estão encerrados.")
 
+        # trava edição após fechamento (exceto superuser)
         if self.instance and self.instance.pk:
             if not despesa_editavel(self.instance.criado_em) and not (self._user and self._user.is_superuser):
                 raise ValidationError("Esta despesa não pode mais ser editada após o fechamento do mês.")
 
-        # blindagem: mesmo se postarem campos admin, ignore
+        # reforça obrigatório do comprovante quando não há arquivo ainda
+        tem_arquivo_banco = bool(self.instance and getattr(self.instance, "comprovante"))
+        arquivo_novo = cleaned.get("comprovante")
+        if not tem_arquivo_banco and not arquivo_novo:
+            self.add_error("comprovante", "Envie o comprovante (obrigatório).")
+
+        # blindagem: ignora campos admin se vierem no POST
         for admin_field in ("pago_em", "comprovante_pagamento", "status", "observacao_admin"):
             cleaned.pop(admin_field, None)
 
@@ -324,13 +429,6 @@ class DespesaForm(forms.ModelForm):
 
     def save(self, commit=True):
         obj = super().save(commit=False)
-
-        # remove o arquivo atual se marcado
-        if "remover_comprovante" in self.cleaned_data and self.cleaned_data["remover_comprovante"]:
-            if obj.comprovante:
-                # exclui o arquivo do storage (sem salvar ainda)
-                obj.comprovante.delete(save=False)
-            obj.comprovante = None
 
         if commit:
             obj.save()
@@ -341,8 +439,8 @@ class DespesaForm(forms.ModelForm):
         fields = ["centro", "titulo", "data_fato", "valor", "descricao", "comprovante"]
         widgets = {
             "data_fato": BRDateInput(),
-            # 'comprovante' é substituído em __init__ por FileInput simples
         }
+
 
 
 class LoteReembolsoForm(forms.ModelForm):
