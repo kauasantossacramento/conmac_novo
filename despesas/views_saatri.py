@@ -10,6 +10,7 @@
 # ═══════════════════════════════════════════════════════════════════════
 import json
 import logging
+import traceback
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from time import sleep
@@ -24,6 +25,10 @@ from .omie_service import OmieService
 from .saatri import client as saatri_client
 from .saatri import config as saatri_config
 
+# Usa print() (não logging) de propósito: o server log do PythonAnywhere
+# que a equipe acompanha é alimentado por print(), igual ao omie_service.py
+# — logger.info()/logger.exception() ficam mudos sem LOGGING configurado
+# no settings.py, o que fazia parecer que o SAATRI "não retornava" nada.
 logger = logging.getLogger(__name__)
 
 
@@ -146,8 +151,8 @@ def _salvar_nota_saatri(contrato, rps_saatri, nota_data):
                     nota=nota,
                     arquivo=ContentFile(pdf_bytes, name=f'nfse_saatri_{nota.numero_nfse}.pdf'),
                 )
-        except Exception:
-            logger.exception('Falha ao baixar PDF da NFS-e SAATRI %s', nota.numero_nfse)
+        except Exception as e:
+            print(f"  ⚠️ Falha ao baixar PDF da NFS-e SAATRI {nota.numero_nfse}: {e}")
 
     return nota
 
@@ -190,7 +195,7 @@ def faturar_lote_saatri_view(request):
     sucessos, erros, msgs_erro = 0, 0, []
     total = len(contratos)
 
-    logger.info('--- Faturar Lote SAATRI | total=%s fonte=%s ---', total, fonte)
+    print(f"--- Faturar Lote SAATRI | total={total} fonte={fonte} ---")
 
     for idx, contrato in enumerate(contratos):
         num_ctr = contrato.omie_num_ctr or str(contrato.omie_cod_ctr)
@@ -199,10 +204,12 @@ def faturar_lote_saatri_view(request):
         if not dados_emissao:
             erros += 1
             fonte_txt = 'no cache local' if fonte == 'local' else 'na Omie'
-            msgs_erro.append(
+            msg = (
                 f"<b>Ctr {num_ctr}:</b> Não foi possível obter valor/descrição do contrato {fonte_txt}."
                 + (" Sincronize este contrato com a Omie pelo menos uma vez." if fonte == 'local' else "")
             )
+            msgs_erro.append(msg)
+            print(f"  ⚠️ Ctr {num_ctr}: sem dados de emissão ({fonte_txt})")
             if fonte == 'omie':
                 _throttle(idx, total)
             continue
@@ -215,6 +222,7 @@ def faturar_lote_saatri_view(request):
                 f"<b>Ctr {num_ctr}:</b> Cadastro fiscal do cliente incompleto {fonte_txt} "
                 f"(falta CNPJ/CPF ou município — necessário pro SAATRI)."
             )
+            print(f"  ⚠️ Ctr {num_ctr}: cadastro fiscal do tomador incompleto ({fonte_txt})")
             if fonte == 'omie':
                 _throttle(idx, total)
             continue
@@ -244,7 +252,8 @@ def faturar_lote_saatri_view(request):
         try:
             resultado = saatri_client.gerar_nfse(rps_dict, tomador)
         except Exception as e:
-            logger.exception('Erro inesperado no GerarNfse SAATRI (RPS %s)', numero)
+            print(f"  ❌ Ctr {num_ctr}: erro inesperado no GerarNfse SAATRI (RPS {numero}): {e}")
+            print(traceback.format_exc())
             rps_saatri.status = 'erro'
             rps_saatri.mensagem_erro = f'Erro de comunicação: {e}'
             rps_saatri.save(update_fields=['status', 'mensagem_erro'])
@@ -256,6 +265,7 @@ def faturar_lote_saatri_view(request):
         if resultado.get('notas'):
             _salvar_nota_saatri(contrato, rps_saatri, resultado['notas'][0])
             sucessos += 1
+            print(f"  ✅ Ctr {num_ctr}: NFS-e emitida na hora (RPS {numero})")
         elif resultado.get('info'):
             # Ambiente Nacional (Reforma Tributária): DPS aceita, a NFS-e
             # sai minutos depois pela SEFIN — sincronizar_saatri_pendentes_view
@@ -264,6 +274,7 @@ def faturar_lote_saatri_view(request):
             rps_saatri.mensagem_erro = ''
             rps_saatri.save(update_fields=['status', 'mensagem_erro'])
             sucessos += 1
+            print(f"  ⏳ Ctr {num_ctr}: DPS aceita (RPS {numero}) — NFS-e sai em alguns minutos, aguardando sync")
         else:
             rps_saatri.status = 'erro'
             erros_msg = resultado.get('erros', [])
@@ -271,10 +282,11 @@ def faturar_lote_saatri_view(request):
             rps_saatri.save(update_fields=['status', 'mensagem_erro'])
             erros += 1
             msgs_erro.append(f"<b>Ctr {num_ctr}:</b> {rps_saatri.mensagem_erro}")
+            print(f"  ❌ Ctr {num_ctr}: {rps_saatri.mensagem_erro}")
 
         _throttle(idx, total)
 
-    logger.info('--- Faturar Lote SAATRI End | sucessos=%s erros=%s ---', sucessos, erros)
+    print(f"--- Faturar Lote SAATRI End | sucessos={sucessos} erros={erros} ---")
 
     return JsonResponse({
         'ok': True, 'total': total, 'sucessos': sucessos, 'erros': erros,
@@ -301,11 +313,13 @@ def sincronizar_saatri_pendentes():
     resolvidos = 0
     ainda_pendentes = 0
 
+    print(f"--- Sync SAATRI pendentes | total={total} ---")
+
     for idx, rps_saatri in enumerate(pendentes):
         try:
             resultado = saatri_client.consultar_nfse_por_rps(rps_saatri.numero, rps_saatri.serie, rps_saatri.tipo)
-        except Exception:
-            logger.exception('Erro ao consultar RPS SAATRI pendente %s', rps_saatri.numero)
+        except Exception as e:
+            print(f"  ❌ RPS {rps_saatri.numero}: erro ao consultar — {e}")
             ainda_pendentes += 1
             _throttle(idx, total)
             continue
@@ -313,10 +327,13 @@ def sincronizar_saatri_pendentes():
         if resultado.get('notas'):
             _salvar_nota_saatri(rps_saatri.contrato, rps_saatri, resultado['notas'][0])
             resolvidos += 1
+            print(f"  ✅ RPS {rps_saatri.numero}: NFS-e resolvida")
         else:
             ainda_pendentes += 1
+            print(f"  ⏳ RPS {rps_saatri.numero}: ainda aguardando a SEFIN")
         _throttle(idx, total)
 
+    print(f"--- Sync SAATRI pendentes End | resolvidos={resolvidos} ainda_pendentes={ainda_pendentes} ---")
     return total, resolvidos, ainda_pendentes
 
 

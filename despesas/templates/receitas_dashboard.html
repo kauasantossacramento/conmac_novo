@@ -387,8 +387,8 @@
 </div>
 {% endif %}
 
-<!-- ── STATUS DE FATURAMENTO DA COMPETÊNCIA ── -->
-{% if qtd_nao_faturados_periodo > 0 %}
+<!-- ── STATUS DE FATURAMENTO DA COMPETÊNCIA (opcional, ligado via Django admin → Configurações do Sistema) ── -->
+{% if mostrar_status_fat and qtd_nao_faturados_periodo > 0 %}
 <div style="margin:.5rem 0 .75rem;border-radius:14px;padding:11px 16px;background:#FEF2F2;border:1px solid #FCA5A5;color:#7f1d1d;display:flex;gap:.75rem;align-items:center;">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" style="flex:0 0 auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
   <span>
@@ -518,7 +518,10 @@
         <option value="camara"    {% if entidade_f == 'camara'    %}selected{% endif %}>Câmara Municipal</option>
       </select>
 
-      <!-- Filtro de competência p/ status faturado/não faturado -->
+      <!-- Filtro de competência p/ status faturado/não faturado — opcional,
+           ligado via Django admin (Configurações do Sistema). O indicador
+           "oficial" fica no fluxo de faturar em lote, não aqui. -->
+      {% if mostrar_status_fat %}
       <select name="mes_fat" class="fsel" onchange="this.form.submit()" title="Competência de referência p/ status faturado/não faturado">
         {% for num, nome in meses_nomes.items %}
         <option value="{{ num }}" {% if num == mes_fat %}selected{% endif %}>{{ nome }}</option>
@@ -533,6 +536,7 @@
         <input type="checkbox" name="nao_faturados" value="1" {% if apenas_nao_faturados %}checked{% endif %} onchange="this.form.submit()">
         Só não faturados
       </label>
+      {% endif %}
 
       <button type="submit" class="btn-grad">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -673,6 +677,18 @@
         </div>
       </div>
 
+      <div style="margin-bottom:16px;">
+        <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">SINCRONIZAR</label>
+        <div style="display:flex;gap:14px;font-size:.84rem;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+            <input type="checkbox" id="snfse-fonte-omie" checked> Omie
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+            <input type="checkbox" id="snfse-fonte-saatri" checked> SAATRI (pendentes)
+          </label>
+        </div>
+      </div>
+
       <div id="snfse-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
 
       <div style="display:flex;justify-content:flex-end;gap:8px;">
@@ -703,7 +719,7 @@
         <th>Município · Entidade</th>
         <th>Vigência</th>
         <th style="text-align:center">Status</th>
-        <th style="text-align:center">Faturamento ({{ mes_fat_nome }}/{{ ano_fat }})</th>
+        {% if mostrar_status_fat %}<th style="text-align:center">Faturamento ({{ mes_fat_nome }}/{{ ano_fat }})</th>{% endif %}
         <th style="text-align:right">Valor Mensal</th>
         <th style="text-align:center">Ações</th>
       </tr>
@@ -766,6 +782,7 @@
           {% else %}<span class="badge-st st-10">Ativo</span>{% endif %}
         </td>
 
+        {% if mostrar_status_fat %}
         <td style="text-align:center">
           {% if item.is_inativo %}
             <span style="color:#cbd5e0">—</span>
@@ -781,6 +798,7 @@
             </span>
           {% endif %}
         </td>
+        {% endif %}
 
         <td style="text-align:right"><span class="mono">R$ {{ item.obj.valor_mensal|floatformat:2|intcomma }}</span></td>
 
@@ -1134,6 +1152,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var fonteBox = mc('conf-fonte-dados');
     if (fonteBox) fonteBox.style.display = (ehFaturamento && origem === 'saatri') ? 'block' : 'none';
 
+    var statusBox = mc('conf-status-faturamento');
+    if (statusBox) {
+      statusBox.style.display = ehFaturamento ? 'block' : 'none';
+      if (ehFaturamento) carregarStatusFaturamento(_pendIds, comp);
+    }
+
     var avisoFat = mc('conf-aviso-faturamento');
     var avisoSalvar = mc('conf-aviso-salvar');
     var btnConfirmar = mc('btn-confirmar-faturar');
@@ -1149,6 +1173,51 @@ document.addEventListener('DOMContentLoaded', function () {
       if (avisoSalvar) avisoSalvar.style.display = 'none';
       if (btnTxt) btnTxt.textContent = 'Confirmar e Faturar';
       if (btnConfirmar) btnConfirmar.className = 'eb eb-green';
+    }
+  }
+
+  var _statusFatToken = 0;
+
+  async function carregarStatusFaturamento(ids, comp) {
+    var corpo = mc('conf-status-faturamento-corpo');
+    if (!corpo || !ids || !ids.length) return;
+
+    var meuToken = ++_statusFatToken; // evita corrida se o usuário trocar de opção rápido
+    corpo.textContent = 'Verificando quais já foram faturados…';
+
+    var hoje = new Date();
+    var mes = (comp && comp.mes_num) ? comp.mes_num : (hoje.getMonth() + 1);
+    var ano = (comp && comp.ano) ? comp.ano : hoje.getFullYear();
+
+    try {
+      var url = '/receitas/contratos/status-faturamento/?ids=' + ids.join(',') + '&mes=' + mes + '&ano=' + ano;
+      var r = await fetch(url);
+      var d = await r.json();
+      if (meuToken !== _statusFatToken) return; // resposta obsoleta, ignora
+
+      if (!d.ok) {
+        corpo.innerHTML = '⚠️ Não foi possível checar o status de faturamento.';
+        return;
+      }
+
+      var nomesFat = d.faturados.map(function (c) { return c.nome; });
+      var nomesNao = d.nao_faturados.map(function (c) { return c.nome; });
+      var mesNome = MESES_PT_FULL[d.mes] || d.mes;
+
+      var html = '<div style="margin-bottom:4px;">Competência de referência: <strong>' + mesNome + '/' + d.ano + '</strong></div>';
+      if (nomesFat.length) {
+        html += '<div style="color:#166534;">✅ <strong>' + nomesFat.length + ' já faturado(s):</strong> ' + nomesFat.join(', ') + '</div>';
+      }
+      if (nomesNao.length) {
+        html += '<div style="color:#991b1b;">⏳ <strong>' + nomesNao.length + ' ainda não faturado(s):</strong> ' + nomesNao.join(', ') + '</div>';
+      }
+      if (!nomesFat.length && !nomesNao.length) {
+        html = 'Nenhum contrato selecionado.';
+      }
+      corpo.innerHTML = html;
+    } catch (e) {
+      if (meuToken !== _statusFatToken) return;
+      corpo.innerHTML = '⚠️ Erro de rede ao checar status de faturamento.';
     }
   }
 
@@ -1539,33 +1608,57 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
 async function executarSyncNfse() {
   var mes = parseInt(document.getElementById('snfse-mes').value);
   var ano = parseInt(document.getElementById('snfse-ano').value);
+  var syncOmie   = document.getElementById('snfse-fonte-omie').checked;
+  var syncSaatri = document.getElementById('snfse-fonte-saatri').checked;
   var btn = document.getElementById('snfse-btn-confirmar');
   var res = document.getElementById('snfse-resultado');
+
+  if (!syncOmie && !syncSaatri) {
+    res.style.display = 'block';
+    res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fff7ed;border:1.5px solid #fed7aa;color:#92400e;';
+    res.innerHTML = '⚠️ Selecione ao menos uma origem (Omie ou SAATRI).';
+    return;
+  }
+
   btn.disabled = true; btn.textContent = 'Sincronizando…';
   res.style.display = 'none';
   try {
     var r = await fetch('/receitas/sincronizar-nfse/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ mes: mes, ano: ano }),
+      body: JSON.stringify({ mes: mes, ano: ano, sincronizar_omie: syncOmie, sincronizar_saatri: syncSaatri }),
     });
+    if (!r.ok) {
+      res.style.display = 'block';
+      res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
+      res.innerHTML = '❌ Erro HTTP ' + r.status + ' ao sincronizar. Veja o log do servidor.';
+      btn.disabled  = false;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar';
+      return;
+    }
     var d = await r.json();
     res.style.display = 'block';
     if (d.ok) {
       res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#f0fdf4;border:1.5px solid #86efac;color:#166534;';
-      var msgSync = '✅ <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas';
-      if (d.saatri_total) {
-        msgSync += ' · SAATRI: <strong>' + d.saatri_resolvidas + '/' + d.saatri_total + '</strong> resolvidas';
-        if (d.saatri_pendentes) msgSync += ' (' + d.saatri_pendentes + ' ainda aguardando a SEFIN)';
+      var msgSync = [];
+      if (syncOmie) msgSync.push('Omie: <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas');
+      if (syncSaatri) {
+        msgSync.push(
+          d.saatri_total
+            ? 'SAATRI: <strong>' + d.saatri_resolvidas + '/' + d.saatri_total + '</strong> resolvidas' +
+              (d.saatri_pendentes ? ' (' + d.saatri_pendentes + ' ainda aguardando a SEFIN)' : '')
+            : 'SAATRI: nada pendente'
+        );
       }
-      res.innerHTML = msgSync;
+      res.innerHTML = '✅ ' + msgSync.join(' · ');
     } else {
       res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
       res.innerHTML = '❌ ' + (d.erro || 'Erro ao sincronizar.');
     }
   } catch (e) {
+    res.style.display = 'block';
     res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
-    res.textContent = '❌ Erro de conexão.';
+    res.textContent = '❌ Erro de conexão (a requisição não completou — confira sua internet ou tente de novo).';
   }
   btn.disabled  = false;
   btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar';

@@ -5497,11 +5497,17 @@ from .models import Contrato, ServicoExtra
 # ─────────────────────────────────────────────────────────────
 @login_required #verificar coerencia
 def receitas_dashboard(request):
-    from .models import NotaFiscal
+    from .models import NotaFiscal, ConfiguracaoSistema
 
     hoje            = date.today()
     limite_aviso    = hoje + timedelta(days=30)
     STATUS_INATIVOS = ['99', 'Cancelado', 'Inativo', 'Suspenso']
+
+    # Feature flag (Django admin → Configurações do Sistema). Desligada por
+    # padrão — o indicador "oficial" de faturado/não faturado fica dentro do
+    # fluxo de faturar em lote (ver painel de confirmação do modal), não
+    # aqui no dashboard. Isso aqui é um extra opcional pra quem quiser.
+    mostrar_status_fat = ConfiguracaoSistema.obter().dashboard_mostra_status_faturamento
 
     # ── Filtros GET ──────────────────────────────────────────
     q              = request.GET.get('q', '').strip()
@@ -5520,7 +5526,7 @@ def receitas_dashboard(request):
         ano_f = int(request.GET.get('ano_fat') or hoje.year)
     except (TypeError, ValueError):
         ano_f = hoje.year
-    apenas_nao_faturados = request.GET.get('nao_faturados') == '1'
+    apenas_nao_faturados = mostrar_status_fat and request.GET.get('nao_faturados') == '1'
 
     contratos_qs = Contrato.objects.all().order_by('municipio', 'tipo_entidade', 'status_omie', '-valor_mensal')
 
@@ -5544,13 +5550,17 @@ def receitas_dashboard(request):
     total_geral      = total_recorrente + total_extra
     qtd_vencendo     = ativos_qs.filter(data_vigencia_final__range=[hoje, limite_aviso]).count()
 
-    # ── Contratos faturados na competência de referência ──────
-    contratos_faturados_ids = set(
-        NotaFiscal.objects
-        .filter(competencia_mes=mes_f, competencia_ano=ano_f, status='emitida', contrato_id__isnull=False)
-        .values_list('contrato_id', flat=True)
-        .distinct()
-    )
+    # ── Contratos faturados na competência de referência (só se a flag
+    #    estiver ligada — ver ConfiguracaoSistema) ──────────────────────
+    if mostrar_status_fat:
+        contratos_faturados_ids = set(
+            NotaFiscal.objects
+            .filter(competencia_mes=mes_f, competencia_ano=ano_f, status='emitida', contrato_id__isnull=False)
+            .values_list('contrato_id', flat=True)
+            .distinct()
+        )
+    else:
+        contratos_faturados_ids = set()
 
     # ── Lista para template ──────────────────────────────────
     contratos_list = []
@@ -5564,7 +5574,7 @@ def receitas_dashboard(request):
             and hoje <= c.data_vigencia_final <= limite_aviso
         )
         faturado_periodo = c.id in contratos_faturados_ids
-        if not is_inativo:
+        if mostrar_status_fat and not is_inativo:
             if faturado_periodo:
                 qtd_faturados_periodo += 1
             else:
@@ -5607,7 +5617,9 @@ def receitas_dashboard(request):
         'municipios_filtro':    municipios_filtro,
         'municipios_existentes': municipios_existentes,
         'alerta_docs': get_alerta_documentos(),
-        # Status de faturamento por competência
+        # Status de faturamento por competência — ligado via Django admin
+        # (ConfiguracaoSistema.dashboard_mostra_status_faturamento)
+        'mostrar_status_fat':         mostrar_status_fat,
         'mes_fat':                    mes_f,
         'mes_fat_nome':               MESES_NOMES[mes_f],
         'ano_fat':                    ano_f,
@@ -6345,6 +6357,64 @@ def faturar_lote_view(request):
 def _throttle(idx, total):
     if idx < total - 1:
         sleep(2.0)
+
+
+@login_required
+def status_faturamento_contratos(request):
+    """
+    GET JSON — pra usar no painel de confirmação do "Faturar em lote"
+    (ver painel-confirmacao em modal_editar_lote.html): dado um conjunto de
+    contratos selecionados e uma competência, diz quais já têm NFS-e
+    emitida naquele período e quais não têm — pra revisar antes de
+    confirmar (evita faturar de novo quem já foi faturado, e mostra quem
+    ainda falta).
+
+    Params: ?ids=1,2,3&mes=8&ano=2026 (mes/ano opcionais, default mês atual)
+    """
+    from .models import NotaFiscal
+
+    ids_raw = request.GET.get('ids', '')
+    try:
+        ids = [int(i) for i in ids_raw.split(',') if i.strip()]
+    except ValueError:
+        return JsonResponse({'ok': False, 'erro': 'IDs inválidos'}, status=400)
+
+    if not ids:
+        return JsonResponse({'ok': False, 'erro': 'Nenhum contrato informado'}, status=400)
+
+    hoje = date.today()
+    try:
+        mes = int(request.GET.get('mes') or hoje.month)
+        assert 1 <= mes <= 12
+    except (TypeError, ValueError, AssertionError):
+        mes = hoje.month
+    try:
+        ano = int(request.GET.get('ano') or hoje.year)
+    except (TypeError, ValueError):
+        ano = hoje.year
+
+    contratos = Contrato.objects.filter(id__in=ids).order_by('cliente_nome')
+    faturados_ids = set(
+        NotaFiscal.objects
+        .filter(contrato_id__in=ids, competencia_mes=mes, competencia_ano=ano, status='emitida')
+        .values_list('contrato_id', flat=True)
+        .distinct()
+    )
+
+    faturados     = []
+    nao_faturados = []
+    for c in contratos:
+        item = {'id': c.id, 'nome': c.cliente_nome or c.omie_num_ctr or f'Contrato {c.id}'}
+        if c.id in faturados_ids:
+            faturados.append(item)
+        else:
+            nao_faturados.append(item)
+
+    return JsonResponse({
+        'ok': True, 'mes': mes, 'ano': ano,
+        'faturados': faturados, 'nao_faturados': nao_faturados,
+    })
+
 
 @login_required
 def sincronizar_receitas_view(request):
@@ -7415,8 +7485,10 @@ def sincronizar_nfse(request):
         total_saatri, resolvidos_saatri, _ = sincronizar_saatri_pendentes()
 
         msg = f'✅ NFS-e sincronizadas: {criadas} novas · {atualizadas} atualizadas ({int(mes):02d}/{ano})'
-        if total_saatri:
-            msg += f' · SAATRI: {resolvidos_saatri}/{total_saatri} resolvidas'
+        msg += (
+            f' · SAATRI: {resolvidos_saatri}/{total_saatri} resolvidas' if total_saatri
+            else ' · SAATRI: nada pendente'
+        )
         messages.success(request, msg)
     except Exception as e:
         messages.error(request, f'❌ Erro na sincronização: {e}')
@@ -9468,10 +9540,13 @@ def sincronizar_nfse_ajax(request):
     """
     POST JSON — Sincroniza NFS-e do mês/ano informado.
     Chamado pelo modal "NFS-e" do receitas_dashboard.
-    Body: { "mes": 3, "ano": 2026 }
+    Body: { "mes": 3, "ano": 2026, "sincronizar_omie": true, "sincronizar_saatri": true }
+    (os dois últimos são opcionais — default True, pra manter compatibilidade
+    com quem chamar sem informar)
 
     NÃO altera contratos, município, tipo_entidade ou cliente_nome.
-    Retorna: { ok, criadas, atualizadas } ou { ok: false, erro }
+    Retorna: { ok, criadas, atualizadas, saatri_total, saatri_resolvidas, saatri_pendentes }
+    ou { ok: false, erro }
 
     URL sugerida: /receitas/sincronizar-nfse/
     """
@@ -9485,19 +9560,28 @@ def sincronizar_nfse_ajax(request):
     except (KeyError, ValueError, json.JSONDecodeError):
         return JsonResponse({'ok': False, 'erro': 'Parâmetros inválidos (mes e ano obrigatórios)'}, status=400)
 
+    sync_omie   = body.get('sincronizar_omie', True)
+    sync_saatri = body.get('sincronizar_saatri', True)
+    if not sync_omie and not sync_saatri:
+        return JsonResponse({'ok': False, 'erro': 'Selecione ao menos uma origem (Omie ou SAATRI).'}, status=400)
+
     if not (1 <= mes <= 12):
         return JsonResponse({'ok': False, 'erro': 'Mês inválido'}, status=400)
     if not (2020 <= ano <= 2099):
         return JsonResponse({'ok': False, 'erro': 'Ano inválido'}, status=400)
 
     try:
-        from .omie_service import OmieService
-        service = OmieService()
-        criadas, atualizadas = service.sincronizar_nfse(mes=mes, ano=ano)
+        criadas = atualizadas = 0
+        if sync_omie:
+            from .omie_service import OmieService
+            service = OmieService()
+            criadas, atualizadas = service.sincronizar_nfse(mes=mes, ano=ano)
 
-        # Resolve também os RPS SAATRI Direto pendentes — mesmo clique do
-        # modal "NFS-e", sem precisar de um botão separado.
-        total_saatri, resolvidos_saatri, ainda_pendentes_saatri = sincronizar_saatri_pendentes()
+        total_saatri = resolvidos_saatri = ainda_pendentes_saatri = 0
+        if sync_saatri:
+            # Resolve também os RPS SAATRI Direto pendentes — mesmo clique do
+            # modal "NFS-e", sem precisar de um botão separado.
+            total_saatri, resolvidos_saatri, ainda_pendentes_saatri = sincronizar_saatri_pendentes()
 
         return JsonResponse({
             'ok': True, 'criadas': criadas, 'atualizadas': atualizadas,
@@ -9505,6 +9589,7 @@ def sincronizar_nfse_ajax(request):
             'saatri_pendentes': ainda_pendentes_saatri,
         })
     except Exception as e:
+        print(f"❌ sincronizar_nfse_ajax: erro inesperado — {e}")
         return JsonResponse({'ok': False, 'erro': str(e)})
 
 #NOVO GESTOR DE ATIVIDADES:

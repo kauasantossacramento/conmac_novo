@@ -712,10 +712,19 @@ class ContratoAdmin(admin.ModelAdmin):
         ('Status e Controle', {
             'fields': ('status_omie', 'atualizado_em'),
         }),
+        ('Cache Local de Emissão (SAATRI Direto)', {
+            'fields': (
+                'descricao_servico', ('item_lista_servico', 'codigo_nbs', 'aliquota_iss'),
+                'dados_tomador', 'dados_locais_atualizados_em',
+            ),
+            'description': 'Preenchido/atualizado ao editar o contrato em lote com "Sincronizar com a '
+                            'Omie" ligado. Usado pela emissão SAATRI Direto quando a fonte escolhida é '
+                            '"banco de dados próprio" (sem consultar a Omie).',
+        }),
     )
 
     # Campos que só podem ser lidos (protege dados sensíveis sincronizados da API)
-    readonly_fields = ('atualizado_em', 'omie_cod_ctr')
+    readonly_fields = ('atualizado_em', 'omie_cod_ctr', 'dados_locais_atualizados_em')
 
     # Melhora a performance se você tiver milhares de registros no futuro
     show_full_result_count = False
@@ -1163,5 +1172,59 @@ class PrevisaoPagamentoLogAdmin(admin.ModelAdmin):
         return [f.name for f in self.model._meta.fields]
 
     # Desabilitar a opção de criar um log manualmente pelo Admin
+
+
+# ─────────────────────────────────────────────────────────────────────────
+#  SAATRI Direto — sem isso não dava pra ver no admin se uma emissão
+#  rodou, o que ela retornou, ou se ficou algo pendente de sincronizar.
+# ─────────────────────────────────────────────────────────────────────────
+from .models import RpsSaatri, LogSaatri, SaatriNumeracao, ConfiguracaoSistema
+
+
+@admin.register(ConfiguracaoSistema)
+class ConfiguracaoSistemaAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'dashboard_mostra_status_faturamento')
+
+    def has_add_permission(self, request):
+        # Singleton — só deve existir 1 registro (ConfiguracaoSistema.obter()).
+        return not ConfiguracaoSistema.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RpsSaatri)
+class RpsSaatriAdmin(admin.ModelAdmin):
+    list_display = (
+        'numero', 'serie', 'contrato', 'status', 'valor_servicos',
+        'competencia_mes', 'competencia_ano', 'nota_fiscal', 'criado_em',
+    )
+    list_filter = ('status', 'competencia_ano', 'competencia_mes', 'serie')
+    search_fields = ('numero', 'contrato__cliente_nome', 'contrato__omie_num_ctr', 'mensagem_erro')
+    readonly_fields = ('criado_em', 'atualizado_em')
+    date_hierarchy = 'criado_em'
+    ordering = ('-criado_em',)
+
+
+@admin.register(LogSaatri)
+class LogSaatriAdmin(admin.ModelAdmin):
+    list_display = ('metodo', 'sucesso', 'http_status', 'duracao_ms', 'erro', 'criado_em')
+    list_filter = ('metodo', 'sucesso', 'http_status')
+    search_fields = ('erro', 'xml_envio', 'xml_retorno')
+    readonly_fields = [f.name for f in LogSaatri._meta.fields]
+    date_hierarchy = 'criado_em'
+    ordering = ('-criado_em',)
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(SaatriNumeracao)
+class SaatriNumeracaoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'proximo_numero_rps')
+
+    def has_add_permission(self, request):
+        # Singleton — só deve existir 1 registro (SaatriNumeracao.obter()).
+        return not SaatriNumeracao.objects.exists()
     def has_add_permission(self, request):
         return False

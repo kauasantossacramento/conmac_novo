@@ -1153,6 +1153,33 @@ class SaatriNumeracao(models.Model):
         return numero
 
 
+class ConfiguracaoSistema(models.Model):
+    """
+    Singleton de feature flags editáveis pelo Django admin — pra ligar/
+    desligar funcionalidades experimentais sem precisar de deploy.
+    """
+    dashboard_mostra_status_faturamento = models.BooleanField(
+        "Mostrar status de faturamento por competência no dashboard de contratos",
+        default=False,
+        help_text="Filtro de mês/ano + coluna 'Faturado/Não faturado' na lista de contratos "
+                   "em /receitas/. Desligado por padrão — o indicador oficial de notas já "
+                   "faturadas/pendentes fica no fluxo de 'Faturar em lote' (ver painel de "
+                   "confirmação do modal de edição em lote).",
+    )
+
+    class Meta:
+        verbose_name = "Configuração do Sistema"
+        verbose_name_plural = "Configurações do Sistema"
+
+    def __str__(self):
+        return "Configurações do Sistema"
+
+    @classmethod
+    def obter(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class RpsSaatri(models.Model):
     """Uma tentativa de emissão avulsa de NFS-e via SAATRI Direto."""
 

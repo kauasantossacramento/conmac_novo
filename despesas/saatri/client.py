@@ -40,6 +40,7 @@ def _enviar_soap(metodo, dados_xml):
 
     log = LogSaatri(metodo=metodo, url=endpoint, xml_envio=envelope)
     inicio = time.time()
+    print(f"--- SAATRI {metodo} → {endpoint} ---")
 
     try:
         resp = requests.post(endpoint, data=envelope.encode("utf-8"), headers=headers, timeout=TIMEOUT)
@@ -54,17 +55,21 @@ def _enviar_soap(metodo, dados_xml):
             log.sucesso = len(erros) == 0
             if erros:
                 log.erro = "; ".join(f"[{e['codigo']}] {e['mensagem']}" for e in erros)
+                print(f"  ❌ SAATRI {metodo}: {log.erro}")
+            else:
+                print(f"  ✅ SAATRI {metodo}: HTTP 200 ({log.duracao_ms}ms)")
         else:
             log.sucesso = False
             log.erro = f"HTTP {resp.status_code}"
             xml_negocio = resp.text
+            print(f"  ❌ SAATRI {metodo}: HTTP {resp.status_code}")
 
     except requests.RequestException as e:
         log.duracao_ms = int((time.time() - inicio) * 1000)
         log.sucesso = False
         log.erro = str(e)
         xml_negocio = ""
-        logger.exception("Erro na chamada SOAP SAATRI %s", metodo)
+        print(f"  ❌ SAATRI {metodo}: erro de conexão — {e}")
 
     log.save()
     return xml_negocio, log
@@ -101,8 +106,8 @@ def baixar_pdf_nfse(numero_nfse, codigo_verificacao):
     url = f"{base}/Relatorio/VisualizarNotaFiscal?numero={numero_nfse}&codigoVerificacao={codigo_verificacao}"
     try:
         resp = requests.get(url, timeout=30, allow_redirects=True)
-    except requests.RequestException:
-        logger.exception("Erro ao baixar PDF da NFS-e %s", numero_nfse)
+    except requests.RequestException as e:
+        print(f"  ❌ Erro ao baixar PDF da NFS-e {numero_nfse}: {e}")
         return None
 
     if resp.status_code == 200 and "pdf" in resp.headers.get("Content-Type", "").lower():
