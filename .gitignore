@@ -1,0 +1,10 @@
+venv/
+env/
+db.sqlite3
+conmac-app-firebase-adminsdk-fbsvc-89ccdd6f2a.json
+*.pem
+.env
+media/
+salarios_funcionario.xlsx
+__pycache__/
+*.pyc

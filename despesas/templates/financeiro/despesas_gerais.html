@@ -1,0 +1,1858 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Despesas Gerais · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --brown:#945f34; --teal:#239FAB; --teal-dk:#1a7a84;
+  --green:#276749; --green-lt:#f0fff4;
+  --red:#c53030;   --red-lt:#fff5f5;
+  --gold:#c8922a;
+  --purple:#6b46c1; --purple-lt:#ede9fe; --purple-bd:#c4b5fd;
+  --cyan:#0e7490;   --cyan-lt:#ecfeff;   --cyan-bd:#a5f3fc;
+  --amber:#a16207;  --amber-lt:#fef9c3;  --amber-bd:#fde047;
+  --dark:#1a202c; --gray:#4a5568; --muted:#718096;
+  --border:#e2e8f0;
+  --grad:linear-gradient(135deg,#945f34 0%,#239FAB 100%);
+  font-family:'Sora',sans-serif;
+}
+
+/* ── HERO ─────────────────────────────────────────────────────── */
+.dg-hero {
+  margin-top:10px; background:var(--grad); border-radius:24px;
+  color:#fff; padding:26px 32px; display:flex; align-items:center;
+  justify-content:space-between; gap:20px;
+  box-shadow:0 16px 40px rgba(148,95,52,.2); flex-wrap:wrap;
+  position:relative; overflow:hidden;
+}
+.dg-hero::before { content:''; position:absolute; top:-40px; right:-40px;
+  width:200px; height:200px; background:rgba(255,255,255,.05); border-radius:50%; }
+.dg-hero::after  { content:''; position:absolute; bottom:-60px; left:30%;
+  width:220px; height:220px; background:rgba(255,255,255,.04); border-radius:50%; pointer-events:none; }
+.hero-left  { display:flex; align-items:center; gap:18px; position:relative; z-index:1; }
+.hero-ico   { width:62px; height:62px; display:grid; place-items:center;
+  background:rgba(255,255,255,.18); border-radius:50%; border:2px solid rgba(255,255,255,.28); flex-shrink:0; }
+.hero-txt h2 { margin:0; font-size:1.75rem; font-weight:800; color:#fff; letter-spacing:-.4px; }
+.hero-txt p  { margin:5px 0 0; opacity:.85; font-size:.88rem; }
+.hero-badge  { display:inline-flex; align-items:center; gap:6px;
+  background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.25);
+  border-radius:20px; padding:4px 14px; font-size:.72rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; margin-top:8px; }
+.hero-kpis  { display:flex; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
+
+.kpi-card { background:rgba(255,255,255,.97); border-radius:16px; padding:16px 20px;
+  min-width:148px; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,.1);
+  position:relative; overflow:hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--grad); }
+.kpi--green::before { background:linear-gradient(90deg,#276749,#48bb78); }
+.kpi--red::before   { background:linear-gradient(90deg,#c53030,#fc8181); }
+.kpi--gold::before  { background:linear-gradient(90deg,#945f34,#d69e2e); }
+.kpi--gray::before  { background:linear-gradient(90deg,#718096,#a0aec0); }
+.kpi__val { font-size:1.18rem; font-weight:800; color:var(--teal); font-family:'JetBrains Mono',monospace; }
+.kpi--green .kpi__val { color:var(--green); }
+.kpi--red   .kpi__val { color:var(--red);   }
+.kpi--gold  .kpi__val { color:var(--brown); }
+.kpi--gray  .kpi__val { color:var(--muted); }
+.kpi__lbl { font-size:.63rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.5px; margin-top:4px; }
+
+/* ── TOOLBAR ──────────────────────────────────────────────────── */
+.toolbar { display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:12px; margin:20px 0 14px; }
+.toolbar-left  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.toolbar-right { display:flex; align-items:center; gap:8px; }
+.fsel {
+  padding:9px 30px 9px 12px; border:1.5px solid var(--border); border-radius:10px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  font-size:.82rem; color:var(--gray); cursor:pointer; appearance:none; -webkit-appearance:none;
+  font-family:'Sora',sans-serif; transition:.18s; outline:none;
+}
+.fsel:focus { border-color:var(--teal); }
+.fsel.active { border-color:var(--teal); background-color:#f0fdff; }
+
+.btn-add { display:inline-flex; align-items:center; gap:7px; padding:9px 18px;
+  background:var(--teal); color:#fff; border:none; border-radius:10px;
+  font-size:.83rem; font-weight:700; cursor:pointer; transition:.18s; font-family:'Sora',sans-serif; }
+.btn-add:hover { background:var(--teal-dk); transform:translateY(-1px); }
+
+.btn-lock-gd { display:inline-flex; align-items:center; gap:7px; padding:9px 14px;
+  background:#fff; color:var(--purple); border:1.5px solid var(--purple-bd);
+  border-radius:10px; font-size:.82rem; font-weight:700; cursor:pointer;
+  transition:.18s; font-family:'Sora',sans-serif; }
+.btn-lock-gd:hover { background:var(--purple-lt); }
+.btn-lock-gd.unlocked { color:var(--green); border-color:#9ae6b4; background:var(--green-lt); }
+
+/* ── TABLE ────────────────────────────────────────────────────── */
+.table-wrap { background:#fff; border-radius:16px; border:1px solid var(--border);
+  box-shadow:0 2px 12px rgba(0,0,0,.04); overflow:hidden; margin-bottom:10px; }
+.dg-table { width:100%; border-collapse:collapse; }
+.dg-table thead tr { background:#f8fafc; }
+.dg-table th { padding:12px 15px; text-align:left; font-size:.68rem;
+  text-transform:uppercase; font-weight:700; color:var(--gray);
+  border-bottom:2px solid var(--border); letter-spacing:.45px; white-space:nowrap; }
+.dg-table td { padding:11px 15px; border-bottom:1px solid #f1f5f9;
+  font-size:.87rem; color:var(--dark); vertical-align:middle; }
+.dg-table tbody tr:last-child td { border-bottom:none; }
+.dg-table tbody tr:hover td { background:#fafbff; }
+
+.grp-sep td {
+  background:linear-gradient(90deg,#f3eeff 0%,#f8fafc 100%);
+  padding:9px 15px; font-size:.71rem; font-weight:800;
+  color:var(--purple); text-transform:uppercase; letter-spacing:.8px;
+  border-top:2px solid #ddd6fe; border-bottom:1px solid #e9d8fd;
+}
+.grp-total td {
+  background:#f8f4ff; padding:8px 15px;
+  border-top:1px solid #e9d8fd; font-size:.8rem;
+  font-weight:700; font-family:'JetBrains Mono',monospace;
+}
+
+.mono { font-family:'JetBrains Mono',monospace; font-weight:600; }
+
+.pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+  border-radius:20px; font-size:.69rem; font-weight:700; font-family:'Sora',sans-serif; }
+.pill-pago      { background:var(--green-lt); color:var(--green); border:1px solid #9ae6b4; }
+.pill-pendente  { background:#fff8f1; color:var(--gold); border:1px solid #fbd38d; }
+.pill-recorrente{ background:var(--cyan-lt); color:var(--cyan); border:1px solid var(--cyan-bd); font-size:.65rem; }
+
+/* Badges de Classificação */
+.bc { display:inline-flex; align-items:center; padding:3px 9px;
+  border-radius:20px; font-size:.68rem; font-weight:700; white-space:nowrap; }
+.bc-aluguel       { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+.bc-energia       { background: #86c5cb;color: #0d0d0d;border: 1px solid #86c5cb; }
+.bc-gd            { background:var(--purple-lt); color:var(--purple); border:1px solid var(--purple-bd); }
+.bc-alimentacao   { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+.bc-transporte    { background:var(--cyan-lt); color:var(--cyan); border:1px solid var(--cyan-bd); }
+.bc-consignado    { background:#fce7f3; color:#9d174d; border:1px solid #fbcfe8; }
+.bc-financiamentos{ background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; }
+.bc-outros        { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
+
+.btn-sm { padding:5px 10px; border-radius:7px; font-size:.72rem; font-weight:700;
+  cursor:pointer; transition:.18s; font-family:'Sora',sans-serif; }
+.btn-edit-row { border:1.5px solid var(--border); background:#fff; color:var(--gray); }
+.btn-edit-row:hover { border-color:var(--teal); color:var(--teal); background:#f0fdff; }
+.btn-del-row  { border:1.5px solid var(--border); background:#fff; color:var(--muted); }
+.btn-del-row:hover  { border-color:var(--red); color:var(--red); background:var(--red-lt); }
+
+/* Linha bloqueada (Gastos Diversos travado) */
+.row-gd-locked { position:relative; }
+.row-gd-locked td:not(.td-class) { filter:blur(3.5px); user-select:none; pointer-events:none; }
+
+/* Bloco de aviso de desbloqueio inline */
+.gd-lock-banner {
+  display:none; align-items:center; gap:10px; padding:12px 15px;
+  background:var(--purple-lt); border-top:1px solid var(--purple-bd);
+  border-bottom:1px solid var(--purple-bd);
+}
+.gd-lock-banner.visible { display:flex; }
+.gd-lock-banner p { margin:0; font-size:.83rem; font-weight:600; color:var(--purple); }
+.gd-lock-banner button { padding:6px 14px; border-radius:8px; font-size:.78rem; font-weight:700;
+  cursor:pointer; border:1.5px solid var(--purple-bd); background:#fff;
+  color:var(--purple); font-family:'Sora',sans-serif; transition:.18s; }
+.gd-lock-banner button:hover { background:var(--purple); color:#fff; }
+
+.total-bar { display:flex; align-items:center; justify-content:flex-end;
+  gap:24px; padding:13px 16px; background:#f8fafc; border-top:2px solid var(--border);
+  font-size:.85rem; }
+.total-bar .lbl { font-size:.7rem; text-transform:uppercase; font-weight:700;
+  color:var(--muted); letter-spacing:.4px; }
+.total-bar .val { font-family:'JetBrains Mono',monospace; font-size:1.1rem;
+  font-weight:800; color:var(--teal); }
+
+.empty-state { text-align:center; padding:52px 20px; color:var(--muted); }
+.empty-state h3 { font-size:1rem; color:var(--gray); margin:0 0 6px; }
+
+/* ── MODALS ───────────────────────────────────────────────────── */
+.modal-back { position:fixed; inset:0; background:rgba(0,0,0,.52); z-index:2000;
+  display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-back.open { display:flex; }
+@keyframes slideUp {
+  from { transform:translateY(14px) scale(.97); opacity:0; }
+  to   { transform:none; opacity:1; }
+}
+.modal-box { background:#fff; width:94%; max-width:540px; border-radius:20px;
+  padding:28px; position:relative; box-shadow:0 24px 60px rgba(0,0,0,.22);
+  animation:slideUp .25s ease-out; font-family:'Sora',sans-serif; max-height:90vh; overflow-y:auto; }
+.modal-box.modal-teal   { border-top:4px solid var(--teal); }
+.modal-box.modal-purple { border-top:4px solid var(--purple); }
+.modal-box.modal-red    { border-top:4px solid var(--red); }
+.modal-close { position:absolute; top:13px; right:13px; width:30px; height:30px;
+  background:#f1f5f9; border:none; border-radius:50%; cursor:pointer;
+  font-size:1rem; color:var(--muted); display:grid; place-items:center; }
+.modal-close:hover { background:#e2e8f0; }
+.modal-title { font-size:1.12rem; font-weight:800; color:var(--dark); margin:0 0 6px; }
+.modal-sub   { font-size:.82rem; color:var(--muted); margin:0 0 20px;
+  padding-bottom:16px; border-bottom:1px solid var(--border); }
+
+.form-grid { display:grid; gap:14px; }
+.form-cols-2 { grid-template-columns:1fr 1fr; }
+.form-cols-3 { grid-template-columns:1fr 1fr 1fr; }
+.fgroup { display:flex; flex-direction:column; gap:5px; }
+.fgroup label { font-size:.69rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--gray); }
+.fgroup input, .fgroup select, .fgroup textarea {
+  padding:9px 12px; border:1.5px solid #cbd5e0; border-radius:9px;
+  font-size:.88rem; font-family:'Sora',sans-serif; outline:none; transition:.18s;
+  color:var(--dark); background:#fff;
+}
+.fgroup input:focus, .fgroup select:focus, .fgroup textarea:focus {
+  border-color:var(--teal); box-shadow:0 0 0 3px rgba(35,159,171,.1);
+}
+.fgroup textarea { resize:vertical; min-height:56px; }
+.fgroup small { font-size:.73rem; color:var(--muted); margin-top:2px; }
+
+.toggle-card { display:flex; align-items:flex-start; gap:12px; padding:11px 14px;
+  background:#f8fafc; border-radius:10px; border:1.5px solid var(--border);
+  cursor:pointer; transition:.18s; }
+.toggle-card:hover { border-color:var(--teal); background:#f0fdff; }
+.toggle-card input[type=checkbox] { width:17px; height:17px; cursor:pointer; flex-shrink:0; margin-top:2px; }
+.toggle-card .tc-info { flex:1; }
+.toggle-card .tc-lbl  { font-size:.86rem; font-weight:700; color:var(--dark); }
+.toggle-card .tc-sub  { font-size:.74rem; color:var(--muted); margin-top:2px; }
+.toggle-card.tc-on { border-color:var(--teal); background:#f0fdff; }
+
+.transport-box { background:var(--cyan-lt); border:1.5px solid var(--cyan-bd);
+  border-radius:10px; padding:13px 15px; display:none; }
+.transport-box.visible { display:block; }
+.transport-box-title { font-size:.75rem; font-weight:800; color:var(--cyan);
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.transport-qty-hint { font-size:.75rem; color:var(--muted); margin-top:8px;
+  padding:8px 12px; background:#fff; border-radius:8px; border:1px solid var(--cyan-bd); }
+
+.custom-class-box { display:none; }
+.custom-class-box.visible { display:block; margin-top:-6px; }
+
+.btn-submit-modal { width:100%; padding:12px; background:var(--teal); color:#fff;
+  border:none; border-radius:10px; font-size:.92rem; font-weight:700;
+  cursor:pointer; font-family:'Sora',sans-serif; transition:.18s; margin-top:16px; }
+.btn-submit-modal:hover { background:var(--teal-dk); }
+.btn-cancel-modal { width:100%; padding:10px; background:#fff; color:var(--gray);
+  border:1.5px solid var(--border); border-radius:10px; font-size:.88rem;
+  font-weight:600; cursor:pointer; font-family:'Sora',sans-serif; margin-top:8px; }
+
+/* MODAL DE SENHA ─── */
+.pin-input { text-align:center; font-size:1.5rem; font-family:'JetBrains Mono',monospace;
+  font-weight:700; letter-spacing:6px; }
+.pin-error { color:var(--red); font-size:.82rem; font-weight:600;
+  text-align:center; margin-top:6px; display:none; }
+
+/* ── VENCIMENTO ───────────────────────────────────────────────── */
+.venc-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px;
+  border-radius:20px; font-size:.68rem; font-weight:700; white-space:nowrap;
+  font-family:'JetBrains Mono',monospace; }
+.venc-vencida   { background:var(--red-lt);  color:var(--red);   border:1px solid #feb2b2; }
+.venc-urgente   { background:#fffaf0; color:#dd6b20; border:1px solid #feebc8; }
+.venc-proximo   { background:var(--amber-lt); color:var(--amber); border:1px solid var(--amber-bd); }
+.venc-ok        { background:var(--green-lt); color:var(--green); border:1px solid #9ae6b4; }
+.venc-sem       { color:#cbd5e0; font-size:.8rem; }
+
+/* ── LEMBRETES ────────────────────────────────────────────────── */
+.lem-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px; }
+.lem-card { display:flex; align-items:center; gap:8px; padding:8px 11px;
+  border:1.5px solid var(--border); border-radius:9px; cursor:pointer;
+  transition:.18s; background:#fff; }
+.lem-card:hover { border-color:var(--teal); background:#f0fdff; }
+.lem-card.lem-on { border-color:var(--teal); background:#f0fdff; }
+.lem-card input { width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+.lem-card span { font-size:.8rem; font-weight:600; color:var(--dark); }
+
+/* ── SINO / BADGE DE NOTIFICAÇÃO ──────────────────────────────── */
+.notif-btn { position:relative; display:inline-flex; align-items:center; gap:6px;
+  padding:8px 13px; border-radius:9px; font-size:.82rem; font-weight:700;
+  cursor:pointer; font-family:'Sora',sans-serif; transition:.18s;
+  background:#fff; color:var(--gray); border:1.5px solid var(--border); }
+.notif-btn:hover { border-color:var(--red); color:var(--red); background:var(--red-lt); }
+.notif-btn.has-alert { border-color:var(--red); color:var(--red); background:var(--red-lt); }
+.notif-badge { position:absolute; top:-5px; right:-5px; min-width:18px; height:18px;
+  background:var(--red); color:#fff; border-radius:99px; font-size:.64rem; font-weight:800;
+  display:grid; place-items:center; padding:0 4px; border:2px solid #fff; }
+
+/* ── MODAL DE NOTIFICAÇÕES ────────────────────────────────────── */
+.modal-notif-box { max-width:560px; }
+.notif-item { display:flex; align-items:flex-start; gap:12px; padding:11px 0;
+  border-bottom:1px solid var(--border); }
+.notif-item:last-child { border-bottom:none; }
+.notif-ico { width:36px; height:36px; border-radius:10px; display:grid;
+  place-items:center; flex-shrink:0; }
+.notif-ico.red    { background:var(--red-lt); }
+.notif-ico.orange { background:#fffaf0; }
+.notif-ico.yellow { background:var(--amber-lt); }
+.notif-info { flex:1; min-width:0; }
+.notif-title { font-size:.87rem; font-weight:700; color:var(--dark);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.notif-sub   { font-size:.76rem; color:var(--muted); margin-top:2px; }
+.notif-tag   { font-size:.68rem; font-weight:700; padding:2px 8px;
+  border-radius:20px; display:inline-flex; margin-top:3px; }
+
+/* ── MODAL LOTE ───────────────────────────────────────────────── */
+.btn-lote { display:inline-flex; align-items:center; gap:7px; padding:9px 15px;
+  background:#fff; color:var(--cyan); border:1.5px solid var(--cyan-bd);
+  border-radius:10px; font-size:.83rem; font-weight:700; cursor:pointer;
+  transition:.18s; font-family:'Sora',sans-serif; }
+.btn-lote:hover { background:var(--cyan-lt); border-color:var(--cyan); }
+
+.modal-lote { max-width:620px !important; }
+
+/* Tipo selecionável */
+.tipo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.tipo-card { display:flex; align-items:center; gap:10px; padding:10px 13px;
+  border:1.5px solid var(--border); border-radius:10px; cursor:pointer; transition:.18s;
+  background:#fff; }
+.tipo-card:hover { border-color:var(--teal); background:#f0fdff; }
+.tipo-card.selected { border-color:var(--teal); background:#f0fdff;
+  box-shadow:0 0 0 3px rgba(35,159,171,.1); }
+.tipo-card input[type=radio] { display:none; }
+.tipo-ico { width:32px; height:32px; border-radius:8px; display:grid; place-items:center;
+  flex-shrink:0; }
+.tipo-lbl { font-size:.83rem; font-weight:700; color:var(--dark); }
+.tipo-sub { font-size:.72rem; color:var(--muted); }
+
+/* Lista de colaboradores */
+.colab-list { border:1.5px solid var(--border); border-radius:10px; overflow:hidden;
+  max-height:220px; overflow-y:auto; }
+.colab-header { display:flex; align-items:center; justify-content:space-between;
+  padding:8px 13px; background:#f8fafc; border-bottom:1px solid var(--border);
+  font-size:.72rem; font-weight:700; color:var(--gray); }
+.colab-toggle-all { font-size:.72rem; font-weight:700; color:var(--teal); cursor:pointer;
+  border:none; background:none; font-family:'Sora',sans-serif; padding:0; }
+.colab-row { display:flex; align-items:center; gap:10px; padding:8px 13px;
+  border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background .15s; }
+.colab-row:last-child { border-bottom:none; }
+.colab-row:hover { background:#fafbff; }
+.colab-row input[type=checkbox] { width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+.colab-nome { font-size:.84rem; font-weight:600; color:var(--dark); flex:1; }
+.colab-cargo { font-size:.73rem; color:var(--muted); }
+.colab-row.disabled { opacity:.4; pointer-events:none; }
+
+/* Preview do total */
+.lote-preview { background:linear-gradient(90deg,#f0fdff,#ecfeff); border:1.5px solid var(--cyan-bd);
+  border-radius:10px; padding:12px 16px; margin-top:12px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.lote-preview .lp-info { font-size:.8rem; color:var(--cyan); font-weight:600; }
+.lote-preview .lp-total { font-family:'JetBrains Mono',monospace; font-size:1.05rem;
+  font-weight:800; color:var(--teal); }
+
+/* Modo de geração */
+.modo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.modo-card { display:flex; align-items:flex-start; gap:9px; padding:9px 12px;
+  border:1.5px solid var(--border); border-radius:9px; cursor:pointer; transition:.18s; }
+.modo-card:hover { border-color:var(--teal); background:#f0fdff; }
+.modo-card.selected { border-color:var(--teal); background:#f0fdff; }
+.modo-card input[type=radio] { display:none; }
+.modo-card .mc-title { font-size:.8rem; font-weight:700; color:var(--dark); }
+.modo-card .mc-sub   { font-size:.7rem; color:var(--muted); margin-top:1px; }
+
+/* ── PRINT ────────────────────────────────────────────────────── */
+@media print {
+  .dg-hero, .toolbar, .btn-sm, .btn-add, .btn-lock-gd,
+  .gd-lock-banner, .modal-back, .total-bar .btn-sm,
+  nav, header, footer { display:none !important; }
+  .print-header { display:block !important; }
+  body { font-size:10.5px; color:#000; background:#fff; }
+  .table-wrap { box-shadow:none; border:1px solid #bbb; border-radius:0; }
+  .dg-table { font-size:9.5px; }
+  .dg-table thead tr { background:#e8e8e8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .dg-table th { padding:6px 10px; font-size:8px; }
+  .dg-table td { padding:6px 10px; }
+  .grp-sep td { background:#ede9fe !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .grp-total td { background:#f3eeff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .row-gd-locked td { filter:blur(0); }
+  @page { margin:1.5cm; size:A4 landscape; }
+}
+.print-header { display:none; margin-bottom:16px; padding-bottom:12px; border-bottom:2.5px solid #333; }
+.print-header h2 { font-size:14px; margin:0 0 2px; font-weight:800; }
+.print-header .print-meta { font-size:9px; color:#555; margin-top:2px; }
+.print-header .print-logo { font-size:20px; font-weight:900; color:#945f34; letter-spacing:-1px; }
+</style>
+
+<!-- ─── CABEÇALHO DE IMPRESSÃO ─────────────────────────────────── -->
+<div class="print-header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="print-logo">CONMAC</div>
+      <h2>Despesas Gerais — {{ mes_sel|default:"—" }}/{{ ano_sel|stringformat:"d"|default:"—" }}</h2>
+      <div class="print-meta">Emitido em: <strong id="ph-data"></strong> · Usuário: {{ request.user.get_full_name }}</div>
+    </div>
+    <div style="text-align:right;font-size:9px;color:#666">
+      Ambiente: Gestão Financeira<br>Total do mês: <strong id="ph-total">—</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HERO ───────────────────────────────────────────────────── -->
+<section class="dg-hero">
+  <div class="hero-left">
+    <div class="hero-ico">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    </div>
+    <div class="hero-txt">
+      <h2>Despesas Gerais</h2>
+      <p>Cadastro e gestão das despesas operacionais da empresa</p>
+      <span class="hero-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+        Acesso Restrito · Staff
+      </span>
+    </div>
+  </div>
+
+  <div class="hero-kpis">
+    <div class="kpi-card kpi--gold">
+      <div class="kpi__val" id="kpi-total">{{ total_mes|floatformat:2|intcomma|default:"—" }}</div>
+      <div class="kpi__lbl">Total do Mês</div>
+    </div>
+    <div class="kpi-card kpi--green">
+      <div class="kpi__val" id="kpi-pago">{{ total_pago|floatformat:2|intcomma|default:"—" }}</div>
+      <div class="kpi__lbl">Pago</div>
+    </div>
+    <div class="kpi-card kpi--red">
+      <div class="kpi__val" id="kpi-pend">{{ total_pendente|floatformat:2|intcomma|default:"—" }}</div>
+      <div class="kpi__lbl">Pendente</div>
+    </div>
+    <div class="kpi-card {% if total_vencidas > 0 %}kpi--red{% else %}kpi--gray{% endif %}">
+      <div class="kpi__val" id="kpi-venc" style="{% if total_vencidas > 0 %}color:var(--red){% endif %}">
+        {{ total_vencidas|default:"0" }}
+      </div>
+      <div class="kpi__lbl">Vencidas/Urgentes</div>
+    </div>
+    <div class="kpi-card kpi--gray">
+      <div class="kpi__val" id="kpi-qtd">{{ total_itens|default:"0" }}</div>
+      <div class="kpi__lbl">Lançamentos</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TOOLBAR ────────────────────────────────────────────────── -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <!-- Seletor de mês/ano -->
+    <form method="get" style="display:flex;gap:8px;align-items:center">
+      <select name="mes" class="fsel" onchange="this.form.submit()">
+        {% for m in meses_lista %}
+        <option value="{{ m.num }}" {% if m.num == mes_sel %}selected{% endif %}>{{ m.label }}</option>
+        {% endfor %}
+      </select>
+      <select name="ano" class="fsel" onchange="this.form.submit()">
+        {% for a in anos_lista %}
+        <option value="{{ a|stringformat:"d" }}" {% if a == ano_sel %}selected{% endif %}>{{ a|stringformat:"d" }}</option>
+        {% endfor %}
+      </select>
+      <select name="class" id="filtro-class" class="fsel">
+        <option value="">Todas as Classificações</option>
+        <option value="aluguel"        {% if filtro_class == 'aluguel' %}selected{% endif %}>Aluguel</option>
+        <option value="gastos_diversos"{% if filtro_class == 'gastos_diversos' %}selected{% endif %}>Gastos Diversos</option>
+        <option value="alimentacao"    {% if filtro_class == 'alimentacao' %}selected{% endif %}>Alimentação</option>
+        <option value="transporte"     {% if filtro_class == 'transporte' %}selected{% endif %}>Transporte</option>
+        <option value="consignado"     {% if filtro_class == 'consignado' %}selected{% endif %}>Consignado</option>
+        <option value="energia"     {% if filtro_class == 'energia' %}selected{% endif %}>Energia</option>
+        <option value="financiamentos" {% if filtro_class == 'financiamentos' %}selected{% endif %}>Financiamentos</option>
+        <option value="outros"         {% if filtro_class == 'outros' %}selected{% endif %}>Outros</option>
+      </select>
+      <select name="status" class="fsel">
+        <option value="">Todos os Status</option>
+        <option value="pago"     {% if filtro_status == 'pago' %}selected{% endif %}>✓ Pago</option>
+        <option value="pendente" {% if filtro_status == 'pendente' %}selected{% endif %}>⏳ Pendente</option>
+      </select>
+    </form>
+  </div>
+  <div class="toolbar-right">
+    <a href="{% url 'raio_x' %}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;
+              border-radius:9px;font-size:.79rem;font-weight:600;color:var(--muted);
+              border:1.5px solid var(--border);background:#fff;text-decoration:none;
+              transition:.18s;font-family:'Sora',sans-serif;"
+       onmouseover="this.style.color='var(--teal)';this.style.borderColor='var(--teal)';this.style.background='#f0fdff'"
+       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)';this.style.background='#fff'"
+       title="Abrir Raio X Financeiro">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+      Raio X
+    </a>
+    {% if notificacoes_alerta %}
+    <button class="notif-btn has-alert" onclick="abrirModal('modal-notif')" title="Ver alertas de vencimento">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alertas
+      <span class="notif-badge">{{ notificacoes_alerta|length }}</span>
+    </button>
+    {% endif %}
+    <button class="btn-lock-gd" id="btnLockGD" onclick="toggleLockGD()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span id="btnLockGDTxt">Ocultar Gastos Sensíveis</span>
+    </button>
+    <button class="btn-lote" onclick="abrirModalLote()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+      </svg>
+      Lançamento em Lote
+    </button>
+    <button class="btn-add" onclick="abrirModalAdd()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova Despesa
+    </button>
+    <button onclick="window.print()" style="display:inline-flex;align-items:center;gap:7px;padding:9px 14px;background:#fff;color:var(--brown);border:1.5px solid var(--brown);border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;transition:.18s" onmouseover="this.style.background='var(--brown)';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='var(--brown)'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Imprimir
+    </button>
+  </div>
+</div>
+
+<!-- ─── TABELA DE DESPESAS ─────────────────────────────────────── -->
+<div class="table-wrap">
+  <table class="dg-table" id="dgTable">
+    <thead>
+      <tr>
+        <th>Classificação</th>
+        <th>Descrição</th>
+        <th style="text-align:center">Vencimento</th>
+        <th>Mês Ref.</th>
+        <th style="text-align:right">Qtd.</th>
+        <th style="text-align:right">Valor Unit.</th>
+        <th style="text-align:right">Total</th>
+        <th>Recorrente</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center" class="col-acoes">Ações</th>
+      </tr>
+    </thead>
+    <tbody id="dgTbody">
+      {# ─── DADOS REAIS VIA DJANGO ─── #}
+      {% if despesas %}
+        {% regroup despesas by get_classificacao_display as por_class %}
+        {% for grp in por_class %}
+
+        <tr class="grp-sep">
+          <td colspan="10">
+            <span id="grp-label-{{ grp.grouper|slugify }}">{{ grp.grouper }}</span>
+          </td>
+        </tr>
+
+        {% if grp.grouper == 'Gastos Diversos' %}
+        <tr>
+          <td colspan="10" style="padding:0">
+            <div class="gd-lock-banner visible" id="gdBanner">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <p>Conteúdo sensível. Clique para desbloquear e visualizar os lançamentos.</p>
+              <button onclick="abrirModalSenha()">🔓 Desbloquear</button>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+
+        {% for d in grp.list %}
+
+        <tr class="{% if grp.grouper == 'Gastos Diversos' %}row-gd-locked{% endif %} dg-row"
+                    data-class="{{ d.classificacao }}"
+                    data-class-custom="{{ d.classificacao_custom|default:'' }}"
+                    data-desc="{{ d.descricao }}"
+                    data-obs="{{ d.observacao|default:'' }}"
+                    data-status="{{ d.status }}"
+                    data-valor="{{ d.valor }}"
+                    data-valor-unit="{{ d.valor_unitario|default:'' }}"
+                    data-qtd="{{ d.quantidade }}"
+                    data-mes="{{ d.mes_referencia|date:'Y-m' }}"
+                    data-venc="{{ d.data_vencimento|date:'Y-m-d'|default:'' }}"
+                    data-rec="{{ d.recorrente|yesno:'true,false' }}"
+                    data-rec-id="{{ d.recorrencia_id|default:'' }}"
+                    data-lembretes="{% for l in d.lembrete_antecedencia %}{{ l }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                    data-municipio="{{ d.municipio|default:'' }}"
+                    data-municipio="{{ d.municipio|default:'' }}"
+                    data-tipo-orgao="{{ d.tipo_orgao|default:'' }}"
+                    id="dgrow-{{ d.id|stringformat:'d' }}">
+
+                  <td class="td-class">
+                    <span class="bc bc-{{ d.classificacao }}">{{ d.get_classificacao_display }}</span>
+                  </td>
+                  <td>
+                    <span style="font-weight:600">{{ d.descricao }}</span>
+                    {% if d.observacao %}<br><small style="color:var(--muted);font-size:.74rem">{{ d.observacao|truncatechars:60 }}</small>{% endif %}
+                  </td>
+                  <td style="text-align:center">
+                    {% if d.data_vencimento %}
+                      {% with dias=d.dias_para_vencimento %}
+                      {% if dias < 0 %}
+                        <span class="venc-badge venc-vencida">🔴 {{ d.data_vencimento|date:"d/m" }}<br><span style="font-size:.6rem">{{ d.dias_atraso }} d. atrás</span></span>
+                      {% elif dias == 0 %}
+                        <span class="venc-badge venc-urgente">🔴 Hoje!</span>
+                      {% elif dias <= 3 %}
+                        <span class="venc-badge venc-urgente">🟠 {{ d.data_vencimento|date:"d/m" }}<br><span style="font-size:.6rem">{{ dias }}d</span></span>
+                      {% elif dias <= 7 %}
+                        <span class="venc-badge venc-proximo">🟡 {{ d.data_vencimento|date:"d/m" }}<br><span style="font-size:.6rem">{{ dias }}d</span></span>
+                      {% else %}
+                        <span class="venc-badge venc-ok">{{ d.data_vencimento|date:"d/m/Y" }}</span>
+                      {% endif %}
+                      {% endwith %}
+                    {% else %}
+                      <span class="venc-sem">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="mono" style="color:var(--gray)">
+                    {{ d.mes_referencia|date:"m/Y" }}
+                  </td>
+                  <td style="text-align:right;color:var(--muted)">{{ d.quantidade|default:"1" }}</td>
+                  <td style="text-align:right" class="mono">
+                    {% if d.valor_unitario %}R$ {{ d.valor_unitario|floatformat:2|intcomma }}{% else %}—{% endif %}
+                  </td>
+                  <td style="text-align:right;font-weight:800" class="mono">
+                    R$ {{ d.valor|floatformat:2|intcomma }}
+                  </td>
+                  <td>
+                    {% if d.recorrente %}<span class="pill pill-recorrente">↻ Recorrente</span>{% else %}<span style="color:#cbd5e0">—</span>{% endif %}
+                  </td>
+                  <td style="text-align:center">
+                    <span class="pill {% if d.status == 'pago' %}pill-pago{% else %}pill-pendente{% endif %}">
+                      {% if d.status == 'pago' %}✓ Pago{% else %}⏳ Pendente{% endif %}
+                    </span>
+                  </td>
+                  <td style="text-align:center;white-space:nowrap" class="col-acoes">
+                    <button class="btn-sm btn-edit-row" onclick="editarDespesa({{ d.id|stringformat:'d' }})">Editar</button>
+                    <button class="btn-sm btn-del-row"  onclick="excluirDespesa({{ d.id|stringformat:'d' }}, '{{ d.descricao|escapejs }}', {{ d.recorrente|yesno:'true,false' }}, '{{ d.recorrencia_id|default:'' }}')">✕</button>
+                  </td>
+                </tr>
+
+        {% endfor %}
+
+        <tr class="grp-total">
+          <td colspan="6" style="text-align:right;color:var(--purple);font-size:.76rem;font-family:'Sora',sans-serif">
+            Subtotal · {{ grp.grouper }}
+          </td>
+          <td style="text-align:right;color:var(--purple)" id="subtotal-{{ grp.grouper|slugify }}">—</td>
+          <td colspan="3"></td>
+        </tr>
+
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="10">
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.3;margin-bottom:14px">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <h3>Nenhuma despesa cadastrada</h3>
+          <p>Clique em "Nova Despesa" para adicionar o primeiro lançamento do mês.</p>
+        </div>
+      </td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <!-- Barra de total geral -->
+  <div class="total-bar">
+    <div>
+      <div class="lbl">Total Geral</div>
+      <div class="val" id="total-geral">R$ 0,00</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — LANÇAMENTO EM LOTE
+════════════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-lote">
+  <div class="modal-box modal-teal modal-lote">
+    <button class="modal-close" onclick="fecharModal('modal-lote')">×</button>
+    <h3 class="modal-title">Lançamento em Lote</h3>
+    <p class="modal-sub">Benefício com valor fixo lançado para múltiplos colaboradores.</p>
+
+    <!-- Tipo de benefício -->
+    <div class="fgroup" style="margin-bottom:12px">
+      <label>Tipo de Benefício *</label>
+      <div class="tipo-grid">
+
+        <label class="tipo-card selected" id="tc-valiment" onclick="selecionarTipo('vale_alimentacao', this)">
+          <input type="radio" name="lote-tipo" value="vale_alimentacao" checked>
+          <div class="tipo-ico" style="background:#dcfce7">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          </div>
+          <div>
+            <div class="tipo-lbl">Vale Alimentação</div>
+            <div class="tipo-sub">Cartão de benefício alimentar</div>
+          </div>
+        </label>
+
+        <label class="tipo-card" id="tc-vtransp" onclick="selecionarTipo('vale_transporte', this)">
+          <input type="radio" name="lote-tipo" value="vale_transporte">
+          <div class="tipo-ico" style="background:var(--cyan-lt)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div>
+            <div class="tipo-lbl">Vale Transporte</div>
+            <div class="tipo-sub">Passagem ou crédito de mobilidade</div>
+          </div>
+        </label>
+
+        <label class="tipo-card" id="tc-consig" onclick="selecionarTipo('consignado', this)">
+          <input type="radio" name="lote-tipo" value="consignado">
+          <div class="tipo-ico" style="background:#fce7f3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9d174d" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="tipo-lbl">Consignado</div>
+            <div class="tipo-sub">Desconto ou empréstimo em folha</div>
+          </div>
+        </label>
+
+        <label class="tipo-card" id="tc-lote-outro" onclick="selecionarTipo('outros', this)">
+          <input type="radio" name="lote-tipo" value="outros">
+          <div class="tipo-ico" style="background:#f3f4f6">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </div>
+          <div>
+            <div class="tipo-lbl">Outros</div>
+            <div class="tipo-sub">Benefício personalizado</div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- Nome personalizado (só visível para "Outros") -->
+      <div id="lote-custom-box" style="display:none;margin-top:-4px">
+        <input type="text" id="lote-custom-nome" placeholder="Nome do benefício (ex: Plano de Saúde)"
+               style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e0;border-radius:9px;font-size:.88rem;font-family:'Sora',sans-serif;outline:none;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- Valor e Mês -->
+    <div class="form-grid form-cols-2" style="margin-bottom:12px">
+      <div class="fgroup">
+        <label>Valor por Colaborador (R$) *</label>
+        <input type="number" step="0.01" min="0.01" id="lote-valor"
+               placeholder="Ex: 550,00" oninput="atualizarPreview()">
+      </div>
+      <div class="fgroup">
+        <label>Mês de Referência *</label>
+        <input type="month" id="lote-mes">
+      </div>
+    </div>
+
+    <!-- Colaboradores -->
+    <div class="fgroup" style="margin-bottom:0">
+      <label>Colaboradores *</label>
+      <div class="colab-list">
+        <div class="colab-header">
+          <span id="colab-count-lbl">Todos selecionados</span>
+          <button class="colab-toggle-all" onclick="toggleTodosColab()" id="btnToggleColab">
+            Desmarcar todos
+          </button>
+        </div>
+        <div id="colab-rows">
+          {% for u in usuarios_ativos %}
+          <label class="colab-row" data-salary="{{ u.perfil.salario_base|default:0 }}">
+            <input type="checkbox" class="colab-cb" value="{{ u.id }}" checked onchange="atualizarPreview()">
+            <div class="colab-nome">{{ u.get_full_name|default:u.username }}</div>
+            <div class="colab-cargo">{{ u.perfil.cargo|default:"Colaborador" }}</div>
+          </label>
+          {% empty %}
+          <div style="padding:16px;text-align:center;color:var(--muted);font-size:.83rem">
+            Nenhum colaborador ativo encontrado.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview do total -->
+    <div class="lote-preview" id="lote-preview">
+      <div class="lp-info" id="lp-info">0 colaboradores × R$ 0,00</div>
+      <div>
+        <span style="font-size:.68rem;text-transform:uppercase;font-weight:700;color:var(--muted);margin-right:8px">Total</span>
+        <span class="lp-total" id="lp-total">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- Modo de geração -->
+    <div class="fgroup" style="margin-top:14px">
+      <label>Como gerar os registros?</label>
+      <div class="modo-grid">
+        <label class="modo-card selected" id="mc-unico" onclick="selecionarModo('unico', this)">
+          <input type="radio" name="lote-modo" value="unico" checked>
+          <div>
+            <div class="mc-title">📦 Um registro consolidado</div>
+            <div class="mc-sub">Gera uma única despesa com a quantidade e total.</div>
+          </div>
+        </label>
+        <label class="modo-card" id="mc-individual" onclick="selecionarModo('individual', this)">
+          <input type="radio" name="lote-modo" value="individual">
+          <div>
+            <div class="mc-title">👤 Um registro por pessoa</div>
+            <div class="mc-sub">Gera uma despesa individual para cada colaborador.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Opções extras -->
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label class="toggle-card" id="tc-lote-recorrente">
+        <input type="checkbox" id="lote-recorrente">
+        <div class="tc-info">
+          <div class="tc-lbl">↻ Recorrente</div>
+          <div class="tc-sub">Replica nos meses seguintes.</div>
+        </div>
+      </label>
+      <div class="fgroup" style="margin:0">
+        <label>Vencimento (opcional)</label>
+        <input type="date" id="lote-vencimento">
+      </div>
+    </div>
+
+    <button class="btn-submit-modal" onclick="salvarLote()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="margin-right:4px;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>
+      Confirmar Lançamento em Lote
+    </button>
+    <button class="btn-cancel-modal" onclick="fecharModal('modal-lote')">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — ADD / EDIT DESPESA GERAL
+════════════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-dg">
+  <div class="modal-box modal-teal">
+    <button class="modal-close" onclick="fecharModal('modal-dg')">×</button>
+    <h3 class="modal-title" id="modal-dg-title">Nova Despesa Geral</h3>
+    <p class="modal-sub">Preencha os campos abaixo. Campos marcados com * são obrigatórios.</p>
+
+    <input type="hidden" id="dg-id" value="">
+
+    <div class="form-grid">
+      <!-- Classificação -->
+      <div class="fgroup">
+        <label>Classificação *</label>
+        <select id="dg-class" onchange="onClassChange(this.value)">
+          <option value="">Selecione...</option>
+          <option value="aluguel">🏢 Aluguel</option>
+          <option value="gastos_diversos">🔒 Gastos Diversos</option>
+          <option value="alimentacao">🍽️ Alimentação</option>
+          <option value="transporte">🚌 Transporte</option>
+          <option value="consignado">💳 Consignado</option>
+          <option value="financiamentos">🏦 Financiamentos</option>
+          <option value="energia">💡 Energia</option>
+          <option value="outros">📦 Outros / Personalizado</option>
+        </select>
+      </div>
+
+      <!-- Nome personalizado (apenas para "outros") -->
+      <div class="fgroup custom-class-box" id="box-custom-class">
+        <label>Nome da Classificação *</label>
+        <input type="text" id="dg-class-custom" placeholder="Ex: Manutenção, Software, Limpeza...">
+        <small>Esse nome aparecerá nas listagens e no Raio X.</small>
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-top:12px">
+      <!-- Descrição -->
+      <div class="fgroup">
+        <label>Descrição *</label>
+        <input type="text" id="dg-desc" placeholder="Ex: Aluguel sede — Rua das Flores 123">
+      </div>
+    </div>
+
+    <!-- Painel especial: Transporte (bulk) -->
+    <div class="transport-box" id="box-transporte">
+      <div class="transport-box-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Configuração de Transporte em Lote
+      </div>
+      <div class="form-grid form-cols-2">
+        <div class="fgroup">
+          <label>Valor Unitário (R$) *</label>
+          <input type="number" step="0.01" id="dg-valor-unit" placeholder="Ex: 220.00" oninput="calcTransporte()">
+        </div>
+        <div class="fgroup">
+          <label>Quantidade de Colaboradores</label>
+          <input type="number" min="1" id="dg-qtd" placeholder="Deixe vazio = usar total de colaboradores" oninput="calcTransporte()">
+        </div>
+      </div>
+      <div class="transport-qty-hint" id="transport-hint">
+        💡 Deixe a quantidade em branco para multiplicar automaticamente pelo total de colaboradores ativos
+        (<strong>{{ total_usuarios|default:"—" }}</strong> no momento).
+        Total calculado: <strong id="transport-calc">—</strong>
+      </div>
+    </div>
+
+    <!-- Valor direto (outras classificações) -->
+    <div class="form-grid form-cols-2" id="box-valor-direto" style="margin-top:12px">
+      <div class="fgroup">
+        <label>Valor Total (R$) *</label>
+        <input type="number" step="0.01" id="dg-valor" placeholder="Ex: 2500.00">
+      </div>
+      <div class="fgroup">
+        <label>Mês de Referência *</label>
+        <input type="month" id="dg-mes">
+      </div>
+    </div>
+
+    <div class="form-grid form-cols-2" style="margin-top:12px">
+      <div class="fgroup">
+        <label>Status</label>
+        <select id="dg-status">
+          <option value="pendente">⏳ Pendente</option>
+          <option value="pago">✓ Pago</option>
+        </select>
+      </div>
+      <div class="fgroup" id="box-mes-transporte" style="display:none">
+        <label>Mês de Referência *</label>
+        <input type="month" id="dg-mes-t">
+      </div>
+    </div>
+
+    <!-- Toggles -->
+    <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+      <label class="toggle-card" id="tc-recorrente">
+        <input type="checkbox" id="dg-recorrente">
+        <div class="tc-info">
+          <div class="tc-lbl">↻ Despesa Recorrente</div>
+          <div class="tc-sub">Essa despesa se repetirá automaticamente nos meses seguintes com o mesmo valor.</div>
+        </div>
+      </label>
+    </div>
+
+    <!-- Data de vencimento + lembretes -->
+    <div class="form-grid form-cols-2" style="margin-top:14px">
+      <div class="fgroup">
+        <label>Data de Vencimento</label>
+        <input type="date" id="dg-vencimento">
+        <small>Deixe em branco se não há vencimento fixo.</small>
+      </div>
+      <div class="fgroup">
+        <label>Lembretes antes do vencimento</label>
+        <div class="lem-grid">
+          <label class="lem-card" id="lc-7">
+            <input type="checkbox" value="7" id="lem-7">
+            <span>🔔 7 dias antes</span>
+          </label>
+          <label class="lem-card" id="lc-3">
+            <input type="checkbox" value="3" id="lem-3">
+            <span>🔔 3 dias antes</span>
+          </label>
+          <label class="lem-card" id="lc-1">
+            <input type="checkbox" value="1" id="lem-1">
+            <span>🔔 1 dia antes</span>
+          </label>
+          <label class="lem-card" id="lc-0">
+            <input type="checkbox" value="0" id="lem-0">
+            <span>🔔 No vencimento</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Observação -->
+    <div class="fgroup" style="margin-top:12px">
+      <label>Observação</label>
+      <textarea id="dg-obs" placeholder="Notas internas, número de contrato, etc."></textarea>
+    </div>
+
+    <!-- Município Vinculado -->
+    <div class="fgroup" style="margin-top:12px">
+      <label>Município Vinculado <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+
+        <select id="dg-municipio" class="fsel" style="font-family:'Sora',sans-serif">
+        <option value="">— Sem vínculo —</option>
+        {% if municipios_prefeitura %}
+        <optgroup label="Prefeitura">
+          {% for m in municipios_prefeitura %}<option value="{{ m }}|prefeitura">{{ m }}</option>{% endfor %}
+        </optgroup>
+        {% endif %}
+        {% if municipios_camara %}
+        <optgroup label="Câmara Municipal">
+          {% for m in municipios_camara %}<option value="{{ m }}|camara">{{ m }}</option>{% endfor %}
+        </optgroup>
+        {% endif %}
+      </select>
+
+      <small style="color:var(--muted)">Associe ao município para análise detalhada no Raio X.</small>
+    </div>
+
+    <!-- ── Escopo de recorrência (aparece apenas ao editar despesas recorrentes) ── -->
+    <div id="box-escopo-rec" style="display:none;margin-top:16px;
+         background:var(--cyan-lt);border:1.5px solid var(--cyan-bd);
+         border-radius:10px;padding:13px 15px">
+      <div style="font-size:.73rem;font-weight:800;color:var(--cyan);
+                  text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;
+                  display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        Despesa Recorrente — Aplicar alteração em:
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+                      padding:9px 12px;border-radius:8px;border:1.5px solid var(--cyan-bd);
+                      background:#fff;transition:.18s"
+               id="escopo-unico-lbl">
+          <input type="radio" name="dg-escopo" id="escopo-unico" value="unico" checked
+                 style="margin-top:2px;flex-shrink:0" onchange="onEscopoChange()">
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--dark)">
+              📅 Apenas este mês
+            </div>
+            <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
+              Os outros meses já lançados permanecem inalterados.
+            </div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+                      padding:9px 12px;border-radius:8px;border:1.5px solid var(--cyan-bd);
+                      background:#fff;transition:.18s"
+               id="escopo-todos-lbl">
+          <input type="radio" name="dg-escopo" id="escopo-todos" value="todos"
+                 style="margin-top:2px;flex-shrink:0" onchange="onEscopoChange()">
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--cyan)">
+              ↻ Todos os meses desta recorrência
+            </div>
+            <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
+              Descrição, valor, município e vencimento serão atualizados em todos os lançamentos do mesmo grupo.
+              <strong style="color:var(--cyan)">Status e mês de referência não são alterados.</strong>
+            </div>
+          </div>
+        </label>
+      </div>
+      <div id="escopo-preview" style="margin-top:8px;font-size:.75rem;color:var(--cyan);
+           font-weight:600;display:none">
+        ↻ Alteração será propagada para todos os meses do grupo desta recorrência.
+      </div>
+    </div>
+
+    <button class="btn-submit-modal" onclick="salvarDespesa()">Salvar Despesa</button>
+    <button class="btn-cancel-modal" onclick="fecharModal('modal-dg')">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — SENHA para Gastos Diversos
+════════════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-senha">
+  <div class="modal-box modal-purple" style="max-width:380px">
+    <button class="modal-close" onclick="fecharModal('modal-senha')">×</button>
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="width:56px;height:56px;background:var(--purple-lt);border-radius:50%;display:grid;place-items:center;margin:0 auto 12px">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h3 style="margin:0 0 4px;font-size:1rem;font-weight:800;color:var(--dark)">Conteúdo Protegido</h3>
+      <p style="margin:0;font-size:.83rem;color:var(--muted)">Digite sua senha de acesso para visualizar os <strong>Gastos Diversos</strong>.</p>
+    </div>
+
+    <div class="fgroup">
+      <label>Senha do Administrador</label>
+      <input type="password" class="pin-input" id="senha-input" placeholder="••••••" onkeyup="if(event.key==='Enter')verificarSenha()">
+      <div class="pin-error" id="senha-error">Senha incorreta. Tente novamente.</div>
+    </div>
+
+    <button class="btn-submit-modal" style="background:var(--purple);margin-top:14px" onclick="verificarSenha()">Confirmar</button>
+    <button class="btn-cancel-modal" onclick="fecharModal('modal-senha')">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — ALERTAS DE VENCIMENTO
+════════════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-notif">
+  <div class="modal-box modal-teal modal-notif-box">
+    <button class="modal-close" onclick="fecharNotif()">×</button>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:44px;height:44px;background:var(--red-lt);border-radius:12px;display:grid;place-items:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <div>
+        <h3 style="margin:0 0 2px;font-size:1rem;font-weight:800;color:var(--dark)">Alertas de Vencimento</h3>
+        <p style="margin:0;font-size:.81rem;color:var(--muted)">
+          Despesas pendentes que requerem atenção — <strong id="notif-count">0</strong> alerta(s)
+        </p>
+      </div>
+    </div>
+
+    <div id="notif-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;padding:4px 14px">
+      {# Renderizado via Django #}
+      {% for n in notificacoes_alerta %}
+      <div class="notif-item">
+        <div class="notif-ico {% if n.urgencia == 'vencida' %}red{% elif n.urgencia == 'urgente' %}orange{% else %}yellow{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="{% if n.urgencia == 'vencida' %}var(--red){% elif n.urgencia == 'urgente' %}#dd6b20{% else %}var(--amber){% endif %}"
+               stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="notif-info">
+          <div class="notif-title">{{ n.descricao }}</div>
+          <div class="notif-sub">
+            {{ n.get_classificacao_display }} · R$ {{ n.valor|floatformat:2|intcomma }}
+          </div>
+          <span class="notif-tag {% if n.urgencia == 'vencida' %}venc-vencida{% elif n.urgencia == 'urgente' %}venc-urgente{% else %}venc-proximo{% endif %}">
+            {% if n.urgencia == 'vencida' %}
+              🔴 Vencida há {{ n.dias_atraso }} dia{{ n.dias_atraso|pluralize }} · {{ n.data_vencimento|date:"d/m/Y" }}
+            {% elif n.urgencia == 'urgente' %}
+              🟠 Vence em {{ n.dias_restantes }} dia{{ n.dias_restantes|pluralize }} · {{ n.data_vencimento|date:"d/m/Y" }}
+            {% else %}
+              🟡 Vence em {{ n.dias_restantes }} dias · {{ n.data_vencimento|date:"d/m/Y" }}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% empty %}
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:.88rem">
+        Nenhum alerta pendente.
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="fecharNotif()" class="btn-cancel-modal" style="flex:1;margin-top:0">Dispensar</button>
+      <a href="?status=pendente" class="btn-submit-modal" style="flex:1;margin-top:0;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center">
+        Ver Pendentes
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — Confirmar Exclusão
+════════════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-del">
+  <div class="modal-box modal-red" style="max-width:460px">
+    <button class="modal-close" onclick="fecharModal('modal-del')">×</button>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="width:44px;height:44px;background:var(--red-lt);border-radius:12px;
+                  display:grid;place-items:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)"
+             stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="modal-title" style="color:var(--red);margin:0 0 2px">Excluir Despesa</h3>
+        <p style="margin:0;font-size:.83rem;color:var(--muted)">
+          Excluindo: <strong id="del-desc"></strong>
+        </p>
+      </div>
+    </div>
+
+    <input type="hidden" id="del-id">
+    <input type="hidden" id="del-is-rec">
+    <input type="hidden" id="del-rec-id">
+
+    <!-- Opções de escopo — visível apenas para despesas recorrentes com grupo -->
+    <div id="del-escopo-box" style="display:none;margin-bottom:16px;
+         background:#fff5f5;border:1.5px solid #feb2b2;border-radius:12px;padding:14px 15px">
+      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+                  color:var(--red);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        Despesa recorrente — o que deseja excluir?
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+                      padding:9px 12px;border-radius:8px;border:1.5px solid #feb2b2;
+                      background:#fff;transition:.18s" id="del-lbl-unico"
+               onmouseover="this.style.borderColor='var(--red)'"
+               onmouseout="syncDelLabels()">
+          <input type="radio" name="del-escopo" id="del-esc-unico" value="apenas_este" checked
+                 style="margin-top:2px;flex-shrink:0;accent-color:var(--red)"
+                 onchange="syncDelLabels()">
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--dark)">📅 Apenas este mês</div>
+            <div style="font-size:.73rem;color:var(--muted);margin-top:1px">
+              Remove só o lançamento do mês selecionado. Os outros meses permanecem.
+            </div>
+          </div>
+        </label>
+
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+                      padding:9px 12px;border-radius:8px;border:1.5px solid #feb2b2;
+                      background:#fff;transition:.18s" id="del-lbl-futuros"
+               onmouseover="this.style.borderColor='var(--red)'"
+               onmouseout="syncDelLabels()">
+          <input type="radio" name="del-escopo" id="del-esc-futuros" value="este_e_futuros"
+                 style="margin-top:2px;flex-shrink:0;accent-color:var(--red)"
+                 onchange="syncDelLabels()">
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:#dd6b20">🗓️ Este mês e os futuros</div>
+            <div style="font-size:.73rem;color:var(--muted);margin-top:1px">
+              Remove este e todos os lançamentos de meses posteriores da mesma recorrência.
+            </div>
+          </div>
+        </label>
+
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+                      padding:9px 12px;border-radius:8px;border:1.5px solid #feb2b2;
+                      background:#fff;transition:.18s" id="del-lbl-todos"
+               onmouseover="this.style.borderColor='var(--red)'"
+               onmouseout="syncDelLabels()">
+          <input type="radio" name="del-escopo" id="del-esc-todos" value="todos"
+                 style="margin-top:2px;flex-shrink:0;accent-color:var(--red)"
+                 onchange="syncDelLabels()">
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--red)">🗑️ Toda a recorrência</div>
+            <div style="font-size:.73rem;color:var(--muted);margin-top:1px">
+              Remove <strong>todos</strong> os meses desta despesa recorrente, passados e futuros.
+            </div>
+          </div>
+        </label>
+
+      </div>
+    </div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 14px;
+              padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)">
+      ⚠️ Esta ação <strong>não pode ser desfeita</strong>.
+    </p>
+
+    <div style="display:flex;gap:10px">
+      <button onclick="fecharModal('modal-del')" class="btn-cancel-modal"
+              style="flex:1;margin-top:0">Cancelar</button>
+      <button onclick="confirmarExclusao()"
+              style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;
+                     border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;
+                     font-family:'Sora',sans-serif;transition:.18s"
+              onmouseover="this.style.background='#9b2c2c'"
+              onmouseout="this.style.background='var(--red)'">
+        🗑️ Confirmar Exclusão
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── JAVASCRIPT ─────────────────────────────────────────────── -->
+<script>
+/* ── Dados injetados pelo Django ─── */
+const TOTAL_USUARIOS = {{ total_usuarios|default:0 }};
+const CSRF_TOKEN     = '{{ csrf_token }}';
+
+/* ── Estado global ─── */
+/* ── Estado global ─── */
+let gdUnlocked = sessionStorage.getItem('gd_unlocked') === '1';
+let pendingAction = null;
+
+/* ── Formatação ─── */
+const fmt = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',
+  {minimumFractionDigits:2, maximumFractionDigits:2});
+
+/* ── Helper de fetch com tratamento correto de erros ────────────────────
+   - Verifica r.ok antes de parsear JSON
+   - Nunca recarrega a página em caso de erro
+   - Exibe mensagem útil ao usuário
+──────────────────────────────────────────────────────────────────────── */
+async function apiFetch(url, body) {
+  let r;
+  try {
+    r = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body:    JSON.stringify(body),
+    });
+  } catch (networkErr) {
+    throw new Error('Falha de rede. Verifique sua conexão e tente novamente.');
+  }
+
+  if (!r.ok) {
+    // Tenta ler texto para dar diagnóstico melhor (ex: CSRF expirado = 403)
+    let detalhe = '';
+    try { detalhe = await r.text(); } catch(_) {}
+    if (r.status === 403) throw new Error('Sessão expirada (CSRF). Recarregue a página e tente novamente.');
+    if (r.status === 404) throw new Error('Registro não encontrado. A página será recarregada.');
+    throw new Error(`Erro do servidor (HTTP ${r.status}). ${detalhe.substring(0, 120)}`);
+  }
+
+  let data;
+  try {
+    data = await r.json();
+  } catch(_) {
+    throw new Error('Resposta inesperada do servidor. Recarregue a página.');
+  }
+
+  if (!data.ok) throw new Error(data.error || 'Operação recusada pelo servidor.');
+  return data;
+}
+
+/* ── URL builder robusto (evita replace frágil de '/0/') ─── */
+function buildUrl(template, id) {
+  // template ex: "/financeiro/despesas/0/update/"  →  "/financeiro/despesas/42/update/"
+  return template.replace(/\/0\//, '/' + id + '/');
+}
+
+/* ── Helpers de Modal ─── */
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-back').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) fecharModal(m.id); });
+});
+
+/* ── Gastos Diversos — estado inicial restaurado da sessão ─── */
+if (gdUnlocked) {
+  aplicarLockGD(false);
+  // Ajustar botão (DOM ainda não existe aqui; faz no DOMContentLoaded)
+}
+
+function toggleLockGD() {
+  if (gdUnlocked) {
+    gdUnlocked = false;
+    sessionStorage.removeItem('gd_unlocked');
+    aplicarLockGD(true);
+    document.getElementById('btnLockGD').classList.remove('unlocked');
+    document.getElementById('btnLockGDTxt').textContent = 'Ocultar Gastos Sensíveis';
+  } else {
+    abrirModalSenha();
+  }
+}
+
+function abrirModalSenha(action) {
+  pendingAction = action || 'unlock-view';
+  document.getElementById('senha-input').value = '';
+  document.getElementById('senha-error').style.display = 'none';
+  abrirModal('modal-senha');
+  setTimeout(() => document.getElementById('senha-input').focus(), 100);
+}
+
+function verificarSenha() {
+  const pwd = document.getElementById('senha-input').value;
+  if (!pwd) { document.getElementById('senha-error').style.display='block'; return; }
+
+  fetch('{% url "verificar_senha" %}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ password: pwd })
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(data => {
+    if (data.ok) _aplicarDesbloqueio();
+    else document.getElementById('senha-error').style.display = 'block';
+  })
+  .catch(() => document.getElementById('senha-error').style.display = 'block');
+}
+
+function _aplicarDesbloqueio() {
+  fecharModal('modal-senha');
+  gdUnlocked = true;
+  sessionStorage.setItem('gd_unlocked', '1');   // ← persiste na sessão
+  aplicarLockGD(false);
+  document.getElementById('btnLockGD').classList.add('unlocked');
+  document.getElementById('btnLockGDTxt').textContent = 'Gastos Visíveis · Travar';
+
+  if (pendingAction === 'add-gd') {
+    abrirModal('modal-dg');
+    setTimeout(() => {
+      const sel = document.getElementById('dg-class');
+      sel.value = 'gastos_diversos';
+      onClassChange('gastos_diversos');
+    }, 80);
+  } else if (typeof pendingAction === 'object' && pendingAction.tipo === 'edit-gd') {
+    executarEdicao(pendingAction.id);
+  }
+}
+
+function aplicarLockGD(lock) {
+  document.querySelectorAll('.dg-row[data-class="gastos_diversos"]').forEach(r => {
+    r.classList.toggle('row-gd-locked', lock);
+  });
+  const banner = document.getElementById('gdBanner');
+  if (banner) banner.classList.toggle('visible', lock);
+}
+
+/* ── Escopo de recorrência ─── */
+function onEscopoChange() {
+  const todos = document.getElementById('escopo-todos').checked;
+  const preview = document.getElementById('escopo-preview');
+  const lblTodos = document.getElementById('escopo-todos-lbl');
+  const lblUnico = document.getElementById('escopo-unico-lbl');
+  if (preview) preview.style.display = todos ? 'block' : 'none';
+  if (lblTodos) lblTodos.style.borderColor = todos ? 'var(--cyan)' : 'var(--cyan-bd)';
+  if (lblUnico) lblUnico.style.borderColor = !todos ? 'var(--cyan)' : 'var(--cyan-bd)';
+}
+
+/* ── Abrir modal de nova despesa (zerado) ─── */
+function abrirModalAdd() {
+  // Limpar ID (modo criação)
+  document.getElementById('dg-id').value            = '';
+  document.getElementById('dg-class').value          = '';
+  document.getElementById('dg-class-custom').value   = '';
+  document.getElementById('dg-desc').value            = '';
+  document.getElementById('dg-valor').value           = '';
+  document.getElementById('dg-valor-unit').value      = '';
+  document.getElementById('dg-qtd').value             = '';
+  document.getElementById('dg-status').value          = 'pendente';
+  document.getElementById('dg-obs').value             = '';
+  document.getElementById('dg-vencimento').value      = '';
+  document.getElementById('dg-municipio').value       = '';
+
+  // Mês atual como padrão
+  const hoje = new Date();
+  const mes  = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('dg-mes').value   = mes;
+  document.getElementById('dg-mes-t').value = mes;
+
+  // Desmarcar recorrente e sincronizar visual do card
+  const recChk = document.getElementById('dg-recorrente');
+  recChk.checked = false;
+  document.getElementById('tc-recorrente').classList.remove('tc-on');
+
+  // Limpar lembretes
+  ['7','3','1','0'].forEach(v => {
+    const cb = document.getElementById('lem-' + v);
+    const lc = document.getElementById('lc-' + v);
+    if (cb) cb.checked = false;
+    if (lc) lc.classList.remove('lem-on');
+  });
+
+  // Ocultar bloco de escopo (não aplicável em criação)
+  const boxEscopo = document.getElementById('box-escopo-rec');
+  if (boxEscopo) boxEscopo.style.display = 'none';
+
+  // Título e campos condicionais
+  document.getElementById('modal-dg-title').textContent = 'Nova Despesa Geral';
+  onClassChange('');
+  abrirModal('modal-dg');
+  setTimeout(() => document.getElementById('dg-class').focus(), 80);
+}
+
+/* ── Calcular total de transporte ─── */
+function calcTransporte() {
+  const unit  = parseFloat(document.getElementById('dg-valor-unit').value) || 0;
+  const qtdEl = document.getElementById('dg-qtd');
+  const qtd   = qtdEl && qtdEl.value ? parseInt(qtdEl.value) : TOTAL_USUARIOS;
+  const total = unit * qtd;
+  const hint  = document.getElementById('transport-calc');
+  if (hint) hint.textContent = total > 0 ? fmt(total) : '—';
+}
+
+/* ── Mudança de classificação no modal ─── */
+function onClassChange(val) {
+  document.getElementById('box-transporte').classList.toggle('visible', val === 'transporte');
+  document.getElementById('box-custom-class').classList.toggle('visible', val === 'outros');
+  document.getElementById('box-valor-direto').style.display = val === 'transporte' ? 'none' : 'grid';
+  document.getElementById('box-mes-transporte').style.display = val === 'transporte' ? 'block' : 'none';
+  if (val === 'gastos_diversos' && !gdUnlocked) {
+    pendingAction = 'add-gd';
+    fecharModal('modal-dg');
+    abrirModalSenha();
+  }
+}
+
+/* ── Editar despesa ─── */
+function editarDespesa(id) {
+  const row = document.getElementById('dgrow-' + id);
+  if (!row) return;
+  const isGD = row.dataset.class === 'gastos_diversos';
+  if (isGD && !gdUnlocked) {
+    pendingAction = { tipo: 'edit-gd', id: id };
+    abrirModalSenha();
+    return;
+  }
+  executarEdicao(id);
+}
+
+
+function executarEdicao(id) {
+  const row = document.getElementById('dgrow-' + id);
+  if (!row) return;
+  const ds = row.dataset;
+
+  // Função auxiliar para garantir que o número tenha PONTO no input
+  const limpaNum = (str) => (str || '').replace(',', '.');
+
+  document.getElementById('dg-id').value             = id;
+  document.getElementById('dg-class').value          = ds.class || '';
+  document.getElementById('dg-class-custom').value   = ds.classCustom || '';
+  document.getElementById('dg-desc').value           = ds.desc || '';
+  document.getElementById('dg-status').value         = ds.status || 'pendente';
+  document.getElementById('dg-obs').value            = ds.obs || '';
+  document.getElementById('dg-vencimento').value     = ds.venc || '';
+  const recChk = document.getElementById('dg-recorrente');
+  recChk.checked = ds.rec === 'true';
+  document.getElementById('tc-recorrente').classList.toggle('tc-on', recChk.checked);
+  const tipo = ds.tipoOrgao;
+  const munVal = ds.municipio ? (tipo ? `${ds.municipio}|${tipo}` : `${ds.municipio}|prefeitura`) : '';
+  document.getElementById('dg-municipio').value = munVal;
+
+  const mes = ds.mes || '';
+  document.getElementById('dg-mes').value   = mes;
+  document.getElementById('dg-mes-t').value = mes;
+
+  if (ds.class === 'transporte') {
+    document.getElementById('dg-valor-unit').value = limpaNum(ds.valorUnit);
+    document.getElementById('dg-qtd').value        = ds.qtd || '';
+    calcTransporte();
+  } else {
+    document.getElementById('dg-valor').value      = limpaNum(ds.valor);
+    document.getElementById('dg-valor-unit').value = '';
+    document.getElementById('dg-qtd').value        = '';
+  }
+
+  // Previne erro se o campo de lembretes estiver vazio
+  const lems = ds.lembretes
+    ? ds.lembretes.split(',').filter(x => x !== '').map(Number)
+    : [];
+
+  ['7','3','1','0'].forEach(v => {
+    const checked = lems.includes(parseInt(v));
+    const cb = document.getElementById('lem-' + v);
+    const lc = document.getElementById('lc-' + v);
+    if (cb) cb.checked = checked;
+    if (lc) lc.classList.toggle('lem-on', checked);
+  });
+
+  document.getElementById('modal-dg-title').textContent = 'Editar Despesa Geral';
+
+  const boxEscopo = document.getElementById('box-escopo-rec');
+  const temGrupo  = ds.recId && ds.recId !== '';
+  const eRec      = ds.rec === 'true';
+  if (boxEscopo) {
+    boxEscopo.style.display = (eRec && temGrupo) ? 'block' : 'none';
+  }
+
+  const escUnico = document.getElementById('escopo-unico');
+  if (escUnico) { escUnico.checked = true; onEscopoChange(); }
+
+  onClassChange(ds.class || '');
+  abrirModal('modal-dg');
+}
+
+/* ── Salvar despesa ─── */
+function salvarDespesa() {
+  const id        = document.getElementById('dg-id').value;
+  const classe    = document.getElementById('dg-class').value;
+  const desc      = document.getElementById('dg-desc').value.trim();
+  let   valor     = parseFloat(document.getElementById('dg-valor').value) || 0;
+  const mes       = document.getElementById(classe === 'transporte' ? 'dg-mes-t' : 'dg-mes').value;
+  const status    = document.getElementById('dg-status').value;
+  const recorrente= document.getElementById('dg-recorrente').checked;
+  const obs       = document.getElementById('dg-obs').value;
+  const vencimento= document.getElementById('dg-vencimento').value || null;
+  const lembretes = ['lem-7','lem-3','lem-1','lem-0']
+    .filter(lid => document.getElementById(lid).checked)
+    .map(lid => parseInt(document.getElementById(lid).value));
+  let   qtd       = 1;
+  let   valorUnit = null;
+
+  if (classe === 'transporte') {
+    valorUnit = parseFloat(document.getElementById('dg-valor-unit').value) || 0;
+    qtd       = parseInt(document.getElementById('dg-qtd').value) || TOTAL_USUARIOS;
+    valor     = valorUnit * qtd;
+  }
+
+  if (!classe || !desc || !valor || !mes) {
+    alert('Preencha os campos obrigatórios: Classificação, Descrição, Valor e Mês.');
+    return;
+  }
+
+  // Escopo de propagação (só relevante ao editar uma recorrência)
+  const escopoEl = document.getElementById('escopo-todos');
+  const escopo   = (id && escopoEl && escopoEl.checked) ? 'todos' : 'unico';
+
+  const payload = {
+    id, classificacao: classe, descricao: desc, valor, valor_unitario: valorUnit,
+    quantidade: qtd, mes_referencia: mes + '-01', status, recorrente, observacao: obs,
+    classificacao_custom: document.getElementById('dg-class-custom').value,
+    data_vencimento: vencimento,
+    lembrete_antecedencia: lembretes,
+    municipio: document.getElementById('dg-municipio').value || null,
+    escopo,                          // ← 'unico' | 'todos'
+  };
+
+  const url = id
+    ? buildUrl(`{% url "despesa_geral_update" pk=0 %}`, id)
+    : '{% url "despesa_geral_create" %}';
+
+  const btn = document.querySelector('#modal-dg .btn-submit-modal');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+
+  apiFetch(url, payload)
+    .then(data => {
+      fecharModal('modal-dg');
+      if (escopo === 'todos' && data.propagados > 0) {
+        alert(`✅ Despesa salva e propagada para mais ${data.propagados} mês(es) da recorrência.`);
+      }
+      location.reload();
+    })
+    .catch(err => {
+      alert('❌ ' + err.message);
+    })
+    .finally(() => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Salvar Despesa'; }
+    });
+}
+/* ── Toggle visual dos cards de lembrete ─── */
+document.querySelectorAll('.lem-card input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.lem-card').classList.toggle('lem-on', cb.checked);
+  });
+});
+
+/* ── Fechar modal de notificação (salva sessão) ─── */
+function fecharNotif() {
+  fecharModal('modal-notif');
+  sessionStorage.setItem('notif_despesas_dismissed', '1');
+}
+
+/* ════════════════════════════════════════════════════
+   LANÇAMENTO EM LOTE
+═════════════════════════════════════════════════════ */
+
+let lote_tipo = 'vale_alimentacao';
+let lote_modo = 'unico';
+
+const TIPO_LABELS = {
+  vale_alimentacao: 'Vale Alimentação',
+  vale_transporte:  'Vale Transporte',
+  consignado:       'Consignado',
+  outros:           '',        // preenchido dinamicamente
+};
+const TIPO_CLASSES = {
+  vale_alimentacao: 'alimentacao',
+  vale_transporte:  'transporte',
+  consignado:       'consignado',
+  outros:           'outros',
+};
+
+function abrirModalLote() {
+  // Defaults
+  const hoje = new Date();
+  document.getElementById('lote-mes').value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('lote-valor').value = '';
+  document.getElementById('lote-recorrente').checked = false;
+  document.getElementById('lote-vencimento').value = '';
+  document.getElementById('lote-custom-nome').value = '';
+  document.getElementById('lote-custom-box').style.display = 'none';
+  selecionarTipo('vale_alimentacao', document.getElementById('tc-valiment'));
+  selecionarModo('unico', document.getElementById('mc-unico'));
+  // Marcar todos
+  document.querySelectorAll('.colab-cb').forEach(cb => { cb.checked = true; });
+  atualizarPreview();
+  document.getElementById('btnToggleColab').textContent = 'Desmarcar todos';
+  abrirModal('modal-lote');
+  setTimeout(() => document.getElementById('lote-valor').focus(), 120);
+}
+
+function selecionarTipo(tipo, card) {
+  lote_tipo = tipo;
+  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  card.querySelector('input[type=radio]').checked = true;
+  document.getElementById('lote-custom-box').style.display =
+    tipo === 'outros' ? 'block' : 'none';
+  atualizarPreview();
+}
+
+function selecionarModo(modo, card) {
+  lote_modo = modo;
+  document.querySelectorAll('.modo-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  card.querySelector('input[type=radio]').checked = true;
+}
+
+function toggleTodosColab() {
+  const cbs    = document.querySelectorAll('.colab-cb');
+  const algumMarcado = Array.from(cbs).some(cb => cb.checked);
+  cbs.forEach(cb => { cb.checked = !algumMarcado; });
+  document.getElementById('btnToggleColab').textContent =
+    algumMarcado ? 'Marcar todos' : 'Desmarcar todos';
+  atualizarPreview();
+}
+
+function atualizarPreview() {
+  const valor   = parseFloat(document.getElementById('lote-valor').value) || 0;
+  const selecionados = document.querySelectorAll('.colab-cb:checked').length;
+  const total   = valor * selecionados;
+  const countLbl = document.getElementById('colab-count-lbl');
+  const totalCbs = document.querySelectorAll('.colab-cb').length;
+
+  if (countLbl) {
+    countLbl.textContent = selecionados === totalCbs
+      ? 'Todos selecionados'
+      : `${selecionados} de ${totalCbs} selecionados`;
+  }
+  document.getElementById('lp-info').textContent =
+    `${selecionados} colaborador${selecionados !== 1 ? 'es' : ''} × ${fmt(valor)}`;
+  document.getElementById('lp-total').textContent = fmt(total);
+}
+
+function salvarLote() {
+  const valor      = parseFloat(document.getElementById('lote-valor').value) || 0;
+  const mes        = document.getElementById('lote-mes').value;
+  const recorrente = document.getElementById('lote-recorrente').checked;
+  const vencimento = document.getElementById('lote-vencimento').value || null;
+  const custom     = document.getElementById('lote-custom-nome').value.trim();
+
+  const colabIds = Array.from(document.querySelectorAll('.colab-cb:checked'))
+    .map(cb => parseInt(cb.value));
+  const colabNomes = Array.from(document.querySelectorAll('.colab-cb:checked'))
+    .map(cb => cb.closest('.colab-row').querySelector('.colab-nome').textContent.trim());
+
+  if (!valor || valor <= 0) { alert('Informe o valor por colaborador.'); return; }
+  if (!mes)                  { alert('Informe o mês de referência.'); return; }
+  if (colabIds.length === 0) { alert('Selecione ao menos um colaborador.'); return; }
+  if (lote_tipo === 'outros' && !custom) { alert('Informe o nome do benefício.'); return; }
+
+  const descricao = lote_tipo === 'outros'
+    ? custom
+    : TIPO_LABELS[lote_tipo];
+
+  const payload = {
+    tipo:                  lote_tipo,
+    classificacao:         TIPO_CLASSES[lote_tipo],
+    classificacao_custom:  lote_tipo === 'outros' ? custom : '',
+    descricao:             descricao,
+    valor_unitario:        valor,
+    mes_referencia:        mes + '-01',
+    recorrente,
+    status:                'pendente',
+    data_vencimento:       vencimento,
+    lembrete_antecedencia: [],
+    modo:                  lote_modo,          // 'unico' | 'individual'
+    colaboradores:         colabIds,
+    colaboradores_nomes:   colabNomes,
+  };
+
+  const btn = document.querySelector('#modal-lote .btn-submit-modal');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+
+  apiFetch('{% url "despesa_geral_lote_create" %}', payload)
+    .then(data => {
+      fecharModal('modal-lote');
+      alert(`✅ ${data.criados} lançamento(s) criado(s) com sucesso.`);
+      location.reload();
+    })
+    .catch(err => {
+      alert('❌ ' + err.message);
+    })
+    .finally(() => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Lançamento'; }
+    });
+}
+
+/* ── Exclusão de despesa ─── */
+function excluirDespesa(id, desc, isRec, recId) {
+  document.getElementById('del-id').value       = id;
+  document.getElementById('del-is-rec').value   = isRec ? 'true' : 'false';
+  document.getElementById('del-rec-id').value   = recId || '';
+  document.getElementById('del-desc').textContent = desc;
+
+  // Mostrar opções de escopo apenas se for recorrente E tiver grupo (recorrencia_id)
+  const temGrupo = isRec && recId && recId !== '';
+  document.getElementById('del-escopo-box').style.display = temGrupo ? 'block' : 'none';
+
+  // Sempre resetar para "apenas este mês"
+  document.getElementById('del-esc-unico').checked = true;
+  syncDelLabels();
+
+  abrirModal('modal-del');
+}
+
+function syncDelLabels() {
+  const val = (document.querySelector('input[name="del-escopo"]:checked') || {}).value || 'apenas_este';
+  const map = { apenas_este: 'del-lbl-unico', este_e_futuros: 'del-lbl-futuros', todos: 'del-lbl-todos' };
+  ['del-lbl-unico','del-lbl-futuros','del-lbl-todos'].forEach(lid => {
+    const lbl = document.getElementById(lid);
+    if (!lbl) return;
+    const active = map[val] === lid;
+    lbl.style.borderColor = active ? 'var(--red)' : '#feb2b2';
+    lbl.style.background  = active ? '#fff5f5'    : '#fff';
+  });
+}
+
+function confirmarExclusao() {
+  const id     = document.getElementById('del-id').value;
+  const recId  = document.getElementById('del-rec-id').value;
+  const isRec  = document.getElementById('del-is-rec').value === 'true';
+  const temGrupo = isRec && recId && recId !== '';
+
+  let escopo = 'apenas_este';
+  if (temGrupo) {
+    const checked = document.querySelector('input[name="del-escopo"]:checked');
+    if (checked) escopo = checked.value;
+  }
+
+  const url = buildUrl(`{% url "despesa_geral_delete" pk=0 %}`, id);
+
+  const btn = document.querySelector('#modal-del button[onclick="confirmarExclusao()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Excluindo…'; }
+
+  apiFetch(url, { escopo })
+    .then(data => {
+      fecharModal('modal-del');
+      if (escopo === 'apenas_este') {
+        const row = document.getElementById('dgrow-' + id);
+        if (row) {
+          row.style.transition = 'opacity .25s';
+          row.style.opacity    = '0';
+          setTimeout(() => { row.remove(); recalcTotais(); }, 250);
+        } else {
+          location.reload();
+        }
+      } else {
+        const label = escopo === 'todos' ? 'Toda a recorrência excluída' : 'Este mês e futuros excluídos';
+        alert(`✅ ${label} (${data.excluidos} lançamento(s)).`);
+        location.reload();
+      }
+    })
+    .catch(err => {
+      alert('❌ ' + err.message);
+    })
+    .finally(() => {
+      if (btn) { btn.disabled = false; btn.textContent = '🗑️ Confirmar Exclusão'; }
+    });
+}
+
+/* ── Recalcular subtotais e total geral ─── */
+function recalcTotais() {
+  let totalGeral = 0;
+
+  document.querySelectorAll('.grp-total').forEach(grpRow => {
+    let sum = 0;
+    let prev = grpRow.previousElementSibling;
+    while (prev && !prev.classList.contains('grp-sep') && !prev.classList.contains('grp-total')) {
+      if (prev.classList.contains('dg-row')) {
+        sum += parseFloat(prev.dataset.valor || 0);
+      }
+      prev = prev.previousElementSibling;
+    }
+    // A linha grp-total tem: td[colspan=6] | td (valor) | td[colspan=3]
+    // → a célula de valor é a 2ª <td> da linha (nth-child(2))
+    const valCell = grpRow.querySelector('td:nth-child(2)');
+    if (valCell) valCell.textContent = fmt(sum);
+    totalGeral += sum;
+  });
+
+  document.getElementById('total-geral').textContent = fmt(totalGeral);
+  const phTotal = document.getElementById('ph-total');
+  if (phTotal) phTotal.textContent = fmt(totalGeral);
+}
+
+/* ── Data de impressão + auto-notificação ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  const phData = document.getElementById('ph-data');
+  if (phData) phData.textContent = new Date().toLocaleString('pt-BR');
+  recalcTotais();
+
+  // Atualizar contador do modal de notificações
+  const qtdAlertas = {{ notificacoes_alerta|length|default:0 }};
+  const notifCount = document.getElementById('notif-count');
+  if (notifCount) notifCount.textContent = qtdAlertas;
+
+  // Exibir modal automaticamente se há alertas e não foi dispensado nesta sessão
+  if (qtdAlertas > 0 && !sessionStorage.getItem('notif_despesas_dismissed')) {
+    setTimeout(() => abrirModal('modal-notif'), 900);
+  }
+});
+</script>
+
+{% endblock %}

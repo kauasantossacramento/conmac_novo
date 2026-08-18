@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Fechamento — Clientes vinculados</h2>
+
+<form method="get" class="form-inline" style="margin-bottom:12px;">
+  <label>Competência:</label>
+  <select name="mes">
+    {% for n,label in meses_numeros %}
+      <option value="{{ n }}" {% if sel_mes == n %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="ano">
+    {% for a in anos_disponiveis %}
+      <option value="{{ a }}" {% if sel_ano == a %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filtrar</button>
+</form>
+
+<div class="clientes-grid" style="display:flex;flex-wrap:wrap;gap:12px;">
+  {% for item in clientes_data %}
+    <div class="cliente-card" style="border:1px solid #ddd;padding:12px;border-radius:8px;width:260px;">
+      <div style="font-weight:700;">{{ item.cliente.nome }}</div>
+      <div style="margin-top:6px;">Status: <strong>{{ item.status_geral }}</strong></div>
+      <div style="margin-top:6px;">Etapas: {{ item.qtd_concluidas }}/{{ item.total_etapas }}</div>
+      {% if item.ultima_data %}
+        <div style="font-size:.85rem;color:#666;margin-top:6px;">Última: {{ item.ultima_data|date:"d/m/Y H:i" }}</div>
+      {% endif %}
+      <div style="margin-top:8px;">
+        <a href="{% url 'fechamento_cliente_detail' item.cliente.id %}?ano={{ sel_ano }}&mes={{ sel_mes }}">Ver etapas</a>
+        {% if item.fechado %}
+          <span style="color:green;font-weight:700;margin-left:8px;">FECHADO</span>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <div>Nenhum cliente vinculado.</div>
+  {% endfor %}
+</div>
+{% endblock %}

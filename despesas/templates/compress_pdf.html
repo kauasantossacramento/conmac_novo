@@ -1,0 +1,899 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --teal:        #2d9b8f;
+    --teal-dark:   #1e7a70;
+    --teal-light:  #e6f5f4;
+    --orange:      #e8763a;
+    --orange-light:#fdf0e8;
+    --purple:      #6e54c4;
+    --purple-light:#f0edfb;
+    --bg:          #f0f4f5;
+    --white:       #ffffff;
+    --text:        #1a2e2d;
+    --muted:       #6b8886;
+    --border:      #d4e6e4;
+    --shadow:      0 4px 24px rgba(45,155,143,.13);
+    --shadow-sm:   0 2px 8px rgba(45,155,143,.08);
+    --font:        'Nunito', sans-serif;
+    --radius:      16px;
+    --radius-sm:   10px;
+  }
+
+  .ocr-wrap {
+    font-family: var(--font);
+    color: var(--text);
+    font-size: 15px;
+    padding: 28px 0 48px;
+  }
+
+  /* ── PAGE GRID ─────────────────────────────────────── */
+  .ocr-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .ocr-layout { grid-template-columns: 1fr; }
+  }
+
+  /* ── HERO BANNER ───────────────────────────────────── */
+  .ocr-hero {
+    background: linear-gradient(135deg, #239fab 0%, #1e7a70 55%, #2d4a48 100%);
+    border-radius: var(--radius);
+    padding: 24px 26px 22px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ocr-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, transparent, transparent 20px, rgba(255,255,255,.025) 20px, rgba(255,255,255,.025) 22px);
+  }
+  .ocr-hero-content { position: relative; z-index: 1; }
+  .ocr-hero-label {
+    font-size: .68rem; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: #a7f3d0; margin-bottom: 6px;
+  }
+  .ocr-hero-title {
+    font-size: 1.15rem; font-weight: 900; color: #fff;
+    line-height: 1.35; margin-bottom: 16px;
+  }
+  .ocr-hero-title em { color: #5eead4; font-style: normal; }
+
+  .pipeline {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .pipe-step {
+    background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 7px; padding: 5px 10px;
+    font-size: .72rem; font-weight: 700;
+    color: rgba(255,255,255,.88);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .pipe-step svg { width: 12px; height: 12px; }
+  .pipe-arrow { color: rgba(255,255,255,.35); font-size: .9rem; }
+
+  /* ── MAIN CARD ─────────────────────────────────────── */
+  .main-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .card-band {
+    background: linear-gradient(90deg, #239fab 0%, #e57a34 100%);
+    padding: 14px 22px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .card-band-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,.22);
+    border-radius: 10px;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .card-band-icon svg { width: 20px; height: 20px; color: #fff; }
+  .card-band-title { font-weight: 800; font-size: 1rem; color: #fff; }
+  .card-band-sub { font-size: .75rem; color: rgba(255,255,255,.78); font-weight: 500; }
+
+  .card-body { padding: 24px 22px; }
+
+  /* ── UPLOAD ────────────────────────────────────────── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 32px 20px;
+    text-align: center; cursor: pointer;
+    position: relative;
+    transition: border-color .2s, background .2s;
+    background: var(--teal-light);
+    margin-bottom: 18px;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--teal);
+    background: #d0eeec;
+  }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon-wrap {
+    width: 52px; height: 52px;
+    background: var(--white); border-radius: 14px;
+    display: inline-grid; place-items: center;
+    margin-bottom: 10px; box-shadow: var(--shadow-sm);
+  }
+  .upload-icon-wrap svg { width: 24px; height: 24px; color: var(--teal); }
+  .upload-title { font-weight: 800; font-size: .95rem; margin-bottom: 4px; }
+  .upload-sub { font-size: .78rem; color: var(--muted); font-weight: 500; }
+
+  /* FILE PREVIEW */
+  .file-preview {
+    display: none; align-items: center; gap: 12px;
+    background: var(--teal-light); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px;
+  }
+  .file-preview.visible { display: flex; }
+  .file-icon-wrap {
+    width: 40px; height: 40px; background: var(--teal);
+    border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .file-icon-wrap svg { width: 20px; height: 20px; color: #fff; }
+  .file-info { flex: 1; min-width: 0; }
+  .file-name { font-weight: 700; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-size { font-size: .74rem; color: var(--muted); margin-top: 1px; font-weight: 500; }
+  .file-remove {
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    padding: 5px; border-radius: 8px; display: grid; place-items: center;
+    transition: background .15s, color .15s;
+  }
+  .file-remove:hover { background: #ffe5e5; color: #d94040; }
+
+  /* ── PRESETS ───────────────────────────────────────── */
+  .field-label {
+    font-size: .72rem; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+  }
+
+  .presets-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 18px;
+  }
+  .preset-card {
+    border: 2px solid var(--border); border-radius: var(--radius-sm);
+    padding: 11px 13px; cursor: pointer;
+    transition: all .15s; background: var(--bg); position: relative;
+  }
+  .preset-card:hover { border-color: var(--teal); background: var(--teal-light); }
+  .preset-card.selected { border-color: var(--teal); background: var(--teal-light); }
+  .preset-card.selected::after {
+    content: '✓'; position: absolute; top: 8px; right: 9px;
+    width: 19px; height: 19px; background: var(--teal); color: #fff;
+    border-radius: 50%; font-size: .68rem; font-weight: 800;
+    line-height: 19px; text-align: center;
+  }
+  .preset-name { font-weight: 800; font-size: .86rem; margin-bottom: 2px; }
+  .preset-dpi { font-size: .68rem; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .preset-est {
+    display: inline-block; background: rgba(45,155,143,.12);
+    color: var(--teal-dark); font-size: .66rem; font-weight: 800;
+    padding: 2px 7px; border-radius: 100px; margin-bottom: 3px;
+  }
+  .preset-desc { font-size: .68rem; color: var(--muted); line-height: 1.4; }
+
+  /* ── NOTICE ────────────────────────────────────────── */
+  .ocr-notice {
+    border-radius: var(--radius-sm); padding: 11px 14px;
+    margin-bottom: 18px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .ocr-notice.ok { background: var(--teal-light); border: 1.5px solid #9dd6d0; }
+  .ocr-notice.warn { background: #fff8e6; border: 1.5px solid #f5d87a; }
+  .ocr-notice-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .ocr-notice-text { font-size: .76rem; font-weight: 600; line-height: 1.5; }
+  .ocr-notice.ok  .ocr-notice-text { color: var(--teal-dark); }
+  .ocr-notice.warn .ocr-notice-text { color: #7a5c00; }
+  .ocr-notice-text strong { display: block; margin-bottom: 1px; }
+
+  /* ── BOTÃO ─────────────────────────────────────────── */
+  .btn-compress {
+    width: 100%;
+    background: linear-gradient(135deg, var(--teal) 0%, #3dbcae 100%);
+    border: none; border-radius: var(--radius-sm);
+    padding: 14px 20px; color: #fff;
+    font-family: var(--font); font-weight: 800; font-size: 1rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 4px 16px rgba(45,155,143,.3);
+    transition: opacity .15s, transform .1s;
+  }
+  .btn-compress:hover { opacity: .92; }
+  .btn-compress:active { transform: scale(.98); }
+  .btn-compress:disabled { background: var(--border); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+
+  /* ── PROGRESSO ─────────────────────────────────────── */
+  .progress-area { display: none; margin-top: 16px; }
+  .progress-area.visible { display: block; }
+
+  .progress-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .progress-label { font-size: .78rem; font-weight: 700; color: var(--text); }
+  .progress-pct { font-size: .78rem; font-weight: 800; color: var(--teal); }
+
+  .progress-track { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), var(--orange));
+    border-radius: 4px; width: 0%;
+    transition: width .5s ease;
+  }
+
+  .status-row { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+  .spinner { width: 15px; height: 15px; border: 2.5px solid var(--border); border-top-color: var(--teal); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .chunks-log {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    max-height: 130px; overflow-y: auto;
+  }
+  .chunk-item { font-size: .72rem; font-weight: 600; color: var(--muted); padding: 2px 0; display: flex; align-items: center; gap: 6px; }
+  .chunk-item.done   { color: var(--teal-dark); }
+  .chunk-item.active { color: var(--orange); }
+  .chunk-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* ── ERRO ──────────────────────────────────────────── */
+  .error-msg {
+    display: none; margin-top: 14px;
+    background: #fff0f0; border: 1.5px solid #fcc;
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    font-size: .82rem; font-weight: 600; color: #c0392b;
+    align-items: center; gap: 8px;
+  }
+  .error-msg.visible { display: flex; }
+
+  /* ── SIDEBAR ───────────────────────────────────────── */
+  .sidebar-card {
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px;
+  }
+  .sidebar-header {
+    background: linear-gradient(90deg, var(--purple) 0%, #8b6fe8 100%);
+    padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-header svg { width: 18px; height: 18px; color: #fff; flex-shrink: 0; }
+  .sidebar-header-title { font-weight: 800; font-size: .88rem; color: #fff; }
+  .sidebar-body { padding: 16px 18px; }
+
+  .info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--border);
+    font-size: .8rem;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: var(--muted); font-weight: 600; }
+  .info-val { font-weight: 800; color: var(--text); }
+  .info-val.teal { color: var(--teal); }
+  .info-val.orange { color: var(--orange); }
+
+  .tip-box {
+    background: var(--orange-light); border: 1.5px solid #f5cba0;
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    margin-top: 14px;
+  }
+  .tip-box-title { font-size: .72rem; font-weight: 800; color: var(--orange); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .06em; }
+  .tip-box-text { font-size: .76rem; color: #7a3d00; font-weight: 600; line-height: 1.55; }
+
+  /* ── RESULTADO ─────────────────────────────────────── */
+  .result-card { display: none; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
+  .result-card.visible { display: block; }
+
+  .result-band { padding: 14px 22px; display: flex; align-items: center; gap: 12px; }
+  .result-band.success { background: linear-gradient(90deg, var(--teal) 0%, #3dbcae 100%); }
+  .result-band-icon { width: 36px; height: 36px; background: rgba(255,255,255,.22); border-radius: 9px; display: grid; place-items: center; }
+  .result-band-icon svg { width: 20px; height: 20px; color: #fff; }
+  .result-band-title { font-weight: 800; font-size: .9rem; color: #fff; }
+  .result-band-sub { font-size: .72rem; color: rgba(255,255,255,.75); font-weight: 500; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); padding: 18px 22px; }
+  .stat { text-align: center; padding: 0 8px; border-right: 1.5px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-label { font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .stat-value { font-size: 1.3rem; font-weight: 900; letter-spacing: -.02em; }
+  .stat-value.teal  { color: var(--teal); }
+  .stat-value.green { color: #1aab6d; }
+  .stat-value.orange { color: var(--orange); }
+
+  .result-meta { padding: 10px 22px 14px; border-top: 1.5px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+  .meta-badge { background: var(--bg); border: 1.5px solid var(--border); border-radius: 100px; padding: 3px 10px; font-size: .7rem; font-weight: 700; color: var(--muted); }
+
+  .result-actions { padding: 14px 22px; border-top: 1.5px solid var(--border); display: flex; gap: 10px; }
+  .btn-download {
+    flex: 1; background: linear-gradient(135deg, var(--teal) 0%, #3dbcae 100%);
+    border: none; border-radius: var(--radius-sm); padding: 12px 16px; color: #fff;
+    font-family: var(--font); font-weight: 800; font-size: .9rem; cursor: pointer;
+    text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 3px 12px rgba(45,155,143,.3); transition: opacity .15s;
+  }
+  .btn-download:hover { opacity: .9; }
+  .btn-new {
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 18px;
+    font-family: var(--font); font-weight: 700; font-size: .88rem;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .btn-new:hover { border-color: var(--teal); color: var(--teal); }
+</style>
+
+{% if request.user.is_authenticated %}
+<div class="logo_home">
+</div>
+{% else %}
+<div class="logo_home">
+  <a href="{% url 'home' %}" class="logo">
+    <img src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" height="34">
+  </a>
+</div>
+{% endif %}
+
+
+<div class="ocr-wrap">
+
+  <!-- HERO -->
+  <div class="ocr-hero">
+    <div class="ocr-hero-content">
+      <div class="ocr-hero-label">Ferramentas · Documentos · OCR</div>
+      <p class="ocr-hero-title">
+        Reduz o PDF ao <em>máximo</em> mantendo o texto <em>pesquisável</em> e selecionável.
+      </p>
+      <div class="pipeline">
+        <div class="pipe-step">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          Rasteriza
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          B&W + PNG
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          OCR {{ ocr_lang }}
+        </div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          PDF Pesquisável
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTADO (aparece acima do layout quando pronto) -->
+  <div class="result-card" id="resultCard">
+    <div class="result-band success">
+      <div class="result-band-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <div class="result-band-title">PDF Pesquisável gerado com sucesso!</div>
+        <div class="result-band-sub" id="resultSub">—</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-label">Original</div>
+        <div class="stat-value orange" id="statOriginal">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Resultado</div>
+        <div class="stat-value teal" id="statFinal">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Redução</div>
+        <div class="stat-value green" id="statReduction">—</div>
+      </div>
+    </div>
+    <div class="result-meta" id="resultMeta"></div>
+    <div class="result-actions">
+      <a class="btn-download" id="downloadLink" href="#" download>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Baixar PDF OCR
+      </a>
+      <button class="btn-new" id="resetBtn">Processar novo arquivo</button>
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="ocr-layout">
+
+    <!-- COLUNA ESQUERDA -->
+    <div>
+      <div class="main-card">
+        <div class="card-band">
+          <div class="card-band-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-band-title">Comprimir PDF com OCR</div>
+            <div class="card-band-sub">Processamento em blocos</div>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          <!-- UPLOAD -->
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="pdfInput" accept=".pdf" />
+            <div class="upload-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <div class="upload-title">Selecionar PDF</div>
+            <div class="upload-sub">Arraste e solte ou clique para escolher o arquivo</div>
+          </div>
+
+          <!-- FILE PREVIEW -->
+          <div class="file-preview" id="filePreview">
+            <div class="file-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name" id="previewName">—</div>
+              <div class="file-size" id="previewSize">—</div>
+            </div>
+            <button class="file-remove" id="removeFile">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- PRESETS -->
+          <div class="field-label">Qualidade de saída</div>
+          <div class="presets-grid" id="presetsGrid">
+            {% for key, p in presets.items %}
+            <div class="preset-card {% if key == 'equilibrado' %}selected{% endif %}"
+                 data-preset="{{ key }}" data-est="{{ p.est_per_page_kb }}">
+              <div class="preset-name">{{ p.label }}</div>
+              <div class="preset-dpi">{{ p.dpi }} DPI · PNG B&W</div>
+              <div class="preset-est" id="est-{{ key }}">—</div>
+              <div class="preset-desc">{{ p.description }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          <input type="hidden" id="selectedPreset" value="equilibrado" />
+
+          <!-- OCR STATUS -->
+          {% if ocr_por_ok %}
+          <div class="ocr-notice ok">
+            <span class="ocr-notice-icon">✅</span>
+            <div class="ocr-notice-text">
+              <strong>OCR configurado: {{ ocr_lang }}</strong>
+              Português e inglês ativos — acurácia otimizada para documentos municipais.
+            </div>
+          </div>
+          {% else %}
+          <div class="ocr-notice warn">
+            <span class="ocr-notice-icon">⚠️</span>
+            <div class="ocr-notice-text">
+              <strong>Idioma OCR: English (padrão)</strong>
+              Para melhor resultado: <code style="background:#fff3cd;padding:1px 5px;border-radius:4px;">apt-get install tesseract-ocr-por</code>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- BOTÃO -->
+          <button class="btn-compress" id="compressBtn" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/>
+            </svg>
+            Gerar PDF Pesquisável
+          </button>
+
+          <!-- PROGRESSO -->
+          <div class="progress-area" id="progressArea">
+            <div class="progress-header">
+              <span class="progress-label" id="progressLabel">Processando…</span>
+              <span class="progress-pct" id="progressPct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progressBar"></div>
+            </div>
+            <div class="status-row">
+              <div class="spinner"></div>
+              <span id="statusText">Iniciando…</span>
+            </div>
+            <div class="chunks-log" id="chunksLog"></div>
+          </div>
+
+          <!-- ERRO -->
+          <div class="error-msg" id="errorMsg">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="errorText"></span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA (sidebar) -->
+    <div>
+
+      <!-- ESTIMATIVAS -->
+      <div class="sidebar-card">
+        <div class="sidebar-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          <span class="sidebar-header-title">Estimativas</span>
+        </div>
+        <div class="sidebar-body">
+          <div class="info-row">
+            <span class="info-key">Arquivo</span>
+            <span class="info-val" id="sideFileSize">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Páginas</span>
+            <span class="info-val" id="sidePages">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Blocos</span>
+            <span class="info-val" id="sideChunks">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Tamanho final</span>
+            <span class="info-val teal" id="sideFinalMb">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Tempo est.</span>
+            <span class="info-val orange" id="sideTime">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DICA -->
+      <div class="sidebar-card">
+        <div class="sidebar-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="sidebar-header-title">Como funciona</span>
+        </div>
+        <div class="sidebar-body">
+          <div class="info-row">
+            <span class="info-key">Método</span>
+            <span class="info-val">Rasterização PNG</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Modo cor</span>
+            <span class="info-val">Preto e branco</span>
+          </div>
+          <!-- <div class="info-row">
+            <span class="info-key">Compressão</span>
+            <span class="info-val">FlateDecode nível 9</span>
+          </div> -->
+          <div class="info-row">
+            <span class="info-key">Texto OCR</span>
+            <span class="info-val teal">Invisível · pesquisável</span>
+          </div>
+          <div class="tip-box">
+            <div class="tip-box-title">⚡ Sistema Exclusivo CONMAC</div>
+            <div class="tip-box-text">Em desenvolvimento. Verifique sempre se o arquivo de saída está legível antes de enviar ao sistema governamental.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const uploadZone    = document.getElementById('uploadZone');
+  const pdfInput      = document.getElementById('pdfInput');
+  const filePreview   = document.getElementById('filePreview');
+  const previewName   = document.getElementById('previewName');
+  const previewSize   = document.getElementById('previewSize');
+  const removeFile    = document.getElementById('removeFile');
+  const compressBtn   = document.getElementById('compressBtn');
+  const progressArea  = document.getElementById('progressArea');
+  const progressBar   = document.getElementById('progressBar');
+  const progressLabel = document.getElementById('progressLabel');
+  const progressPct   = document.getElementById('progressPct');
+  const statusText    = document.getElementById('statusText');
+  const chunksLog     = document.getElementById('chunksLog');
+  const errorMsg      = document.getElementById('errorMsg');
+  const errorText     = document.getElementById('errorText');
+  const resultCard    = document.getElementById('resultCard');
+  const resultSub     = document.getElementById('resultSub');
+  const statOriginal  = document.getElementById('statOriginal');
+  const statFinal     = document.getElementById('statFinal');
+  const statReduction = document.getElementById('statReduction');
+  const resultMeta    = document.getElementById('resultMeta');
+  const downloadLink  = document.getElementById('downloadLink');
+  const resetBtn      = document.getElementById('resetBtn');
+  const selectedPreset = document.getElementById('selectedPreset');
+  const sideFileSize  = document.getElementById('sideFileSize');
+  const sidePages     = document.getElementById('sidePages');
+  const sideChunks    = document.getElementById('sideChunks');
+  const sideFinalMb   = document.getElementById('sideFinalMb');
+  const sideTime      = document.getElementById('sideTime');
+
+  const CHUNK_SIZE = 4;  // reduzido de 15 → evita timeout por bloco
+  let selectedFile = null;
+
+  // ── HELPER: fetch seguro que trata HTML de erro do Django ──────────────────
+  async function fetchJSON(url, options) {
+    const res  = await fetch(url, options);
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(_) {
+      // Django retornou página HTML de erro (500, 403, etc.)
+      throw new Error(`Erro no servidor (HTTP ${res.status}). Verifique o log do PythonAnywhere.`);
+    }
+    if (!res.ok) throw new Error(data.erro || `Erro HTTP ${res.status}`);
+    return data;
+  }
+
+  // ── DRAG & DROP ────────────────────────────────────────────────────────────
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+  pdfInput.addEventListener('change', () => { if (pdfInput.files[0]) setFile(pdfInput.files[0]); });
+
+  // ── PRESETS ────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.preset-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedPreset.value = card.dataset.preset;
+      updateEstimates();
+    });
+  });
+
+  function updateEstimates() {
+    if (!selectedFile) return;
+    const estPages  = Math.max(10, Math.round(selectedFile.size / (80 * 1024)));
+    const estChunks = Math.ceil(estPages / CHUNK_SIZE);
+    const card      = document.querySelector('.preset-card.selected');
+    const kb        = parseInt(card.dataset.est);
+    const mb        = (kb * estPages / 1024).toFixed(1);
+    const mins      = Math.ceil(estPages * 0.065);
+
+    document.querySelectorAll('.preset-card').forEach(c => {
+      const k = parseInt(c.dataset.est);
+      const m = (k * estPages / 1024).toFixed(1);
+      document.getElementById('est-' + c.dataset.preset).textContent = `~${m} MB`;
+    });
+
+    sideFileSize.textContent = formatBytes(selectedFile.size);
+    sidePages.textContent    = `~${estPages} pág.`;
+    sideChunks.textContent   = `${estChunks} blocos de ${CHUNK_SIZE}`;
+    sideFinalMb.textContent  = `~${mb} MB`;
+    sideTime.textContent     = `~${mins} min`;
+  }
+
+  // ── ARQUIVO ────────────────────────────────────────────────────────────────
+  function setFile(file) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) { showError('Apenas PDFs são aceitos.'); return; }
+    selectedFile = file;
+    previewName.textContent = file.name;
+    previewSize.textContent = formatBytes(file.size);
+    uploadZone.style.display = 'none';
+    filePreview.classList.add('visible');
+    compressBtn.disabled = false;
+    hideError();
+    resultCard.classList.remove('visible');
+    updateEstimates();
+  }
+
+  removeFile.addEventListener('click', resetAll);
+  resetBtn.addEventListener('click', resetAll);
+
+  function resetAll() {
+    selectedFile = null;
+    pdfInput.value = '';
+    filePreview.classList.remove('visible');
+    uploadZone.style.display = '';
+    compressBtn.disabled = true;
+    progressArea.classList.remove('visible');
+    resultCard.classList.remove('visible');
+    chunksLog.innerHTML = '';
+    hideError();
+    [sideFileSize, sidePages, sideChunks, sideFinalMb, sideTime].forEach(el => el.textContent = '—');
+    document.querySelectorAll('.preset-est').forEach(el => el.textContent = '—');
+    if (downloadLink._objectUrl) {
+      URL.revokeObjectURL(downloadLink._objectUrl);
+      downloadLink._objectUrl = null;
+    }
+  }
+
+  // ── PROCESSAMENTO EM CHUNKS ────────────────────────────────────────────────
+  compressBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    compressBtn.disabled = true;
+    progressArea.classList.add('visible');
+    resultCard.classList.remove('visible');
+    chunksLog.innerHTML = '';
+    hideError();
+    setProgress(0, 'Enviando arquivo…');
+
+    try {
+
+      // ── PASSO 1: iniciar job ───────────────────────────────────────────────
+      const formData = new FormData();
+      formData.append('pdf_file', selectedFile);
+      formData.append('preset', selectedPreset.value);
+
+      const initData = await fetchJSON('{% url "ocr_iniciar" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrfToken() },
+        body: formData,
+      });
+
+      const { job_id, total_pages, total_chunks, chunk_size } = initData;
+
+      sidePages.textContent  = `${total_pages} pág.`;
+      sideChunks.textContent = `${total_chunks} blocos de ${chunk_size}`;
+      setProgress(2, `Job criado · ${total_pages} páginas · ${total_chunks} blocos`);
+
+      // Monta log visual dos chunks
+      for (let i = 0; i < total_chunks; i++) {
+        const start = i * chunk_size + 1;
+        const end   = Math.min(start + chunk_size - 1, total_pages);
+        const item  = document.createElement('div');
+        item.className = 'chunk-item';
+        item.id = `chunk-log-${i}`;
+        item.innerHTML = `<span class="chunk-dot"></span> Bloco ${i+1}/${total_chunks} — págs. ${start}–${end}`;
+        chunksLog.appendChild(item);
+      }
+
+      // ── PASSO 2: processar chunks sequencialmente ─────────────────────────
+      for (let i = 0; i < total_chunks; i++) {
+        const logItem = document.getElementById(`chunk-log-${i}`);
+        logItem.className = 'chunk-item active';
+        logItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        const pct   = Math.round(2 + (i / total_chunks) * 90);
+        const start = i * chunk_size + 1;
+        const end   = Math.min(start + chunk_size - 1, total_pages);
+        setProgress(pct, `Processando págs. ${start}–${end}…`);
+
+        await fetchJSON('{% url "ocr_processar_chunk" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+          },
+          body: JSON.stringify({ job_id, chunk_index: i }),
+        });
+
+        logItem.className = 'chunk-item done';
+        logItem.innerHTML = `<span class="chunk-dot"></span> ✓ Bloco ${i+1}/${total_chunks} — págs. ${start}–${end}`;
+      }
+
+      // ── PASSO 3: finalizar e baixar (retorna blob, não JSON) ──────────────
+      setProgress(95, 'Mesclando e gerando arquivo final…');
+
+      const finalRes = await fetch('{% url "ocr_finalizar" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken(),
+        },
+        body: JSON.stringify({ job_id }),
+      });
+
+      if (!finalRes.ok) {
+        const errText = await finalRes.text();
+        let msg = `Erro ao finalizar (HTTP ${finalRes.status})`;
+        try { msg = JSON.parse(errText).erro || msg; } catch(_) {}
+        throw new Error(msg);
+      }
+
+      const blob       = await finalRes.blob();
+      const originalMb = parseFloat(finalRes.headers.get('X-Original-MB') || '0');
+      const finalMb    = parseFloat(finalRes.headers.get('X-Final-MB')    || '0');
+      const pages      = finalRes.headers.get('X-Pages')        || total_pages;
+      const dpi        = finalRes.headers.get('X-DPI')          || '?';
+      const lang       = finalRes.headers.get('X-Lang')         || 'eng';
+      const reduction  = parseFloat(finalRes.headers.get('X-Reduction-Pct') || '0');
+
+      if (downloadLink._objectUrl) URL.revokeObjectURL(downloadLink._objectUrl);
+      const url = URL.createObjectURL(blob);
+      downloadLink._objectUrl = url;
+      downloadLink.href = url;
+      downloadLink.download = selectedFile.name.replace(/\.pdf$/i, '') + `_OCR_${finalMb}MB.pdf`;
+
+      statOriginal.textContent  = originalMb.toFixed(2) + ' MB';
+      statFinal.textContent     = finalMb.toFixed(2)    + ' MB';
+      statReduction.textContent = reduction + '%';
+      resultSub.textContent     = `${pages} páginas · ${dpi} DPI · texto selecionável`;
+      resultMeta.innerHTML = [
+        `<span class="meta-badge">📐 ${dpi} DPI</span>`,
+        `<span class="meta-badge">📄 ${pages} pág.</span>`,
+        `<span class="meta-badge">🔍 OCR ${lang}</span>`,
+        `<span class="meta-badge">⚡ PNG B&W</span>`,
+        `<span class="meta-badge">🗜️ ${reduction}% menor</span>`,
+      ].join('');
+
+      setProgress(100, 'Concluído!');
+      setTimeout(() => {
+        progressArea.classList.remove('visible');
+        resultCard.classList.add('visible');
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
+
+    } catch(err) {
+      showError(err.message || 'Falha no processamento.');
+      progressArea.classList.remove('visible');
+    } finally {
+      compressBtn.disabled = false;
+    }
+  });
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function setProgress(pct, label) {
+    progressBar.style.width   = pct + '%';
+    progressPct.textContent   = pct + '%';
+    statusText.textContent    = label;
+    progressLabel.textContent = pct < 100 ? 'Processando…' : 'Concluído';
+  }
+
+  function showError(msg) { errorText.textContent = msg; errorMsg.classList.add('visible'); }
+  function hideError()    { errorMsg.classList.remove('visible'); }
+
+  function formatBytes(b) {
+    if (b < 1024)    return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(2) + ' MB';
+  }
+
+  function getCsrfToken() {
+    const c = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+    return c ? c.split('=')[1] : '';
+  }
+
+})();
+</script>
+
+{% endblock %}

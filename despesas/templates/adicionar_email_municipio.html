@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  .em-wrap * { box-sizing: border-box; }
+
+  .em-wrap {
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background: #f0f2f7;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .em-card {
+    max-width: 780px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 32px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .em-header {
+    background: linear-gradient(135deg, #1a1f3c 0%, #2d3a8c 60%, #3b5bdb 100%);
+    padding: 2rem 2rem 1.6rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .em-header::before {
+    content: '✉';
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 6rem;
+    opacity: .06;
+    line-height: 1;
+  }
+  .em-back {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    color: rgba(255,255,255,.65);
+    text-decoration: none;
+    font-size: .8rem;
+    font-weight: 500;
+    letter-spacing: .03em;
+    margin-bottom: 1rem;
+    transition: color .2s;
+  }
+  .em-back:hover { color: #fff; }
+  .em-header h1 {
+    margin: 0 0 .3rem;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -.02em;
+  }
+  .em-header p {
+    margin: 0;
+    font-size: .82rem;
+    color: rgba(255,255,255,.6);
+    line-height: 1.5;
+  }
+
+  /* ── Body ── */
+  .em-body { padding: 2rem; }
+
+  /* ── Critério ── */
+  .em-section-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: .75rem;
+  }
+
+  .em-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+  @media (max-width: 540px) {
+    .em-grid-2 { grid-template-columns: 1fr; }
+    .em-body { padding: 1.25rem; }
+  }
+
+  .em-field label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: .35rem;
+  }
+  .em-field select,
+  .em-field input[type="email"],
+  .em-field input[type="text"] {
+    width: 100%;
+    padding: .55rem .8rem;
+    font-size: .875rem;
+    font-family: 'DM Sans', sans-serif;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #1e293b;
+    outline: none;
+    transition: border-color .18s, box-shadow .18s, background .18s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .em-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right .8rem center;
+    padding-right: 2.2rem;
+  }
+  .em-field select:focus,
+  .em-field input:focus {
+    border-color: #3b5bdb;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59,91,219,.1);
+  }
+  .em-field .hint {
+    font-size: .72rem;
+    color: #94a3b8;
+    margin-top: .3rem;
+  }
+
+  /* ── Divider ── */
+  .em-divider {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .em-divider span {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+  .em-divider::before,
+  .em-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e9ecef;
+  }
+
+  /* ── Email rows ── */
+  .em-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    gap: .75rem;
+    align-items: end;
+    background: #f8fafc;
+    border: 1.5px solid #e9edf5;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: .65rem;
+    transition: border-color .18s, box-shadow .18s;
+    animation: rowIn .2s ease;
+  }
+  .em-row:focus-within {
+    border-color: #c7d2f8;
+    box-shadow: 0 2px 12px rgba(59,91,219,.06);
+  }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 600px) {
+    .em-row { grid-template-columns: 1fr; }
+    .em-row-principal { flex-direction: row; justify-content: flex-start; gap: .5rem; }
+  }
+
+  .em-row-principal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    padding-bottom: .1rem;
+  }
+  .em-row-principal span {
+    font-size: .7rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: center;
+    white-space: nowrap;
+  }
+  /* toggle switch */
+  .em-toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .em-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .em-toggle input + span.em-toggle-track {
+    position: absolute; inset: 0;
+    background: #cbd5e1;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .em-toggle input + span.em-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .em-toggle input:checked + span.em-toggle-track { background: #3b5bdb; }
+  .em-toggle input:checked + span.em-toggle-track::after { transform: translateX(16px); }
+
+  .em-row-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #cbd5e1;
+    font-size: 1.1rem;
+    padding: .3rem;
+    border-radius: 8px;
+    line-height: 1;
+    transition: color .15s, background .15s;
+    align-self: center;
+    margin-bottom: .1rem;
+  }
+  .em-row-remove:hover { color: #ef4444; background: #fef2f2; }
+
+  /* ── Add button ── */
+  .em-add-btn {
+    width: 100%;
+    padding: .65rem;
+    border: 2px dashed #c7d2f8;
+    border-radius: 12px;
+    background: transparent;
+    color: #3b5bdb;
+    font-size: .85rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    margin: .25rem 0 1.75rem;
+    transition: background .15s, border-color .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+  }
+  .em-add-btn:hover { background: #eef2ff; border-color: #3b5bdb; }
+
+  /* ── Footer ── */
+  .em-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .75rem;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 1.5rem;
+  }
+  @media (max-width: 480px) {
+    .em-footer { flex-direction: column-reverse; }
+    .em-footer a, .em-footer button { width: 100%; text-align: center; justify-content: center; }
+  }
+
+  .em-btn-cancel {
+    display: inline-flex; align-items: center;
+    padding: .6rem 1.25rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #64748b;
+    font-size: .875rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    background: #fff;
+    transition: border-color .15s, color .15s;
+  }
+  .em-btn-cancel:hover { border-color: #94a3b8; color: #1e293b; }
+
+  .em-btn-submit {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .6rem 1.5rem;
+    background: linear-gradient(135deg, #2d3a8c, #3b5bdb);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: .875rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(59,91,219,.35);
+    transition: opacity .15s, box-shadow .15s;
+  }
+  .em-btn-submit:hover { opacity: .92; box-shadow: 0 4px 16px rgba(59,91,219,.4); }
+
+  /* ── Badge contador ── */
+  #em-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px;
+    background: rgba(255,255,255,.18);
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #fff;
+    padding: 0 .4rem;
+    margin-left: .4rem;
+    font-family: 'DM Mono', monospace;
+  }
+</style>
+
+<div class="em-wrap">
+  <div class="em-card">
+
+    <!-- Header -->
+    <div class="em-header">
+      <a href="{% url 'receitas_dashboard' %}" class="em-back">← Voltar ao Dashboard</a>
+      <h1>Adicionar E-mails por Município <span id="em-count">1</span></h1>
+      <p>Selecione o município e tipo de entidade — os e-mails serão vinculados a todos os contratos correspondentes.</p>
+    </div>
+
+    <!-- Body -->
+    <div class="em-body">
+      <form method="post" novalidate id="em-form">
+        {% csrf_token %}
+
+        <!-- Critério -->
+        <p class="em-section-label">Critério de Associação</p>
+        <div class="em-grid-2">
+          <div class="em-field">
+            <label for="id_municipio">Município</label>
+            {{ form.municipio }}
+            {% if form.municipio.errors %}
+              <p class="hint" style="color:#ef4444;">{{ form.municipio.errors }}</p>
+            {% endif %}
+          </div>
+          <div class="em-field">
+            <label for="id_tipo_entidade">Tipo de Entidade</label>
+            {{ form.tipo_entidade }}
+            <p class="hint">Deixe em branco para aplicar a Prefeitura e Câmara.</p>
+          </div>
+        </div>
+
+        <!-- Lista de e-mails -->
+        <div class="em-divider"><span>Lista de E-mails</span></div>
+
+        <div id="email-rows"></div>
+
+        <!-- Template oculto -->
+        <template id="row-tpl">
+          <div class="em-row">
+            <div class="em-field">
+              <label>E-mail *</label>
+              <input type="email" name="email[]" required placeholder="contato@exemplo.com.br">
+            </div>
+            <div class="em-field">
+              <label>Nome do Contato</label>
+              <input type="text" name="nome_contato[]" placeholder="Ex: João Silva">
+            </div>
+            <div class="em-row-principal">
+              <span>Principal</span>
+              <label class="em-toggle">
+                <input type="hidden" name="principal[]" value="0" class="principal-hidden">
+                <input type="checkbox" onchange="this.previousElementSibling.value = this.checked ? '1' : '0'">
+                <span class="em-toggle-track"></span>
+              </label>
+            </div>
+            <button type="button" class="em-row-remove" onclick="removerLinha(this)" title="Remover">✕</button>
+          </div>
+        </template>
+
+        <button type="button" class="em-add-btn" onclick="adicionarLinha()">
+          + Adicionar outro e-mail
+        </button>
+
+        <!-- Rodapé -->
+        <div class="em-footer">
+          <a href="{% url 'receitas_dashboard' %}" class="em-btn-cancel">Cancelar</a>
+          <button type="submit" class="em-btn-submit">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+            Associar E-mails
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  const tpl      = document.getElementById('row-tpl');
+  const rows     = document.getElementById('email-rows');
+  const countBadge = document.getElementById('em-count');
+
+  function atualizarContador() {
+    const n = rows.querySelectorAll('.em-row').length;
+    countBadge.textContent = n;
+  }
+
+  function adicionarLinha() {
+    const clone = tpl.content.cloneNode(true);
+    // Garante campos limpos no clone
+    clone.querySelectorAll('input[type="email"], input[type="text"]').forEach(i => i.value = '');
+    clone.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+    clone.querySelectorAll('.principal-hidden').forEach(i => i.value = '0');
+    rows.appendChild(clone);
+    // Foca no e-mail da nova linha
+    rows.lastElementChild.querySelector('input[type="email"]').focus();
+    atualizarContador();
+  }
+
+  function removerLinha(btn) {
+    if (rows.querySelectorAll('.em-row').length <= 1) return;
+    btn.closest('.em-row').remove();
+    atualizarContador();
+  }
+
+  // Inicializa com a primeira linha
+  adicionarLinha();
+
+  // Pré-preenche se vier da querystring
+  {% if request.GET.municipio %}
+    const selMun = document.getElementById('id_municipio');
+    if (selMun) selMun.value = "{{ request.GET.municipio|escapejs }}";
+  {% endif %}
+  {% if request.GET.entidade %}
+    const selEnt = document.getElementById('id_tipo_entidade');
+    if (selEnt) selEnt.value = "{{ request.GET.entidade|escapejs }}";
+  {% endif %}
+</script>
+
+{% endblock %}

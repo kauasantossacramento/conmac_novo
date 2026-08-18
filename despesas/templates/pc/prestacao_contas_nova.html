@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nova Prestação de Contas · CONMAC{% endblock %}
+
+{% block content %}
+<!-- ── LOADING OVERLAY ── -->
+<div id="loadingOverlay" style="
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(255,255,255,.85); backdrop-filter: blur(4px);
+  flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
+  <div style="
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 5px solid #e2e8f0;
+    border-top-color: #0e7490;
+    animation: spin .8s linear infinite;">
+  </div>
+  <div style="text-align:center;">
+    <p style="font-weight:700;color:#1a202c;margin:0;font-size:1rem;"
+       id="loadingTitle">Analisando documento…</p>
+    <span style="font-size:.82rem;color:#718096;" id="loadingDesc">
+      Identificando cliente, competência e inspetoria
+    </span>
+  </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<style>
+:root {
+  --gradient: linear-gradient(135deg, #1e3a5f 0%, #0e7490 100%);
+  --border: #e2e8f0; --muted: #718096; --dark: #1a202c;
+}
+.nova-hero {
+  background: var(--gradient); border-radius: 20px; color: #fff;
+  padding: 24px 28px; margin-bottom: 24px; display: flex;
+  align-items: center; gap: 16px;
+}
+.nova-hero h2 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+.nova-hero p  { margin: 5px 0 0; opacity: .85; font-size: .88rem; }
+
+.form-card {
+  background: #fff; border-radius: 16px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,.04); padding: 28px; max-width: 760px; margin: 0 auto;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: .83rem; font-weight: 700; color: var(--dark); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: .88rem; background: #fff; transition: .2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: #0e7490; outline: none; box-shadow: 0 0 0 3px rgba(14,116,144,.1);
+}
+
+/* Zona de upload */
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 12px; padding: 24px;
+  text-align: center; cursor: pointer; transition: .2s; background: #f8fafc;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: #0e7490; background: #f0fdfe; }
+.upload-zone p { margin: 8px 0 0; font-weight: 600; font-size: .88rem; color: var(--dark); }
+.upload-zone span { font-size: .78rem; color: var(--muted); }
+
+/* Cliente sugerido */
+.sugestao-card {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
+  padding: 12px; display: none; align-items: center; gap: 10px; margin-top: 8px;
+}
+.sugestao-card.show { display: flex; }
+
+/* Submit */
+.btn-submit {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 24px; background: #0e7490; color: #fff;
+  border: none; border-radius: 10px; font-size: .9rem; font-weight: 700;
+  cursor: pointer; transition: .18s;
+}
+.btn-submit:hover { background: #0e6580; transform: translateY(-1px); }
+.btn-cancel {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 11px 20px; background: #fff; color: var(--dark);
+  border: 1.5px solid var(--border); border-radius: 10px; font-size: .9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: .15s;
+}
+.btn-cancel:hover { background: #f1f5f9; }
+
+/* Progress */
+.upload-progress { display: none; margin-top: 8px; }
+.progress-bar {
+  height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;
+}
+.progress-bar__inner { height: 100%; background: #0e7490; width: 0; transition: width .3s; }
+</style>
+
+<section class="nova-hero">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+  </svg>
+  <div>
+    <h2>Cadastrar Prestação de Contas</h2>
+    <p>Preencha os dados e anexe o documento recebido do TCM/BA</p>
+  </div>
+</section>
+
+{% if messages %}
+  {% for msg in messages %}
+  <div style="background:{% if 'error' in msg.tags %}#fef2f2{% else %}#f0fdf4{% endif %};
+              color:{% if 'error' in msg.tags %}#dc2626{% else %}#065f46{% endif %};
+              border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:.87rem; font-weight:600;">
+    {{ msg }}
+  </div>
+  {% endfor %}
+{% endif %}
+
+<div class="form-card">
+  <form method="post" enctype="multipart/form-data" id="formNovaPC">
+    {% csrf_token %}
+
+    <!-- Competência -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="id_mes">Mês da Competência *</label>
+        <select name="competencia_mes" id="id_mes" required>
+          <option value="">Selecione…</option>
+          {% for m in meses %}
+            <option value="{{ m }}">{{ m|stringformat:"02d" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="id_ano">Ano da Competência *</label>
+        <select name="competencia_ano" id="id_ano" required>
+          <option value="">Selecione…</option>
+          {% for a in anos %}
+            <option value="{{ a | stringformat:'s' }}">{{ a | stringformat:"s"  }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Nº processo e Inspetoria -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="id_processo">Nº Processo TCM</label>
+        <input type="text" name="numero_processo" id="id_processo"
+               placeholder="Ex.: 08201e26">
+      </div>
+      <div class="form-group">
+        <label for="id_inspetoria">Inspetoria</label>
+        <input type="text" name="inspetoria" id="id_inspetoria"
+               placeholder="Ex.: Paulo Afonso">
+      </div>
+    </div>
+
+    <!-- Upload do PDF -->
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Documento PDF da Prestação *</label>
+      <div class="upload-zone" id="dropzone" onclick="document.getElementById('id_doc').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.4">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p id="upload-label">Clique ou arraste o arquivo PDF aqui</p>
+        <span>Somente arquivos .pdf</span>
+      </div>
+      <input type="file" name="documento_principal" id="id_doc" accept=".pdf"
+             style="display:none;" onchange="onDocSelected(this)">
+      <div class="upload-progress" id="prog-wrap">
+        <div class="progress-bar"><div class="progress-bar__inner" id="prog-inner"></div></div>
+        <span id="prog-label" style="font-size:.75rem;color:var(--muted);margin-top:3px;display:block;"></span>
+      </div>
+    </div>
+
+    <!-- Sugestão de cliente via IA -->
+    <div class="sugestao-card" id="cardSugestao">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <div style="flex:1;">
+        <strong id="sugestao-nome">—</strong>
+        <div style="font-size:.78rem;color:#6b7280;" id="sugestao-conf">identificado automaticamente</div>
+      </div>
+      <button type="button" id="btnAceitarSugestao" class="btn-submit" style="padding:6px 12px;font-size:.78rem;">
+        Usar este cliente
+      </button>
+    </div>
+
+    <!-- Seleção manual de cliente -->
+    <div class="form-group" style="margin-bottom:16px;">
+      <label for="id_cliente">Cliente *</label>
+      <select name="cliente_id" id="id_cliente">
+        <option value="">— Selecione ou deixe identificar automaticamente —</option>
+        {% for c in clientes %}
+          <option value="{{ c.pk }}">{{ c.nome }}</option>
+        {% endfor %}
+      </select>
+      <span style="font-size:.75rem;color:var(--muted);margin-top:3px;">
+        O sistema tentará identificar o cliente automaticamente ao anexar o PDF.
+      </span>
+    </div>
+
+    <!-- Observação -->
+    <div class="form-group" style="margin-bottom:20px;">
+      <label for="id_obs">Observação de Cadastro</label>
+      <textarea name="observacao_cadastro" id="id_obs" rows="3"
+                placeholder="Informações adicionais relevantes para a equipe de análise…"></textarea>
+    </div>
+
+    <!-- Botões -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button type="submit" class="btn-submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Cadastrar Prestação
+      </button>
+      <a href="{% url 'prestacao_contas_monitor' %}" class="btn-cancel">
+        Cancelar
+      </a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+let clienteSugeridoId = null;
+
+function onDocSelected(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  document.getElementById('upload-label').textContent = '📎 ' + file.name;
+  tentarIdentificarCliente(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('id_doc').files = dt.files;
+    document.getElementById('upload-label').textContent = '📎 ' + file.name;
+    tentarIdentificarCliente(file);
+  }
+}
+
+async function tentarIdentificarCliente(file) {
+    const card = document.getElementById('cardSugestao');
+    card.classList.remove('show');
+
+    const fd = new FormData();
+    fd.append('pdf', file);
+    fd.append('csrfmiddlewaretoken', CSRF);
+
+    try {
+        const r = await fetch('{% url "api_identificar_cliente_pc" %}', { method: 'POST', body: fd });
+        const d = await r.json();
+
+        // ── Cliente ────────────────────────────────────────────────
+        if (d.cliente_id) {
+            clienteSugeridoId = d.cliente_id;
+            document.getElementById('sugestao-nome').textContent = d.cliente_nome;
+            document.getElementById('sugestao-conf').textContent =
+                `Identificado com ${d.confianca}% de confiança a partir de: "${d.nome_extraido}"`;
+            card.classList.add('show');
+
+            if (d.sugestao_auto) {
+                document.getElementById('id_cliente').value = d.cliente_id;
+            }
+        }
+
+        // ── Competência ────────────────────────────────────────────
+        if (d.competencia_mes) {
+            document.getElementById('id_mes').value = d.competencia_mes;
+        }
+        if (d.competencia_ano) {
+            document.getElementById('id_ano').value = d.competencia_ano;
+        }
+
+        // ── Inspetoria ─────────────────────────────────────────────
+        if (d.inspetoria) {
+            document.getElementById('id_inspetoria').value = d.inspetoria;
+        }
+
+        // ── Nº Processo ────────────────────────────────────────────
+        if (d.numero_processo) {
+            document.getElementById('id_processo').value = d.numero_processo;
+        }
+
+    } catch (e) {
+        // Silencioso: identificação automática é opcional
+    }
+}
+
+document.getElementById('btnAceitarSugestao')?.addEventListener('click', () => {
+  if (clienteSugeridoId) {
+    document.getElementById('id_cliente').value = clienteSugeridoId;
+    document.getElementById('cardSugestao').classList.remove('show');
+  }
+});
+
+function showLoading(title, desc) {
+  document.getElementById('loadingTitle').textContent = title || 'Processando…';
+  document.getElementById('loadingDesc').textContent  = desc  || '';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+async function tentarIdentificarCliente(file) {
+  const card = document.getElementById('cardSugestao');
+  card.classList.remove('show');
+
+  showLoading('Analisando documento…', 'Identificando cliente, competência e inspetoria');
+
+  const fd = new FormData();
+  fd.append('pdf', file);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  try {
+    const r = await fetch('{% url "api_identificar_cliente_pc" %}', { method: 'POST', body: fd });
+    const d = await r.json();
+
+    if (d.cliente_id) {
+      clienteSugeridoId = d.cliente_id;
+      document.getElementById('sugestao-nome').textContent = d.cliente_nome;
+      document.getElementById('sugestao-conf').textContent =
+        `Identificado com ${d.confianca}% de confiança a partir de: "${d.nome_extraido}"`;
+      card.classList.add('show');
+      if (d.sugestao_auto) document.getElementById('id_cliente').value = d.cliente_id;
+    }
+
+    if (d.competencia_mes) document.getElementById('id_mes').value   = d.competencia_mes;
+    if (d.competencia_ano) document.getElementById('id_ano').value   = d.competencia_ano;
+    if (d.inspetoria)      document.getElementById('id_inspetoria').value = d.inspetoria;
+    if (d.numero_processo) document.getElementById('id_processo').value   = d.numero_processo;
+
+  } catch (e) {
+    // silencioso
+  } finally {
+    hideLoading(); // ← sempre esconde, mesmo em erro
+  }
+}
+
+// Loader também no submit do formulário
+document.getElementById('formNovaPC')?.addEventListener('submit', () => {
+  showLoading('Salvando prestação…', 'Aguarde enquanto o documento é processado');
+});
+
+</script>
+{% endblock %}

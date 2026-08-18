@@ -1,0 +1,461 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Gestão de Documentos · CONMAC{% endblock %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+:root {
+  --brown:#945f34; --teal:#239FAB; --green:#14a05a; --red:#dc2626;
+  --gold:#d97706; --purple:#6b46c1; --muted:#718096; --dark:#1a202c;
+  --border:#e5e7eb; --grad:linear-gradient(90deg,#945f34 0%,#239FAB 100%);
+  font-family:'Sora',sans-serif;
+}
+
+/* HERO */
+.gdoc-hero {
+  background:var(--grad); border-radius:22px; padding:26px 34px;
+  display:flex; align-items:center; gap:18px; color:#fff;
+  box-shadow:0 14px 36px rgba(148,95,52,.2); margin-bottom:28px;
+  position:relative; overflow:hidden;
+}
+.gdoc-hero::before {
+  content:''; position:absolute; right:-50px; top:-50px;
+  width:190px; height:190px; background:rgba(255,255,255,.06);
+  border-radius:50%; pointer-events:none;
+}
+.gdoc-ico {
+  width:56px; height:56px; background:rgba(255,255,255,.18);
+  border-radius:50%; display:grid; place-items:center;
+  border:2px solid rgba(255,255,255,.24); flex-shrink:0;
+}
+.gdoc-txt h2 { margin:0; font-size:1.6rem; font-weight:800; }
+.gdoc-txt p  { margin:4px 0 0; opacity:.8; font-size:.84rem; }
+
+/* TABS */
+.tab-bar {
+  display:flex; gap:4px; background:#f1f5f9; border-radius:12px;
+  padding:4px; margin-bottom:24px; width:fit-content;
+}
+.tab-btn {
+  padding:9px 22px; border-radius:9px; border:none;
+  font-family:'Sora',sans-serif; font-size:.85rem; font-weight:600;
+  cursor:pointer; background:transparent; color:var(--muted);
+  transition:all .2s;
+}
+.tab-btn.ativo {
+  background:#fff; color:var(--dark);
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+/* SECTIONS */
+.tab-section { display:none; }
+.tab-section.ativa { display:block; }
+
+/* CARDS PADRAO */
+.grid-padrao {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px;
+}
+.doc-card {
+  background:#fff; border:1.5px solid var(--border); border-radius:16px;
+  padding:18px 20px; position:relative; overflow:hidden;
+}
+.doc-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+}
+.doc-card.ok::before    { background:linear-gradient(90deg,#14a05a,#4ade80); }
+.doc-card.alerta::before{ background:linear-gradient(90deg,#d97706,#fbbf24); }
+.doc-card.vencido::before{ background:linear-gradient(90deg,#dc2626,#f87171); }
+.doc-card.vazio::before  { background:var(--border); }
+
+.dc-tipo {
+  font-size:.72rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--muted); margin-bottom:6px;
+}
+.dc-nome { font-size:.92rem; font-weight:700; color:var(--dark); margin-bottom:10px; }
+.dc-val-ok     { color:#16a34a; font-size:.78rem; font-weight:700; }
+.dc-val-alerta { color:#d97706; font-size:.78rem; font-weight:700; }
+.dc-val-vencido{ color:#dc2626; font-size:.78rem; font-weight:700; }
+.dc-val-vazio  { color:#9ca3af; font-size:.78rem; }
+
+.dc-acoes { display:flex; gap:7px; margin-top:12px; flex-wrap:wrap; }
+.btn-sm {
+  font-size:.75rem; font-family:'Sora',sans-serif; font-weight:600;
+  padding:5px 13px; border-radius:8px; cursor:pointer; border:1.5px solid;
+  transition:all .18s; white-space:nowrap;
+}
+.btn-sm.editar { border-color:#6b46c1; color:#6b46c1; background:#fff; }
+.btn-sm.editar:hover { background:#f3e8ff; }
+.btn-sm.excluir{ border-color:#dc2626; color:#dc2626; background:#fff; }
+.btn-sm.excluir:hover { background:#fef2f2; }
+.btn-sm.ver    { border-color:#0e7490; color:#0e7490; background:#fff; }
+.btn-sm.ver:hover { background:#ecfeff; }
+.btn-sm.add    { border-color:var(--teal); color:var(--teal); background:#fff; }
+.btn-sm.add:hover { background:#f0fdfe; }
+
+/* ADD CARD */
+.doc-card-add {
+  background:transparent; border:1.5px dashed #cbd5e0;
+  border-radius:16px; padding:18px 20px;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:8px; cursor:pointer;
+  color:var(--muted); font-size:.84rem; min-height:120px;
+  transition:all .2s;
+}
+.doc-card-add:hover { border-color:var(--teal); color:var(--teal); background:#f0fdfe; }
+
+/* TABELA MODELO */
+.modelo-table {
+  width:100%; border-collapse:collapse; font-size:.84rem;
+}
+.modelo-table th {
+  text-align:left; font-size:.72rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.07em; color:var(--muted); padding:8px 14px;
+  border-bottom:2px solid var(--border); background:#f8fafc;
+}
+.modelo-table td {
+  padding:12px 14px; border-bottom:1px solid var(--border); vertical-align:middle;
+}
+.modelo-table tr:last-child td { border-bottom:none; }
+.modelo-table tr:hover td { background:#fafafa; }
+
+/* MODAL */
+.modal-back {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+  z-index:9000; align-items:center; justify-content:center;
+}
+.modal-back.ativo { display:flex; }
+.modal-box {
+  background:#fff; border-radius:20px; padding:28px 30px;
+  width:520px; max-width:95vw; max-height:90vh; overflow-y:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.18); position:relative;
+}
+.modal-box h3 { margin:0 0 18px; font-size:1rem; font-weight:700; }
+.modal-close {
+  position:absolute; top:14px; right:16px; background:none; border:none;
+  font-size:1.5rem; color:var(--muted); cursor:pointer;
+}
+.field-group { margin-bottom:14px; }
+.field-group label {
+  display:block; font-size:.76rem; font-weight:700; color:var(--muted);
+  margin-bottom:5px; text-transform:uppercase; letter-spacing:.06em;
+}
+.field-group input,.field-group select,.field-group textarea {
+  width:100%; box-sizing:border-box; padding:9px 12px;
+  border:1.5px solid var(--border); border-radius:9px;
+  font-family:'Sora',sans-serif; font-size:.86rem; outline:none; transition:border .15s;
+}
+.field-group input:focus,.field-group select:focus,.field-group textarea:focus { border-color:var(--teal); }
+.field-hint { font-size:.74rem; color:var(--muted); margin-top:4px; }
+.btn-salvar {
+  width:100%; padding:11px; border-radius:10px; border:none;
+  background:var(--grad); color:#fff; font-family:'Sora',sans-serif;
+  font-size:.88rem; font-weight:700; cursor:pointer; margin-top:6px;
+}
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:24px; right:24px; background:#1a202c; color:#fff;
+  padding:12px 20px; border-radius:12px; font-size:.84rem; font-weight:600;
+  z-index:99999; opacity:0; transform:translateY(12px);
+  transition:all .3s; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.ok  { background:#14532d; border:1.5px solid #bbf7d0; }
+.toast.err { background:#991b1b; border:1.5px solid #fca5a5; }
+</style>
+
+<!-- ── HERO ── -->
+<div class="gdoc-hero">
+  <div class="gdoc-ico">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  </div>
+  <div class="gdoc-txt">
+    <h2>Gestão de Documentos</h2>
+    <p>Documentos padrão (certidões) e modelos para todos os contratos.</p>
+  </div>
+</div>
+
+<!-- ── TABS ── -->
+<div class="tab-bar">
+  <button class="tab-btn ativo" onclick="mudarTab('padrao', this)">
+    Documentos Padrão ({{ docs_padrao|length }}/6)
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: DOCUMENTOS PADRÃO
+══════════════════════════════════════ -->
+<div id="tab-padrao" class="tab-section ativa">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <p style="margin:0;font-size:.84rem;color:var(--muted);">
+      Certidões e comprovações obrigatórias, válidas para todos os contratos.
+    </p>
+    {% if alerta_docs.critico %}
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:9px;padding:8px 14px;font-size:.8rem;color:#991b1b;font-weight:600;">
+      ⚠ {{ alerta_docs.vencidos }} vencida(s) · {{ alerta_docs.ausentes }} ausente(s)
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="grid-padrao">
+    {% for dp in docs_padrao %}
+    <div class="doc-card {{ dp.status_validade }}">
+      <div class="dc-tipo">{{ dp.get_tipo_display }}</div>
+      <div class="dc-nome">{{ dp.get_tipo_display }}</div>
+      <div>
+        {% if dp.status_validade == 'ok' %}
+          <span class="dc-val-ok">✓ válida até {{ dp.data_validade|date:"d/m/Y" }}</span>
+        {% elif dp.status_validade == 'alerta' %}
+          <span class="dc-val-alerta">⚠ vence {{ dp.data_validade|date:"d/m/Y" }}</span>
+        {% else %}
+          <span class="dc-val-vencido">✗ vencida {{ dp.data_validade|date:"d/m/Y" }}</span>
+        {% endif %}
+      </div>
+      <div class="dc-acoes">
+        {% if dp.arquivo %}<a href="{{ dp.arquivo.url }}" target="_blank" class="btn-sm ver">↗ ver</a>{% endif %}
+        <button class="btn-sm editar"
+          onclick="abrirModalPadrao('{{ dp.tipo }}', '{{ dp.get_tipo_display }}', '{{ dp.data_validade|date:"Y-m-d" }}', '{{ dp.observacao|escapejs }}')">
+          ✎ substituir
+        </button>
+        <form method="post" action="{% url 'excluir_documento_padrao' dp.pk %}"
+              onsubmit="return confirm('Excluir este documento?')" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-sm excluir">✕</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% for tipo, label in tipos_faltando.items %}
+    <div class="doc-card-add" onclick="abrirModalPadrao('{{ tipo }}', '{{ label }}', '', '')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <span>Adicionar<br><strong>{{ label }}</strong></span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: DOCUMENTOS MODELO
+══════════════════════════════════════ -->
+<div id="tab-modelo" class="tab-section">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <p style="margin:0;font-size:.84rem;color:var(--muted);">
+      Templates que variam por entidade. A data é substituída automaticamente pelo sistema a cada mês.
+    </p>
+    <button class="btn-sm add" onclick="abrirModalModelo()">+ Novo modelo</button>
+  </div>
+
+  {% if docs_modelo %}
+  <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;">
+    <table class="modelo-table">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Entidade</th>
+          <th>Município</th>
+          <th>Texto data original</th>
+          <th>Arquivo base</th>
+          <th style="text-align:center;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dm in docs_modelo %}
+        <tr>
+          <td><strong>{{ dm.get_tipo_display }}</strong></td>
+          <td>
+            {% if dm.tipo_entidade == 'municipio' %}
+              <span style="font-size:.75rem;font-weight:700;color:#0e7490;">Prefeitura Municipal</span>
+            {% elif dm.tipo_entidade == 'camara' %}
+              <span style="font-size:.75rem;font-weight:700;color:#a16207;">Câmara Municipal</span>
+            {% else %}
+              <span style="color:var(--muted);font-size:.78rem;">Todas</span>
+            {% endif %}
+          </td>
+          <td>{{ dm.municipio|default:"—" }}</td>
+          <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.78rem;"
+              title="{{ dm.texto_data_original }}">
+            {{ dm.texto_data_original }}
+          </td>
+          <td>
+            {% if dm.arquivo_base %}
+              <a href="{{ dm.arquivo_base.url }}" target="_blank"
+                 style="color:var(--teal);font-size:.78rem;font-weight:600;">
+                {{ dm.nome_arquivo }}
+              </a>
+            {% else %}<span style="color:#9ca3af;">—</span>{% endif %}
+          </td>
+          <td style="text-align:center;">
+            <div style="display:flex;gap:6px;justify-content:center;">
+              <button class="btn-sm editar" style="font-size:.7rem;"
+                onclick="abrirModalModeloEditar({{ dm.id }}, '{{ dm.tipo }}', '{{ dm.tipo_entidade }}', '{{ dm.municipio|escapejs }}', '{{ dm.texto_data_original|escapejs }}')">
+                ✎
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:60px;color:var(--muted);">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"
+         style="margin:0 auto 14px;display:block;opacity:.3">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    Nenhum documento modelo cadastrado.
+    <br><button class="btn-sm add" onclick="abrirModalModelo()" style="margin-top:14px;">+ Adicionar primeiro modelo</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: SALVAR DOCUMENTO PADRÃO
+══════════════════════════════════════════════════════ -->
+<div id="modal-padrao" class="modal-back" onclick="if(event.target===this)fecharModal('modal-padrao')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="fecharModal('modal-padrao')">×</button>
+    <h3 id="mp-titulo">Adicionar Documento Padrão</h3>
+    <form method="post" action="{% url 'salvar_documento_padrao' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="tipo" id="mp-tipo">
+      <div class="field-group">
+        <label>Tipo de Documento</label>
+        <input type="text" id="mp-tipo-label" readonly style="background:#f8fafc;color:var(--muted);">
+      </div>
+      <div class="field-group">
+        <label>Arquivo PDF *</label>
+        <input type="file" name="arquivo" accept="application/pdf">
+        <p class="field-hint">Se já existe um arquivo, o novo substitui o anterior.</p>
+      </div>
+      <div class="field-group">
+        <label>Data de Validade *</label>
+        <input type="date" name="data_validade" id="mp-validade" required>
+      </div>
+      <div class="field-group">
+        <label>Observação</label>
+        <textarea name="observacao" id="mp-obs" rows="2" placeholder="Observações opcionais"></textarea>
+      </div>
+      <button type="submit" class="btn-salvar">Salvar Documento</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: CADASTRAR/EDITAR DOCUMENTO MODELO
+══════════════════════════════════════════════════════ -->
+<div id="modal-modelo" class="modal-back" onclick="if(event.target===this)fecharModal('modal-modelo')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="fecharModal('modal-modelo')">×</button>
+    <h3 id="mm-titulo">Novo Documento Modelo</h3>
+    <form method="post" action="/receitas/documentos/modelo/salvar/" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="modelo_id" id="mm-id">
+      <div class="field-group">
+        <label>Tipo *</label>
+        <select name="tipo" id="mm-tipo" required>
+          <option value="">Selecione…</option>
+          <option value="declaracao_simples">Declaração de Optante pelo Simples Nacional</option>
+          <option value="planilha_custos">Planilha de Custos</option>
+          <option value="relatorio_atividades">Relatório de Atividades</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field-group">
+          <label>Entidade *</label>
+          <select name="tipo_entidade" id="mm-entidade">
+            <option value="">Todas</option>
+            <option value="municipio">Prefeitura Municipal</option>
+            <option value="camara">Câmara Municipal</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Município específico</label>
+          <input type="text" name="municipio" id="mm-municipio" placeholder="Deixe em branco = todos">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Arquivo Base (PDF original) *</label>
+        <input type="file" name="arquivo_base" accept="application/pdf">
+        <p class="field-hint">Este é o PDF com a data original que será substituída a cada mês.</p>
+      </div>
+      <div class="field-group">
+        <label>Texto de data original no PDF *</label>
+        <input type="text" name="texto_data_original" id="mm-texto-orig"
+               placeholder='Ex: "Salvador - BA, 20 de janeiro de 2026"' required>
+        <p class="field-hint">Texto exato que aparece no documento e será substituído pelo PyMuPDF.</p>
+      </div>
+      <div class="field-group">
+        <label>Descrição / Instruções</label>
+        <textarea name="descricao" rows="2" placeholder="Instruções para uso deste modelo"></textarea>
+      </div>
+      <button type="submit" class="btn-salvar">Salvar Modelo</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast" class="toast"></div>
+
+<script>
+function mudarTab(nome, btn) {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('ativa'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('ativo'));
+  document.getElementById('tab-' + nome).classList.add('ativa');
+  btn.classList.add('ativo');
+}
+
+function abrirModal(id) { document.getElementById(id).classList.add('ativo'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
+
+function abrirModalPadrao(tipo, label, validade, obs) {
+  document.getElementById('mp-tipo').value      = tipo;
+  document.getElementById('mp-tipo-label').value = label;
+  document.getElementById('mp-validade').value  = validade;
+  document.getElementById('mp-obs').value       = obs;
+  document.getElementById('mp-titulo').textContent = validade ? 'Substituir: ' + label : 'Adicionar: ' + label;
+  abrirModal('modal-padrao');
+}
+
+function abrirModalModelo() {
+  document.getElementById('mm-id').value        = '';
+  document.getElementById('mm-titulo').textContent = 'Novo Documento Modelo';
+  document.getElementById('mm-tipo').value      = '';
+  document.getElementById('mm-entidade').value  = '';
+  document.getElementById('mm-municipio').value = '';
+  document.getElementById('mm-texto-orig').value= '';
+  abrirModal('modal-modelo');
+}
+
+function abrirModalModeloEditar(id, tipo, entidade, municipio, textoOrig) {
+  document.getElementById('mm-id').value         = id;
+  document.getElementById('mm-titulo').textContent = 'Editar Documento Modelo';
+  document.getElementById('mm-tipo').value       = tipo;
+  document.getElementById('mm-entidade').value   = entidade;
+  document.getElementById('mm-municipio').value  = municipio;
+  document.getElementById('mm-texto-orig').value = textoOrig;
+  abrirModal('modal-modelo');
+}
+
+function toast(msg, tipo='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `toast ${tipo} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+{% if messages %}
+{% for msg in messages %}
+document.addEventListener('DOMContentLoaded', () => toast('{{ msg|escapejs }}', '{{ msg.tags }}'));
+{% endfor %}
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,1787 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block title %}Gestão de Contratos · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --brown:     #945f34;
+  --teal:      #239FAB;
+  --teal-dk:   #1a7a84;
+  --green:     #14a05a;
+  --blue:      #0056b3;
+  --gold:      #d97706;
+  --gold-dk:   #b45309;
+  --red:       #dc2626;
+  --purple:    #6b46c1;
+  --purple-lt: #ede9fe;
+  --purple-bd: #c4b5fd;
+  --cyan:      #0e7490;
+  --cyan-lt:   #ecfeff;
+  --cyan-bd:   #a5f3fc;
+  --muted:     #718096;
+  --dark:      #1a202c;
+  --border:    #e5e7eb;
+  --grad:      linear-gradient(90deg, #945f34 0%, #239FAB 100%);
+  font-family: 'Sora', sans-serif;
+}
+
+  .choices__inner {
+    padding: 2px 30px 5px 10px !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: 11px !important;
+    background-color: #fff !important;
+    font-size: .83rem !important;
+    font-family: 'Sora', sans-serif !important;
+    min-height: unset !important;
+    transition: .18s !important;
+  }
+  .choices__list--multiple .choices__item {
+    background-color: var(--primary, #2d7dd2) !important;
+    border: none !important;
+    border-radius: 7px !important;
+    font-size: .75rem !important;
+    font-family: 'Sora', sans-serif !important;
+    padding: 3px 8px !important;
+  }
+  .choices__list--multiple .choices__item .choices__button {
+    border-left: 1px solid rgba(255,255,255,.4) !important;
+    margin-left: 6px !important;
+    padding-left: 8px !important;
+  }
+  .choices[data-type*="select-multiple"] .choices__button,
+  .choices[data-type*="select-one"] .choices__button {
+    background-color: transparent !important;
+  }
+  .choices__list--dropdown,
+  .choices__list[aria-expanded] {
+    border: 1.5px solid var(--border) !important;
+    border-radius: 11px !important;
+    font-size: .83rem !important;
+    font-family: 'Sora', sans-serif !important;
+    margin-top: 4px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08) !important;
+  }
+  .choices__list--dropdown .choices__item--selectable.is-highlighted,
+  .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    background-color: #f1f5f9 !important;
+    color: var(--dark) !important;
+  }
+  .choices__input {
+    font-size: .83rem !important;
+    font-family: 'Sora', sans-serif !important;
+    background: transparent !important;
+  }
+  .choices {
+    margin-bottom: 0 !important;
+  }
+
+
+/* ── HERO ── */
+.receitas-hero {
+  margin-top:10px; background:var(--grad);
+  border-radius:24px; overflow:hidden; color:#fff;
+  padding:24px 30px; display:flex; align-items:center;
+  justify-content:space-between; gap:20px;
+  box-shadow:0 18px 40px rgba(148,95,52,.22); flex-wrap:wrap; position:relative;
+}
+.receitas-hero::before {
+  content:''; position:absolute; top:-70px; right:-70px;
+  width:240px; height:240px; background:rgba(255,255,255,.06); border-radius:50%; pointer-events:none;
+}
+.hero-id { display:flex; align-items:center; gap:18px; position:relative; z-index:1; }
+.hero-ico {
+  width:64px; height:64px; display:grid; place-items:center;
+  background:rgba(255,255,255,.16); border-radius:50%;
+  border:2px solid rgba(255,255,255,.22); flex-shrink:0;
+}
+.hero-txt h2 { margin:0; font-size:1.85rem; font-weight:800; letter-spacing:-.5px; color:#fff; }
+.hero-txt p  { margin:5px 0 0; opacity:.82; font-size:.87rem; }
+.hero-kpis   { display:flex; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
+.hkpi {
+  background:rgba(255,255,255,.97); border-radius:18px; padding:16px 22px;
+  min-width:168px; text-align:center; position:relative; overflow:hidden;
+  box-shadow:0 8px 24px rgba(0,0,0,.1);
+}
+.hkpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--grad); }
+.hkpi.g::before { background:linear-gradient(90deg,#0d7a44,#48bb78); }
+.hkpi.b::before { background:linear-gradient(90deg,#0056b3,#3b82f6); }
+.hkpi__val { font-size:1.35rem; font-weight:800; color:var(--green); margin-bottom:4px; }
+.hkpi.b .hkpi__val { color:var(--blue); }
+.hkpi.t .hkpi__val { color:var(--teal); }
+.hkpi__lbl { font-size:.67rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.5px; }
+
+/* ── BARRA DE AÇÕES ── */
+.action-bar {
+  display:flex; justify-content:space-between; align-items:center;
+  margin:20px 0 12px; flex-wrap:wrap; gap:10px;
+}
+.action-left, .action-right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+.search-wrap { position:relative; }
+.search-wrap .ico-s { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+.search-input {
+  padding:9px 14px 9px 36px; border:1.5px solid var(--border); border-radius:11px;
+  width:250px; background:#fff; font-size:.86rem; font-family:'Sora',sans-serif; transition:.2s; outline:none;
+}
+.search-input:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(35,159,171,.1); }
+
+.fsel {
+  padding:9px 30px 9px 12px; border:1.5px solid var(--border); border-radius:11px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  font-size:.83rem; color:var(--dark); cursor:pointer; appearance:none; -webkit-appearance:none;
+  font-family:'Sora',sans-serif; transition:.18s; outline:none;
+}
+.fsel:focus { border-color:var(--teal); }
+.fsel.ativo { border-color:var(--teal); background-color:#f0fdff; }
+
+.btn-grad {
+  padding:9px 18px; background:var(--grad); color:#fff; border:none; border-radius:11px;
+  font-weight:700; cursor:pointer; font-size:.84rem; font-family:'Sora',sans-serif;
+  display:inline-flex; align-items:center; gap:6px; transition:.18s; text-decoration:none;
+}
+.btn-grad:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 6px 16px rgba(148,95,52,.25); }
+
+.btn-outline {
+  padding:9px 15px; background:#fff; border:1.5px solid var(--border); border-radius:11px;
+  font-weight:600; cursor:pointer; font-size:.83rem; font-family:'Sora',sans-serif;
+  display:inline-flex; align-items:center; gap:6px; color:var(--dark); text-decoration:none; transition:.18s;
+}
+.btn-outline:hover { border-color:var(--muted); background:#f9fafb; }
+
+.btn-notas {
+  padding:9px 16px; background:var(--purple-lt); color:var(--purple);
+  border:1.5px solid var(--purple-bd); border-radius:11px; font-weight:700;
+  cursor:pointer; font-size:.83rem; display:inline-flex; align-items:center; gap:7px;
+  text-decoration:none; transition:.2s; font-family:'Sora',sans-serif; position:relative; overflow:hidden;
+}
+.btn-notas::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,var(--purple),#9f7aea); opacity:0; transition:.2s; }
+.btn-notas:hover::before { opacity:1; }
+.btn-notas:hover { color:#fff; border-color:var(--purple); transform:translateY(-1px); box-shadow:0 6px 18px rgba(107,70,193,.3); }
+.btn-notas span, .btn-notas svg { position:relative; z-index:1; }
+
+.btn-imprimir {
+  padding:9px 15px; background:#fff; color:var(--brown); border:1.5px solid var(--brown);
+  border-radius:11px; font-weight:700; cursor:pointer; font-size:.83rem;
+  display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+  font-family:'Sora',sans-serif; transition:.18s;
+}
+.btn-imprimir:hover { background:var(--brown); color:#fff; }
+
+.btn-select {
+  border:1.5px solid var(--border); color:var(--dark); background:#fff;
+  padding:9px 15px; border-radius:11px; font-weight:600; cursor:pointer;
+  font-size:.83rem; display:inline-flex; align-items:center; gap:6px; transition:.2s;
+  font-family:'Sora',sans-serif;
+}
+.btn-select:hover { border-color:var(--muted); }
+.btn-select.active { background:#e2e6ea; border-color:#adb5bd; }
+
+#btn-editar-lote {
+  background:var(--gold); color:#fff; border:none; padding:9px 16px; border-radius:11px;
+  font-weight:700; cursor:pointer; font-size:.83rem;
+  display:none; align-items:center; gap:6px;
+  box-shadow:0 4px 14px rgba(217,119,6,.3); transition:.18s; font-family:'Sora',sans-serif;
+}
+#btn-editar-lote:hover { background:var(--gold-dk); }
+
+/* ── TABELA ── */
+.table-container {
+  background:#fff; border-radius:18px;
+  box-shadow:0 2px 16px rgba(0,0,0,.05);
+  overflow-x:auto; border:1px solid var(--border);
+}
+.custom-table { width:100%; border-collapse:collapse; }
+.custom-table thead tr { background:#f9fafb; }
+.custom-table th {
+  padding:13px 16px; text-align:left; color:#6b7280;
+  font-size:.7rem; text-transform:uppercase; font-weight:700;
+  border-bottom:2px solid var(--border); letter-spacing:.5px; font-family:'Sora',sans-serif;
+}
+.custom-table td {
+  padding:13px 16px; border-bottom:1px solid #f3f4f6;
+  color:var(--dark); font-size:.87rem; vertical-align:middle;
+}
+.custom-table tbody tr:last-child td { border-bottom:none; }
+.custom-table tbody tr { transition:background .12s; }
+.custom-table tbody tr:hover td { background:#fafbff; }
+.row-inativo td { opacity:.48; background:#fafafa; }
+
+.col-check { display:none; width:44px; text-align:center !important; }
+.selection-mode-active .col-check { display:table-cell; }
+
+/* Badges */
+.badge-st { padding:4px 11px; border-radius:20px; font-size:.71rem; font-weight:700; display:inline-block; font-family:'Sora',sans-serif; }
+.st-99 { background:#fee2e2; color:#991b1b; }
+.st-10 { background:#d1fae5; color:#065f46; }
+.vencendo-tag { color:var(--gold-dk); font-weight:700; background:#fffbeb; padding:3px 9px; border-radius:8px; border:1px solid #fcd34d; display:inline-flex; align-items:center; gap:4px; font-size:.77rem; }
+
+.badge-mun {
+  display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px;
+  font-size:.71rem; font-weight:700; background:var(--purple-lt); color:var(--purple);
+  border:1px solid var(--purple-bd); cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.badge-mun:hover { background:var(--purple); color:#fff; }
+.badge-mun-add {
+  display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px;
+  font-size:.71rem; font-weight:600; background:#f8fafc; color:#a0aec0;
+  border:1.5px dashed #cbd5e0; cursor:pointer; transition:.15s; white-space:nowrap;
+}
+.badge-mun-add:hover { background:var(--purple-lt); color:var(--purple); border-color:var(--purple-bd); border-style:solid; }
+
+/* Badge entidade */
+.badge-ent-mun { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:.68rem; font-weight:700; background:var(--cyan-lt); color:var(--cyan); border:1px solid var(--cyan-bd); }
+.badge-ent-cam { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:.68rem; font-weight:700; background:#fef9c3; color:#a16207; border:1px solid #fde047; }
+
+.mono { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.92rem; }
+.btn-tbl {
+  padding:5px 12px; border-radius:8px; font-size:.75rem; font-weight:700;
+  cursor:pointer; border:1.5px solid var(--border); background:#f8fafc; color:var(--muted);
+  text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:.15s;
+  font-family:'Sora',sans-serif;
+}
+.btn-tbl:hover { background:var(--grad); color:#fff; border-color:transparent; }
+
+/* ── MODAIS ── */
+.modal-back {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(15,15,25,.55); z-index:1050;
+  display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px);
+}
+.modal-back.open { display:flex; }
+@keyframes popIn { from{transform:translateY(12px) scale(.96);opacity:0} to{transform:none;opacity:1} }
+
+.modal-lote-box {
+  background:#fff; width:90%; max-width:560px; border-radius:18px;
+  box-shadow:0 24px 60px rgba(0,0,0,.22); padding:28px; position:relative;
+  animation:popIn .28s cubic-bezier(.34,1.56,.64,1); font-family:'Sora',sans-serif;
+}
+.modal-mun-box {
+  background:#fff; width:90%; max-width:440px; border-radius:20px;
+  box-shadow:0 24px 60px rgba(107,70,193,.2); padding:30px; position:relative;
+  animation:popIn .28s cubic-bezier(.34,1.56,.64,1);
+  border-top:4px solid var(--purple); font-family:'Sora',sans-serif;
+}
+.modal-close {
+  position:absolute; top:14px; right:14px; width:30px; height:30px;
+  background:#f1f5f9; border:none; border-radius:50%; cursor:pointer;
+  font-size:1rem; color:var(--muted); display:grid; place-items:center; transition:.15s;
+}
+.modal-close:hover { background:#e2e8f0; color:var(--dark); }
+
+.mfield { margin-bottom:15px; }
+.mfield label { display:block; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#4a5568; margin-bottom:5px; }
+.mfield input, .mfield select {
+  width:100%; padding:10px 13px; border:1.5px solid #cbd5e0; border-radius:10px;
+  font-size:.9rem; font-family:'Sora',sans-serif; box-sizing:border-box; transition:.18s; outline:none;
+}
+.mfield input:focus, .mfield select:focus { border-color:var(--purple); box-shadow:0 0 0 3px rgba(107,70,193,.1); }
+.mfield select { appearance:none; -webkit-appearance:none; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; padding-right:34px; }
+
+.btn-purple {
+  padding:10px 22px; background:linear-gradient(135deg,#6b46c1,#9f7aea);
+  color:#fff; border:none; border-radius:10px; font-weight:700; font-size:.87rem;
+  cursor:pointer; transition:.18s; font-family:'Sora',sans-serif;
+}
+.btn-purple:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(107,70,193,.35); }
+.btn-purple:disabled { opacity:.6; transform:none; cursor:wait; }
+
+/* ── MODAL DOCS LOTE ── */
+.modal-docs-box {
+  background:#fff; width:96%; max-width:90%; border-radius:22px;
+  box-shadow:0 28px 70px rgba(107,70,193,.22); position:relative;
+  animation:popIn .28s cubic-bezier(.34,1.56,.64,1); font-family:'Sora',sans-serif;
+  border-top:4px solid var(--purple); max-height:92vh; overflow-y:auto;
+}
+.modal-docs-box .mdl-head {
+  padding:24px 28px 18px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; background:#fff; z-index:2; border-radius:18px 18px 0 0;
+}
+.modal-docs-box .mdl-body { padding:20px 28px 28px; }
+.mdl-step {
+  display:none;
+}
+.mdl-step.ativo { display:block; }
+.mdl-step-title {
+  font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--purple); margin-bottom:14px;
+}
+.comp-item {
+  display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px;
+  border:1.5px solid var(--border); cursor:pointer; transition:.15s; margin-bottom:8px;
+}
+.comp-item:hover { border-color:var(--purple); background:var(--purple-lt); }
+.comp-item.sel { border-color:var(--purple); background:var(--purple-lt); }
+.comp-item .ci-nome { font-weight:700; font-size:.9rem; color:var(--dark); }
+.comp-item .ci-qtd  { font-size:.75rem; color:var(--muted); }
+.date-picker-grid { display:grid; grid-template-columns:80px 1fr 90px; gap:10px; margin-bottom:14px; }
+.date-picker-grid label { display:block; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:4px; }
+.date-picker-grid select, .date-picker-grid input {
+  width:100%; padding:9px 10px; border:1.5px solid var(--border); border-radius:9px;
+  font-family:'Sora',sans-serif; font-size:.86rem; box-sizing:border-box; outline:none;
+}
+.date-picker-grid select:focus, .date-picker-grid input:focus { border-color:var(--purple); }
+.preview-texto {
+  background:var(--purple-lt); border:1.5px solid var(--purple-bd); border-radius:10px;
+  padding:10px 14px; font-size:.84rem; color:var(--purple); font-weight:600;
+  margin-bottom:18px; word-break:break-all;
+}
+.btn-lote-action {
+  width:100%; padding:12px; border-radius:11px; border:none; cursor:pointer;
+  font-family:'Sora',sans-serif; font-size:.88rem; font-weight:700; margin-bottom:8px;
+  display:flex; align-items:center; justify-content:center; gap:8px; transition:.18s;
+}
+.btn-lote-gerar  { background:var(--purple); color:#fff; }
+.btn-lote-gerar:hover { background:#5b35b1; }
+.btn-lote-enviar { background:var(--grad); color:#fff; }
+.btn-lote-enviar:hover { opacity:.88; }
+.btn-lote-voltar { background:#f1f5f9; color:var(--muted); }
+.btn-lote-voltar:hover { background:#e2e8f0; }
+.lote-resultado { display:none; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:10px; padding:14px; font-size:.84rem; color:#14532d; margin-top:10px; }
+.lote-resultado.erro { background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+.contrato-chip {
+  display:inline-flex; align-items:center; gap:4px; background:#f8fafc;
+  border:1px solid var(--border); border-radius:99px; padding:3px 10px;
+  font-size:.73rem; font-weight:600; color:var(--dark); margin:2px;
+}
+
+@media print {
+  .receitas-hero, .action-bar, .alerta-venc,
+  .col-check, .btn-tbl, .badge-mun-add,
+  nav, header, footer { display:none !important; }
+
+  body { font-family:Arial,sans-serif; font-size:10.5px; color:#000; }
+  .print-header { display:block !important; }
+
+  .table-container { box-shadow:none; border:1px solid #ccc; border-radius:0; }
+  .custom-table th { background:#eee !important; padding:7px 10px; font-size:9.5px; }
+  .custom-table td { padding:7px 10px; font-size:10px; }
+
+  .row-inativo { display:none !important; }
+
+  .badge-mun, .badge-ent-mun, .badge-ent-cam { border:1px solid #999; background:none !important; color:#000 !important; }
+
+  /* Separador de grupo na impressão */
+  .print-group-sep td { background:#eee !important; font-weight:700; font-size:9px; padding:5px 10px; }
+}
+
+.print-header {
+  display:none; margin-bottom:18px; padding-bottom:10px; border-bottom:2px solid #333;
+}
+.print-header h2 { font-size:15px; margin:0 0 3px; font-weight:800; }
+.print-header p  { font-size:10.5px; color:#555; margin:2px 0 0; }
+.print-header .print-filtros { font-size:10px; color:#777; margin-top:6px; font-style:italic; }
+</style>
+
+<!-- ── ALERTA VENCIMENTO ── -->
+{% if qtd_vencendo > 0 %}
+<div class="alerta-venc" style="position:sticky;top:0;z-index:30;margin:.5rem 0 .75rem;border-radius:14px;padding:11px 16px;background:#FFF6E5;border:1px solid #F8D9A1;color:#7A3E00;display:flex;gap:.75rem;align-items:center;box-shadow:0 2px 12px rgba(242,140,82,.12);">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F28C52" stroke-width="2" style="flex:0 0 auto">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+  <span><strong>Atenção:</strong> <strong>{{ qtd_vencendo }} contrato{{ qtd_vencendo|pluralize:"s" }}</strong> vencendo nos próximos 30 dias.</span>
+</div>
+{% endif %}
+
+<!-- ── CABEÇALHO DE IMPRESSÃO ── -->
+<div class="print-header">
+  <h2>CONMAC — Relatório de Contratos</h2>
+  <p>Emitido em: {% now "d/m/Y" %}</p>
+  <div class="print-filtros">
+    Filtros aplicados:
+    {% if municipio_f %}Município: <strong>{{ municipio_f }}</strong>{% endif %}
+    {% if entidade_f %}· Entidade: <strong>{% if entidade_f == 'municipio' %}Município{% else %}Câmara Municipal{% endif %}</strong>{% endif %}
+    {% if not municipio_f and not entidade_f %}Todos os contratos{% endif %}
+  </div>
+</div>
+
+<!-- ── ALERTA DE CERTIDÕES ── -->
+{% if alerta_docs.critico %}
+<div style="display:flex;align-items:center;gap:12px;
+            background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;
+            padding:12px 18px;margin-bottom:16px;font-size:.85rem;color:#991b1b;">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+  <span>
+    {% if alerta_docs.ausentes %}⚠ <strong>{{ alerta_docs.ausentes }} certidão(ões) não cadastrada(s).</strong>{% endif %}
+    {% if alerta_docs.vencidos %}⚠ <strong>{{ alerta_docs.vencidos }} certidão(ões) vencida(s).</strong>{% endif %}
+    <a href="{% url 'gestao_documentos' %}" style="color:inherit;font-weight:700;margin-left:8px;">
+      Atualizar agora →
+    </a>
+  </span>
+</div>
+{% elif alerta_docs.aviso %}
+<div style="display:flex;align-items:center;gap:12px;
+            background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;
+            padding:12px 18px;margin-bottom:16px;font-size:.85rem;color:#92400e;">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  {{ alerta_docs.alertas }} certidão(ões) vencem em menos de 30 dias.
+  <a href="{% url 'gestao_documentos' %}" style="color:inherit;font-weight:700;margin-left:8px;">Ver →</a>
+</div>
+{% endif %}
+
+<!-- ── HERO ── -->
+<section class="receitas-hero">
+  <div class="hero-id">
+    <div class="hero-ico">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.92 15.45V19h-2.5v-1.48c-1.45-.26-2.6-1.2-2.79-2.5h1.73c.16.68.86 1.19 2.3 1.19 1.32 0 2.03-.75 2.03-1.58 0-1.04-.8-1.57-2.72-2-.91-.21-3.15-.74-3.15-3.14 0-1.63 1.31-2.66 2.52-2.93V5.5h2.5v1.43c1.23.22 2.12 1 2.3 2.29h-1.74c-.1-.61-.7-1.06-1.73-1.06-1.01 0-1.9.55-1.9 1.52 0 .83.65 1.27 2.59 1.71 2.07.47 3.21 1.48 3.21 3.04 0 1.77-1.43 2.79-2.73 3.02z"/>
+      </svg>
+    </div>
+    <div class="hero-txt">
+      <h2>Gestão de Contratos</h2>
+      <p>Contratos recorrentes · NFS-e por competência</p>
+    </div>
+  </div>
+  <div class="hero-kpis">
+    <div class="hkpi g">
+      <div class="hkpi__val">R$ {{ total_recorrente|floatformat:2|intcomma }}</div>
+      <div class="hkpi__lbl">Receita Recorrente</div>
+    </div>
+
+    <!--
+    <div class="hkpi t">
+      <div class="hkpi__val">R$ {{ total_extra|floatformat:2|intcomma }}</div>
+      <div class="hkpi__lbl">Serviços Extras</div>
+    </div>
+
+
+    <div class="hkpi b">
+      <div class="hkpi__val">R$ {{ total_geral|floatformat:2|intcomma }}</div>
+      <div class="hkpi__lbl">Previsão Total</div>
+    </div>
+
+    -->
+
+  </div>
+</section>
+
+<!-- ── BARRA DE AÇÕES ── -->
+<div class="action-bar">
+  <div class="action-left">
+    <form method="GET" action="{% url 'receitas_dashboard' %}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="search-wrap">
+        <svg class="ico-s" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" name="q" class="search-input" placeholder="Buscar cliente ou Nº contrato…" value="{{ q|default:'' }}">
+      </div>
+
+    <!-- Filtro município -->
+      <select name="municipio"
+            class="fsel {% if municipios_f %}ativo{% endif %}"
+            multiple
+            size="1"
+            onchange="this.form.submit()"
+            style="
+              padding: 9px 30px 9px 12px;
+              border: 1.5px solid var(--border);
+              border-radius: 11px;
+              background: #fff url(data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E) no-repeat right 10px center;
+              font-size: .83rem;
+              color: var(--dark);
+              cursor: pointer;
+              appearance: none;
+              -webkit-appearance: none;
+              font-family: 'Sora', sans-serif;
+              transition: .18s;
+              outline: none;
+            ">
+        <option value="" {% if not municipios_f %}selected{% endif %}>Todos municípios</option>
+        {% for m in municipios_filtro %}
+        <option value="{{ m }}" {% if m in municipios_f %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+      <!-- Filtro entidade -->
+      <select name="entidade" class="fsel {% if entidade_f %}ativo{% endif %}" onchange="this.form.submit()">
+        <option value="">Todas as entidades</option>
+        <option value="municipio" {% if entidade_f == 'municipio' %}selected{% endif %}>Prefeitura Municipal</option>
+        <option value="camara"    {% if entidade_f == 'camara'    %}selected{% endif %}>Câmara Municipal</option>
+      </select>
+
+      <button type="submit" class="btn-grad">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Buscar
+      </button>
+
+      {% if q or municipio_f or entidade_f %}
+      <a href="{% url 'receitas_dashboard' %}" class="btn-outline" style="padding:9px 12px;color:var(--muted);font-size:.78rem;">✕ Limpar</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="action-right">
+    <a href="{% url 'notas_competencia' %}" class="btn-notas" style="z-index: 0 !important;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Notas por Competência</span>
+    </a>
+
+    <button onclick="window.print()" class="btn-imprimir">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Imprimir
+    </button>
+
+    <button id="btn-toggle-select" class="btn-select" onclick="toggleSelecionar(this)" type="button">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Selecionar
+    </button>
+
+    <button id="btn-editar-lote" data-base-url="{% url 'receitas_editar_lote' %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Editar (<span id="count-sel">0</span>)
+    </button>
+
+    <button id="btn-docs-lote"
+      style="display:none;padding:9px 16px;background:var(--purple-lt);color:var(--purple);
+             border:1.5px solid var(--purple-bd);border-radius:11px;font-weight:700;
+             cursor:pointer;font-size:.83rem;align-items:center;gap:6px;
+             font-family:'Sora',sans-serif;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Docs em Lote
+    </button>
+
+    <a href="{% url 'sincronizar_receitas' %}" class="btn-outline"
+       title="Sincroniza dados dos contratos com o Omie (nome, valor, vigência, status). Não altera NFS-e."
+       onclick="return confirm('Sincronizar contratos com o Omie?\n\nIsso atualiza valores, vigências e status.\nNomes preenchidos manualmente e município/entidade NÃO serão sobrescritos.');">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Contratos
+    </a>
+
+
+    <a href="https://conmac.pythonanywhere.com/admin/despesas/enviomensal/relatorio-envios" class="btn-outline"
+       title="Visualização de relatório de envio de e-mails por competência">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.2 8.5V19a2 2 0 0 1-2 2H4.8a2 2 0 0 1-2-2V8.5" />
+          <path d="m21.2 8.5-9.2 7-9.2-7" />
+          <circle cx="18" cy="5" r="3" />
+          <path d="M18 2v3h3" />
+        </svg>
+      Relatório de Envio
+    </a>
+.
+    <button class="btn-outline" id="btn-sync-nfse"
+       title="Sincroniza NFS-e emitidas de um mês/ano com o Omie. Não altera contratos."
+       style="font-family:'Sora',sans-serif;cursor:pointer;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      </svg>
+      NFS-e
+    </button>
+
+    <a href="{% url 'gestao_documentos' %}"
+       class="btn-outline"
+       style="background:#fff;color:#6b46c1;border:1.5px solid #c4b5fd;"
+       title="Gestão de certidões e modelos">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Documentos
+    </a>
+
+    <a href="{% url 'adicionar_email_municipio' %}{% if municipio_f %}?municipio={{ municipio_f }}&entidade={{ entidade_f }}{% endif %}"
+       class="btn-outline"
+       title="Adicionar e-mail para todos os contratos de um município">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+        <line x1="16" y1="14" x2="16" y2="20"/>
+        <line x1="13" y1="17" x2="19" y2="17"/>
+      </svg>
+      E-mail por Município
+    </a>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL — Sincronizar NFS-e
+════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-sync-nfse">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-header">
+      <span class="modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Sincronizar NFS-e
+      </span>
+      <button class="modal-close" onclick="fecharModal('modal-sync-nfse')">×</button>
+    </div>
+
+    <div style="padding:18px 20px 20px;">
+      <p style="font-size:.83rem;color:var(--muted);margin:0 0 16px;">
+        Selecione o mês e ano para buscar as NFS-e emitidas no Omie.<br>
+        <strong>Contratos não são alterados.</strong>
+      </p>
+
+      <div style="display:flex;gap:10px;margin-bottom:18px;">
+        <div style="flex:1;">
+          <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">MÊS</label>
+          <select id="snfse-mes" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;">
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ANO</label>
+          <input type="number" id="snfse-ano" value="{{ hoje.year }}" min="2023" max="2030"
+                 style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <div id="snfse-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="fecharModal('modal-sync-nfse')"
+                style="padding:9px 18px;border:1.5px solid var(--border);border-radius:9px;background:#fff;
+                       color:var(--muted);font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
+          Cancelar
+        </button>
+        <button id="snfse-btn-confirmar" onclick="executarSyncNfse()"
+                style="padding:9px 20px;background:var(--teal);color:#fff;border:none;border-radius:9px;
+                       font-weight:700;font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sincronizar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TABELA ── -->
+<div class="table-container">
+  <table class="custom-table" id="tabela-contratos">
+    <thead>
+      <tr>
+        <th class="col-check"><input type="checkbox" id="select-all" style="transform:scale(1.2);cursor:pointer;"></th>
+        <th>Nº Contrato</th>
+        <th>Cliente</th>
+        <th>Município · Entidade</th>
+        <th>Vigência</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:right">Valor Mensal</th>
+        <th style="text-align:center">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in contratos_list %}
+      <tr class="{% if item.is_inativo %}row-inativo{% endif %}">
+
+        <td class="col-check">
+          <input type="checkbox" class="contract-check" value="{{ item.obj.id }}" style="transform:scale(1.2);cursor:pointer;">
+        </td>
+
+        <td><strong style="font-family:'JetBrains Mono',monospace;font-size:.84rem">{{ item.obj.omie_num_ctr }}</strong></td>
+
+        <td><span style="font-weight:600">{{ item.obj.cliente_nome|default:"—" }}</span></td>
+
+        <!-- Município + Entidade — clicável para editar -->
+        <td>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;">
+            {% if item.obj.municipio %}
+              <span class="badge-mun"
+                    onclick="abrirMunicipio({{ item.obj.id }}, '{{ item.obj.municipio|escapejs }}', '{{ item.obj.tipo_entidade|default:'' }}')"
+                    title="Clique para editar">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                {{ item.obj.municipio }}
+              </span>
+            {% else %}
+              <span class="badge-mun-add"
+                    onclick="abrirMunicipio({{ item.obj.id }}, '', '')"
+                    title="Definir município">
+                + definir
+              </span>
+            {% endif %}
+            {% if item.obj.tipo_entidade == 'municipio' %}
+              <span class="badge-ent-mun">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M4 10v7h3v-7H4zm6.5 0v7h3v-7h-3zM2 22h19.5v-3H2v3zm15-12v7h3v-7h-3zM11.5 1L2 6v2h19.5V6L11.5 1z"/></svg>
+                Prefeitura Municipal
+              </span>
+            {% elif item.obj.tipo_entidade == 'camara' %}
+              <span class="badge-ent-cam">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L2 12h3v8h5v-5h4v5h5v-8h3L12 3z"/></svg>
+                Câmara Municipal
+              </span>
+            {% endif %}
+          </div>
+        </td>
+
+        <td>
+          {% if item.obj.data_vigencia_final %}
+            {% if item.is_vencendo %}
+              <span class="vencendo-tag">⚠️ {{ item.obj.data_vigencia_final|date:"d/m/Y" }}</span>
+            {% else %}
+              <span style="color:var(--muted);font-size:.85rem">{{ item.obj.data_vigencia_final|date:"d/m/Y" }}</span>
+            {% endif %}
+          {% else %}<span style="color:#cbd5e0">—</span>{% endif %}
+        </td>
+
+        <td style="text-align:center">
+          {% if item.is_inativo %}<span class="badge-st st-99">Inativo</span>
+          {% else %}<span class="badge-st st-10">Ativo</span>{% endif %}
+        </td>
+
+        <td style="text-align:right"><span class="mono">R$ {{ item.obj.valor_mensal|floatformat:2|intcomma }}</span></td>
+
+
+        <td style="text-align:center">
+          <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;">
+            <!-- Botão Notas (existente) -->
+            <a href="{% url 'notas_competencia' %}?contrato={{ item.obj.id }}" class="btn-tbl" title="Ver notas deste contrato">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Notas
+            </a>
+            <!-- NOVO: Botão Documentos e Envio -->
+            <a href="{% url 'documentos_contrato' item.obj.id %}" class="btn-tbl"
+               style="border-color:#6b46c1;color:#6b46c1;" title="Documentação e Envio">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/>
+                <path d="M12 21a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2z" fill="currentColor" stroke="none"/>
+              </svg>
+              Docs
+            </a>
+          </div>
+        </td>
+
+
+      </tr>
+
+      {% empty %}
+      <tr>
+        <td colspan="8" style="padding:54px;text-align:center;color:#9ca3af;">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="margin-bottom:12px;opacity:.3;display:block;margin-inline:auto"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Nenhum contrato encontrado. Sincronize ou ajuste os filtros.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="text-align:right;margin-top:9px;color:var(--muted);font-size:.76rem;">
+  {{ contratos_list|length }} registro{{ contratos_list|length|pluralize:"s" }} exibido{{ contratos_list|length|pluralize:"s" }}
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL: GERENCIAR DOCUMENTAÇÃO EM LOTE
+══════════════════════════════════════ -->
+<div id="modal-docs-lote" class="modal-back">
+  <div class="modal-docs-box">
+
+    <div class="mdl-head">
+      <button class="modal-close" onclick="document.getElementById('modal-docs-lote').classList.remove('open')" style="top:16px;right:16px;">×</button>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:42px;height:42px;background:var(--purple-lt);border-radius:12px;display:grid;place-items:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div>
+          <h3 style="margin:0;font-size:1rem;font-weight:800;color:var(--dark);">Gerenciar Documentação em Lote</h3>
+          <p style="margin:2px 0 0;font-size:.76rem;color:var(--muted);" id="lote-contratos-info">Contratos selecionados carregando…</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mdl-body">
+
+      <!-- STEP 1: Escolher competência -->
+      <div class="mdl-step ativo" id="step-comp">
+        <div class="mdl-step-title">① Selecione a Competência</div>
+        <div id="comp-lista">
+          <p style="color:var(--muted);font-size:.84rem;text-align:center;padding:20px;">Carregando competências…</p>
+        </div>
+        <input type="hidden" id="lote-mes-sel">
+        <input type="hidden" id="lote-ano-sel">
+        <input type="hidden" id="lote-mes-nome-sel">
+      </div>
+
+      <!-- STEP 2: Definir data e ações -->
+      <div class="mdl-step" id="step-data">
+        <div class="mdl-step-title">② Defina a Data dos Documentos</div>
+
+        <div class="date-picker-grid">
+          <div>
+            <label>Dia</label>
+            <input type="number" id="lote-dia" value="1" min="1" max="31">
+          </div>
+          <div>
+            <label>Mês</label>
+            <select id="lote-mes-data">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+              <option value="3">Março</option><option value="4">Abril</option>
+              <option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option>
+              <option value="9">Setembro</option><option value="10">Outubro</option>
+              <option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div>
+            <label>Ano</label>
+            <input type="number" id="lote-ano-data" value="2026" min="2024" max="2030">
+          </div>
+        </div>
+
+        <div class="preview-texto" id="lote-preview-texto">
+          Oliveira dos Brejinhos - BA, 01 de janeiro de 2026
+        </div>
+
+        <div style="font-size:.76rem;color:var(--muted);margin-bottom:18px;">
+          💡 O município é substituído automaticamente pelo município de cada contrato.
+        </div>
+
+        <button class="btn-lote-action btn-lote-gerar" onclick="executarGerarLote()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Gerar Documentos Modelo
+        </button>
+
+        <button class="btn-lote-action btn-lote-enviar" onclick="executarEnviarLote()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Gerar + Enviar Dossiê em Lote
+        </button>
+
+        <button class="btn-lote-action btn-lote-voltar" onclick="voltarStep()">← Voltar</button>
+
+        <div class="lote-resultado" id="lote-resultado"></div>
+      </div>
+
+    </div><!-- /mdl-body -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL: EDIÇÃO EM LOTE (contratos)
+══════════════════════════════════════ -->
+<div id="modal-lote" class="modal-back">
+  <div class="modal-lote-box" id="modal-lote-content">
+    <div style="text-align:center;padding:36px;color:var(--muted)">Carregando…</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL: DEFINIR MUNICÍPIO + ENTIDADE
+══════════════════════════════════════ -->
+<div id="modal-municipio" class="modal-back">
+  <div class="modal-mun-box">
+    <button class="modal-close" onclick="fecharMunicipio()">×</button>
+
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="width:44px;height:44px;background:var(--purple-lt);border-radius:12px;display:grid;place-items:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--purple)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/></svg>
+      </div>
+      <div>
+        <h3 style="margin:0;font-size:.97rem;font-weight:800;color:var(--dark)">Classificar Contrato</h3>
+        <p style="margin:2px 0 0;font-size:.77rem;color:var(--muted)">Município e tipo de entidade para agrupar NFS-e</p>
+      </div>
+    </div>
+
+    <input type="hidden" id="mun-id">
+
+    <div class="mfield">
+      <label>Município</label>
+      <input type="text" id="mun-valor" placeholder="Ex: Salvador, Andorinha…" list="mun-list" autocomplete="off">
+      <datalist id="mun-list">
+        {% for m in municipios_existentes %}
+        <option value="{{ m }}">
+        {% endfor %}
+      </datalist>
+    </div>
+
+    <div class="mfield">
+      <label>Tipo de Entidade</label>
+      <select id="mun-entidade">
+        <option value="">— Selecione —</option>
+        <option value="municipio">Prefeitura Municipal</option>
+        <option value="camara">Câmara Municipal</option>
+      </select>
+    </div>
+
+    <p style="font-size:.72rem;color:var(--muted);margin:-2px 0 18px;line-height:1.5">
+      💡 Permite filtrar e imprimir "Município de X — Câmara" separadamente.
+    </p>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="fecharMunicipio()" class="btn-outline" style="padding:9px 16px">Cancelar</button>
+      <button id="btn-mun-salvar" onclick="salvarMunicipio()" class="btn-purple">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const MESES_PT_MIN  = ['','janeiro','fevereiro','março','abril','maio','junho',
+                        'julho','agosto','setembro','outubro','novembro','dezembro'];
+const MESES_PT_FULL = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+/* ════════════════════════════════════════════════
+   SELEÇÃO EM LOTE
+════════════════════════════════════════════════ */
+var _selModeAtivo = false;
+function toggleSelecionar(btn) {
+  _selModeAtivo = !_selModeAtivo;
+  var tabela    = document.getElementById('tabela-contratos');
+  var selectAll = document.getElementById('select-all');
+  var checks    = document.querySelectorAll('.contract-check');
+  if (tabela) tabela.classList.toggle('selection-mode-active', _selModeAtivo);
+  if (_selModeAtivo) {
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancelar';
+    btn.classList.add('active');
+  } else {
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Selecionar';
+    btn.classList.remove('active');
+    checks.forEach(function(c) { c.checked = false; });
+    if (selectAll) selectAll.checked = false;
+    atualizarContadorSel();
+  }
+}
+
+function atualizarContadorSel() {
+  var checks  = document.querySelectorAll('.contract-check');
+  var ids     = Array.from(checks).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  var span    = document.getElementById('count-sel');
+  var btnLote = document.getElementById('btn-editar-lote');
+  var btnDocs = document.getElementById('btn-docs-lote');
+  if (span)    span.textContent = ids.length;
+  if (btnLote) btnLote.style.display = ids.length ? 'inline-flex' : 'none';
+  if (btnDocs) btnDocs.style.display = ids.length ? 'inline-flex' : 'none';
+  return ids;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  /* ── Checkboxes ─────────────────────────────────────────────────── */
+  var selectAll = document.getElementById('select-all');
+  var checks    = document.querySelectorAll('.contract-check');
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      checks.forEach(function (c) { c.checked = selectAll.checked; });
+      atualizarContadorSel();
+    });
+  }
+  checks.forEach(function (c) { c.addEventListener('change', atualizarContadorSel); });
+
+  /* ══════════════════════════════════════════════════════════════════
+     MODAL EDIÇÃO EM LOTE (Com Chunks e Telas Inteligentes)
+  ══════════════════════════════════════════════════════════════════ */
+  var btnLote  = document.getElementById('btn-editar-lote');
+  var modal    = document.getElementById('modal-lote');
+  var mContent = document.getElementById('modal-lote-content');
+
+  var _pendIds  = [];
+  var _pendComp = null;
+
+  /* ── Helpers internos ──────────────────────────────────────────── */
+  // CORREÇÃO: Busca direto no documento para não perder referência após o fetch
+  function mc(id) { return document.getElementById(id); }
+
+  function mostrarPainel(id) {
+    ['painel-edicao','painel-confirmacao','painel-executando','painel-resultado-fat'].forEach(function (p) {
+      var el = mc(p);
+      if (el) el.style.display = (p === id) ? '' : 'none';
+    });
+  }
+
+  function mostrarFeedback(msg, tipo) {
+    var el = mc('painel-edicao-feedback');
+    if (!el) return;
+    var estilos = {
+      warning: 'background:#fff7ed;border:1px solid #fed7aa;color:#92400e',
+      danger:  'background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d',
+      success: 'background:#f0fdf4;border:1px solid #86efac;color:#166534',
+    };
+    el.innerHTML = '<div style="' + (estilos[tipo || 'warning'] || estilos.warning) + ';padding:10px 14px;border-radius:6px;font-size:.85rem;">' + msg + '</div>';
+    el.style.display = '';
+  }
+
+  function ocultarFeedback() {
+    var el = mc('painel-edicao-feedback');
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  }
+
+  function lerIds() {
+    var inp = mContent ? mContent.querySelector('[name="ids_selecionados"]') : null;
+    if (!inp || !inp.value) return [];
+    return inp.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  function lerCompetencia() {
+    var mesVal = mc('id_nova_competencia_mes')?.value || '';
+    var anoVal = mc('id_nova_competencia_ano')?.value?.trim() || '';
+    if (!mesVal || !anoVal) return null;
+
+    var mesNum = parseInt(mesVal, 10);
+    if (isNaN(mesNum) || mesNum < 1 || mesNum > 12) {
+      var MMAP = {
+        'JANEIRO':1,'FEVEREIRO':2,'MARÇO':3,'MARCO':3,
+        'ABRIL':4,'MAIO':5,'JUNHO':6,'JULHO':7,
+        'AGOSTO':8,'SETEMBRO':9,'OUTUBRO':10,
+        'NOVEMBRO':11,'DEZEMBRO':12
+      };
+      mesNum = MMAP[(mesVal || '').toUpperCase()] || 0;
+    }
+    return { mes_nome: mesVal, mes_num: mesNum, ano: anoVal };
+  }
+
+  function montarResumo(comp, qtd, opcao) {
+    var acaoTexto = (opcao === 'salvar') ? 'atualizados' : 'faturados no Omie';
+    var linhas = ['📋 <strong>' + qtd + ' contrato(s)</strong> serão ' + acaoTexto + '.'];
+
+    if (opcao === 'salvar_e_faturar') {
+      linhas.push('🚀 Os dados serão <strong>salvos</strong> e logo após o lote será faturado.');
+    }
+    if (comp && comp.mes_num && comp.ano) {
+      linhas.push('📅 Nova Competência: <strong>' + MESES_PT_FULL[comp.mes_num] + ' / ' + comp.ano + '</strong>.');
+    }
+
+    var el = mc('conf-resumo');
+    if (el) el.innerHTML = linhas.map(function (l) { return '<div>' + l + '</div>'; }).join('');
+
+    var avisoFat = mc('conf-aviso-faturamento');
+    var avisoSalvar = mc('conf-aviso-salvar');
+    var btnConfirmar = mc('btn-confirmar-faturar');
+    var btnTxt = mc('btn-confirmar-txt');
+
+    if (opcao === 'salvar') {
+      if (avisoFat) avisoFat.style.display = 'none';
+      if (avisoSalvar) avisoSalvar.style.display = 'block';
+      if (btnTxt) btnTxt.textContent = 'Confirmar Alterações';
+      if (btnConfirmar) btnConfirmar.className = 'eb eb-dark';
+    } else {
+      if (avisoFat) avisoFat.style.display = 'block';
+      if (avisoSalvar) avisoSalvar.style.display = 'none';
+      if (btnTxt) btnTxt.textContent = 'Confirmar e Faturar';
+      if (btnConfirmar) btnConfirmar.className = 'eb eb-green';
+    }
+  }
+
+  function exibirResultadoFat(d, isFaturamento) {
+    isFaturamento = (typeof isFaturamento !== 'undefined') ? isFaturamento : true;
+    var el     = mc('resultado-fat-html');
+    if (!el) return;
+    var temErr = d.erros > 0;
+    var cls    = temErr ? (d.sucessos > 0 ? 'alert-warning' : 'alert-danger') : 'alert-success';
+    var ico    = temErr ? (d.sucessos > 0 ? '⚠️' : '❌') : '✅';
+
+    var txtSucesso = isFaturamento ? 'Faturamento concluído!' : 'Alterações salvas!';
+    var txtFalha   = isFaturamento ? 'Falha no faturamento' : 'Falha ao salvar';
+    var txtAcao    = isFaturamento ? 'Faturados' : 'Salvos';
+
+    var titulo = temErr ? (d.sucessos > 0 ? 'Concluído com ressalvas' : txtFalha) : txtSucesso;
+    var html   = '<div class="alert ' + cls + '" style="font-size:.88rem;padding:12px 16px;border-radius:8px;">' +
+                 ico + ' <strong>' + titulo + '</strong><br>' +
+                 '✅ ' + txtAcao + ': <strong>' + d.sucessos + '</strong> &nbsp;|&nbsp; ❌ Falhas: <strong>' + d.erros + '</strong>';
+    if (d.msgs_erro && d.msgs_erro.length) {
+      html += '<hr style="margin:8px 0 6px;border-color:rgba(0,0,0,.1);">' + d.msgs_erro.join('<br>');
+    }
+    html += '</div>';
+    el.innerHTML = html;
+    mostrarPainel('painel-resultado-fat');
+  }
+
+async function chamarFaturarLote(ids, comp, msgExec) {
+    if (!ids || !ids.length) return;
+
+    var execMsg = mc('exec-msg');
+    if (execMsg) execMsg.textContent = msgExec || 'Faturando contratos no Omie…';
+    mostrarPainel('painel-executando');
+
+    var total = ids.length;
+    var CHUNK_SIZE_FAT = 5; // Blocos menores (5) porque a Omie demora mais para faturar
+    var chunks = [];
+
+    for (let i = 0; i < total; i += CHUNK_SIZE_FAT) {
+      chunks.push(ids.slice(i, i + CHUNK_SIZE_FAT));
+    }
+
+    atualizarProgresso(0, total, `Iniciando faturamento (${total} contratos em ${chunks.length} lotes)…`);
+
+    let sucessos = 0, erros = 0, msgsErro = [];
+
+    for (let ci = 0; ci < chunks.length; ci++) {
+      var chunk = chunks[ci];
+      atualizarProgresso(ci * CHUNK_SIZE_FAT, total, `Faturando lote ${ci + 1} de ${chunks.length} — ${chunk.length} contrato(s)…`);
+
+      var body = { ids: chunk };
+      if (comp && comp.mes_num) body.competencia = { mes_num: comp.mes_num, ano: comp.ano };
+
+      try {
+        var r = await fetch('/receitas/contratos/faturar-lote/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify(body),
+        });
+
+        if (!r.ok) {
+          erros += chunk.length;
+          msgsErro.push(`⏱️ Timeout no lote de faturamento ${ci + 1}.`);
+        } else {
+          var data = await r.json();
+          // Absorve os dados de sucesso ou erro que a sua view retorna
+          if (data.ok || data.sucessos > 0 || data.erros > 0) {
+            sucessos += data.sucessos || 0;
+            erros    += data.erros    || 0;
+            if (data.msgs_erro && data.msgs_erro.length) msgsErro.push(...data.msgs_erro);
+          } else {
+            erros += chunk.length;
+            msgsErro.push(data.msg || 'Erro desconhecido ao faturar.');
+          }
+        }
+      } catch (e) {
+        erros += chunk.length;
+        msgsErro.push(`🔌 Erro de rede no lote ${ci + 1}.`);
+      }
+
+      atualizarProgresso((ci + 1) * CHUNK_SIZE_FAT, total);
+
+      // Dá 1 segundo de respiro para a API da Omie não bloquear por excesso de requisições (Rate Limit)
+      if (ci < chunks.length - 1) await new Promise(r => setTimeout(r, 1000));
+    }
+
+    // Exibe a tela final verde ou vermelha dependendo do resultado real dos chunks
+    exibirResultadoFat({
+      ok: erros === 0,
+      sucessos: sucessos,
+      erros: erros,
+      msgs_erro: msgsErro
+    }, true); // O "true" avisa a tela que foi ação de Faturamento
+  }
+  /* ── Configuração e Progresso (Chunks Edição) ───────────────────── */
+  const CHUNK_SIZE = 10;
+
+  function atualizarProgresso(atual, total, msg) {
+    var pct = total ? Math.round((atual / total) * 100) : 0;
+    var execMsg = mc('exec-msg');
+    var barra = mc('eml-barra');
+    var txt = mc('eml-barra-txt');
+    var pctEl = mc('eml-barra-pct');
+    var infoEl = mc('eml-lote-info');
+
+    if (execMsg) execMsg.textContent = msg || `Processando ${atual} de ${total} contratos…`;
+    if (barra) barra.style.width = Math.max(pct, 2) + '%';
+    if (txt) txt.textContent = atual >= total ? '✅ Concluído!' : `${atual} de ${total} contratos`;
+    if (pctEl) pctEl.textContent = pct + '%';
+
+    if (infoEl && atual < total) {
+      var restantes = total - atual;
+      var tempoMin = Math.ceil((restantes * 11) / 60);
+      infoEl.textContent = `~${tempoMin} min restante(s)`;
+    }
+  }
+
+  async function processarEmChunks(faturarApos) {
+    var form = mc('form-edicao-lote');
+    if (!form) return;
+
+    var todosIds = lerIds();
+    var total = todosIds.length;
+    var chunks = [];
+    for (let i = 0; i < total; i += CHUNK_SIZE) chunks.push(todosIds.slice(i, i + CHUNK_SIZE));
+
+    mostrarPainel('painel-executando');
+    atualizarProgresso(0, total, `Iniciando (${total} contratos em ${chunks.length} lotes)…`);
+
+    let sucessos = 0, erros = 0, msgsErro = [];
+
+    for (let ci = 0; ci < chunks.length; ci++) {
+      var chunk = chunks[ci];
+      atualizarProgresso(ci * CHUNK_SIZE, total, `Lote ${ci + 1} de ${chunks.length} — processando ${chunk.length} contrato(s)…`);
+
+      var fd = new FormData(form);
+      fd.set('ids_selecionados', chunk.join(','));
+
+      try {
+        var resp = await fetch(form.action, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': CSRF }
+        });
+
+        if (!resp.ok) {
+          erros += chunk.length;
+          msgsErro.push(`⏱️ Timeout no lote ${ci + 1}.`);
+        } else {
+          var data = await resp.json();
+          if (data.ok) {
+            sucessos += data.sucessos || 0;
+            erros    += data.erros    || 0;
+            if (data.msgs_erro && data.msgs_erro.length) msgsErro.push(...data.msgs_erro);
+          } else {
+            erros += chunk.length;
+            msgsErro.push(data.msg || 'Erro desconhecido.');
+          }
+        }
+      } catch (e) {
+        erros += chunk.length;
+        msgsErro.push(`🔌 Erro de rede no lote ${ci + 1}.`);
+      }
+
+      atualizarProgresso((ci + 1) * CHUNK_SIZE, total);
+      if (ci < chunks.length - 1) await new Promise(r => setTimeout(r, 800));
+    }
+
+    /* --- FINAL DO PROCESSAMENTO DOS CHUNKS --- */
+    if (faturarApos) {
+      if (erros === 0) {
+        chamarFaturarLote(todosIds, lerCompetencia(), 'Salvamento concluído! Iniciando faturamento...');
+      } else {
+        exibirResultadoFat({ ok: false, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
+      }
+    } else {
+      exibirResultadoFat({ ok: erros === 0, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
+      if (erros === 0) {
+        setTimeout(function() { window.location.reload(); }, 1500);
+      }
+    }
+  }
+
+  function validarFormLote() {
+    var v = mc('id_valor_mensal')?.value;
+    var n = mc('id_codigo_nbs')?.value;
+    var m = mc('id_nova_competencia_mes')?.value;
+    var a = mc('id_nova_competencia_ano')?.value;
+
+    if (!v && !n && !(m && a)) {
+      mostrarFeedback('❌ Preencha ao menos um campo (ou ambos Mês e Ano) antes de salvar.', 'danger');
+      return false;
+    }
+    return true;
+  }
+
+  /* ── Delegação de eventos sobre mContent ────────────── */
+  if (mContent) {
+    mContent.addEventListener('click', async function (e) {
+      var t = e.target.closest('button, [data-close-modal]');
+      if (!t) return;
+
+      /* Fechar modal */
+      if (t.dataset.closeModal !== undefined || t.hasAttribute('data-close-modal')) {
+        modal.classList.remove('open');
+        return;
+      }
+
+      /* ── Faturar sem editar ── */
+      if (t.id === 'btn-faturar-sem-editar') {
+        _pendIds = lerIds();
+        _pendComp = null;
+        montarResumo(null, _pendIds.length, 'faturar_sem_editar');
+        mc('btn-confirmar-faturar').dataset.opcao = 'faturar_sem_editar';
+        mostrarPainel('painel-confirmacao');
+        return;
+      }
+
+      /* ── Salvar Alterações ── */
+      if (t.id === 'btn-salvar') {
+        ocultarFeedback();
+        if (!validarFormLote()) return;
+        _pendIds = lerIds();
+        _pendComp = lerCompetencia();
+        montarResumo(_pendComp, _pendIds.length, 'salvar');
+        mc('btn-confirmar-faturar').dataset.opcao = 'salvar';
+        mostrarPainel('painel-confirmacao');
+        return;
+      }
+
+      /* ── Salvar e Faturar ── */
+      if (t.id === 'btn-salvar-e-faturar') {
+        ocultarFeedback();
+        if (!validarFormLote()) return;
+        _pendIds = lerIds();
+        _pendComp = lerCompetencia();
+        montarResumo(_pendComp, _pendIds.length, 'salvar_e_faturar');
+        mc('btn-confirmar-faturar').dataset.opcao = 'salvar_e_faturar';
+        mostrarPainel('painel-confirmacao');
+        return;
+      }
+
+      /* ── Voltar ── */
+      if (t.id === 'btn-voltar-para-edicao') {
+        mostrarPainel('painel-edicao');
+        return;
+      }
+
+      /* ── Confirmar e Faturar / Executar ── */
+      if (t.id === 'btn-confirmar-faturar') {
+        var opcao = t.dataset.opcao;
+
+        if (opcao === 'faturar_sem_editar') {
+          var msg = (_pendComp && _pendComp.mes_num) ? 'Faturando contratos (competência já atualizada)…' : 'Faturando contratos no Omie…';
+          chamarFaturarLote(_pendIds, null, msg);
+        } else {
+          await processarEmChunks(opcao === 'salvar_e_faturar');
+        }
+        return;
+      }
+
+    }); // fim delegação click
+  }
+
+  /* ── Abre o modal e injeta HTML ─────────────────────────────────── */
+  if (btnLote && modal && mContent) {
+    btnLote.addEventListener('click', function (e) {
+      e.preventDefault();
+      var ids = atualizarContadorSel();
+      if (!ids.length) return;
+      modal.classList.add('open');
+      mContent.innerHTML = '<div style="text-align:center;padding:40px;color:#718096">Carregando…</div>';
+      fetch(btnLote.dataset.baseUrl + '?ids=' + ids.join(','))
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+        .then(function (html) {
+          mContent.innerHTML = html;
+        })
+        .catch(function () {
+          mContent.innerHTML = '<p style="padding:20px;color:red">Erro ao carregar.</p>';
+        });
+    });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) modal.classList.remove('open');
+    });
+  }
+
+  /* ── Modal Docs em Lote ─────────────────────────────────────────── */
+  var btnDocs  = document.getElementById('btn-docs-lote');
+  var modalDoc = document.getElementById('modal-docs-lote');
+  if (btnDocs && modalDoc) {
+    btnDocs.addEventListener('click', function (e) {
+      e.preventDefault();
+      var ids = atualizarContadorSel();
+      if (!ids.length) return;
+      window._loteIds = ids;
+      var checks2 = document.querySelectorAll('.contract-check');
+      var nomes = Array.from(checks2).filter(function (c) { return c.checked; }).map(function (c) {
+        var tr   = c.closest('tr');
+        var span = tr && tr.querySelector('td:nth-child(3) span');
+        return span ? span.textContent.trim() : c.value;
+      });
+      document.getElementById('lote-contratos-info').innerHTML =
+        ids.length + ' contrato(s): ' +
+        ids.map(function (id, i) { return '<span class="contrato-chip">' + (nomes[i] || id) + '</span>'; }).join('');
+      document.getElementById('step-comp').classList.add('ativo');
+      document.getElementById('step-data').classList.remove('ativo');
+      document.getElementById('lote-resultado').style.display = 'none';
+      carregarCompetencias(ids);
+      modalDoc.classList.add('open');
+    });
+    modalDoc.addEventListener('click', function (e) { if (e.target === modalDoc) modalDoc.classList.remove('open'); });
+  }
+
+  /* ── Modal Sync NFS-e ───────────────────────────────────────────── */
+  var btnSyncNfse   = document.getElementById('btn-sync-nfse');
+  var modalSyncNfse = document.getElementById('modal-sync-nfse');
+  if (btnSyncNfse && modalSyncNfse) {
+    var mesAtual = new Date().getMonth() + 1;
+    var selMes   = document.getElementById('snfse-mes');
+    if (selMes) selMes.value = String(mesAtual);
+    btnSyncNfse.addEventListener('click', function () {
+      document.getElementById('snfse-resultado').style.display = 'none';
+      modalSyncNfse.classList.add('open');
+    });
+    modalSyncNfse.addEventListener('click', function (e) {
+      if (e.target === modalSyncNfse) modalSyncNfse.classList.remove('open');
+    });
+  }
+
+  /* Escape fecha todos os modais */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape')
+      document.querySelectorAll('.modal-back.open').forEach(function (m) { m.classList.remove('open'); });
+  });
+
+  /* ── Choices.js — filtro de município ───────────────────────────── */
+  var elMun = document.querySelector('select[name="municipio"]');
+  if (elMun && typeof Choices !== 'undefined') {
+    new Choices(elMun, {
+      removeItemButton:  true,
+      placeholder:       true,
+      placeholderValue:  'Todos municípios',
+      noResultsText:     'Nenhum município encontrado',
+      itemSelectText:    '',
+    });
+    elMun.addEventListener('change', function () { elMun.closest('form').submit(); });
+  }
+
+}); // fim DOMContentLoaded
+
+/* ════════════════════════════════════════
+   SINCRONIZAR NFS-e
+════════════════════════════════════════ */
+async function executarSyncNfse() {
+  var mes = parseInt(document.getElementById('snfse-mes').value);
+  var ano = parseInt(document.getElementById('snfse-ano').value);
+  var btn = document.getElementById('snfse-btn-confirmar');
+  var res = document.getElementById('snfse-resultado');
+  btn.disabled = true; btn.textContent = 'Sincronizando…';
+  res.style.display = 'none';
+  try {
+    var r = await fetch('/receitas/sincronizar-nfse/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ mes: mes, ano: ano }),
+    });
+    var d = await r.json();
+    res.style.display = 'block';
+    if (d.ok) {
+      res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#f0fdf4;border:1.5px solid #86efac;color:#166534;';
+      res.innerHTML = '✅ <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas';
+    } else {
+      res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
+      res.innerHTML = '❌ ' + (d.erro || 'Erro ao sincronizar.');
+    }
+  } catch (e) {
+    res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
+    res.textContent = '❌ Erro de conexão.';
+  }
+  btn.disabled  = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar';
+}
+
+/* ════════════════════════════════════════
+   DOCS EM LOTE (CARREGAMENTO)
+════════════════════════════════════════ */
+async function carregarCompetencias(ids) {
+  var lista = document.getElementById('comp-lista');
+  if (!lista) return;
+  lista.innerHTML = '<p style="color:#718096;font-size:.84rem;text-align:center;padding:20px;">Carregando…</p>';
+  try {
+    var r = await fetch('/receitas/lote/competencias/?ids=' + ids.join(','));
+    var d = await r.json();
+    if (!d.ok || !d.competencias.length) {
+      lista.innerHTML = '<p style="color:#718096;font-size:.84rem;text-align:center;padding:20px;">Nenhuma competência com NFS-e encontrada.</p>';
+      return;
+    }
+    lista.innerHTML = d.competencias.map(function (c) {
+      return '<div class="comp-item" onclick="selecionarComp(' + c.mes + ',' + c.ano + ',\'' + c.mes_nome + '\',this)">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b46c1" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' +
+        '<div><div class="ci-nome">' + c.mes_nome + ' / ' + c.ano + '</div><div class="ci-qtd">' + c.qtd + ' NFS-e emitida(s)</div></div></div>';
+    }).join('');
+  } catch (e) {
+    lista.innerHTML = '<p style="color:red;font-size:.84rem;padding:20px;">Erro ao carregar competências.</p>';
+  }
+}
+function selecionarComp(mes, ano, mesNome, el) {
+  document.querySelectorAll('.comp-item').forEach(function (i) { i.classList.remove('sel'); });
+  el.classList.add('sel');
+  document.getElementById('lote-mes-sel').value      = mes;
+  document.getElementById('lote-ano-sel').value      = ano;
+  document.getElementById('lote-mes-nome-sel').value = mesNome;
+  document.getElementById('lote-mes-data').value     = mes;
+  document.getElementById('lote-ano-data').value     = ano;
+  setTimeout(function () {
+    document.getElementById('step-comp').classList.remove('ativo');
+    document.getElementById('step-data').classList.add('ativo');
+    atualizarPreview();
+  }, 180);
+}
+function voltarStep() {
+  document.getElementById('step-data').classList.remove('ativo');
+  document.getElementById('step-comp').classList.add('ativo');
+  document.getElementById('lote-resultado').style.display = 'none';
+}
+function atualizarPreview() {
+  var dia = (document.getElementById('lote-dia') && document.getElementById('lote-dia').value) || '1';
+  var mes = parseInt(document.getElementById('lote-mes-data').value);
+  var ano = document.getElementById('lote-ano-data').value;
+  document.getElementById('lote-preview-texto').textContent =
+    'Oliveira dos Brejinhos - BA, ' + dia + ' de ' + MESES_PT_MIN[mes] + ' de ' + ano;
+}
+['lote-dia', 'lote-mes-data', 'lote-ano-data'].forEach(function (id) {
+  var el = document.getElementById(id);
+  if (el) { el.addEventListener('input', atualizarPreview); el.addEventListener('change', atualizarPreview); }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GERAÇÃO E ENVIO DE DOCUMENTOS EM LOTE (NOVO SISTEMA CHUNKING)
+═══════════════════════════════════════════════════════════════════════════ */
+
+const LOTE_CHUNK_SIZE_DOCS = 1;
+
+function _docsMostrarProgresso(show) {
+  var prog  = document.getElementById('lote-progresso');
+  var acoes = document.getElementById('lote-acoes');
+  var res   = document.getElementById('lote-resultado');
+  if (prog)  prog.style.display  = show ? 'block' : 'none';
+  if (acoes) acoes.style.display = show ? 'none'  : '';
+  if (res && show)   res.style.display = 'none';
+}
+
+function _docsAtualizarBarra(atual, total, msg, fase) {
+  var pct      = total ? Math.min(Math.round((atual / total) * 100), 100) : 0;
+  var barra    = document.getElementById('docs-prog-barra');
+  var txtBarra = document.getElementById('docs-prog-txt');
+  var pctEl    = document.getElementById('docs-prog-pct');
+  var msgEl    = document.getElementById('docs-prog-msg');
+  var faseEl   = document.getElementById('docs-prog-fase');
+
+  if (barra)    barra.style.width = Math.max(pct, 3) + '%';
+  if (txtBarra) txtBarra.textContent = atual + ' de ' + total;
+  if (pctEl)    pctEl.textContent = pct + '%';
+  if (msgEl)    msgEl.textContent = msg || 'Processando...';
+  if (faseEl && fase) faseEl.textContent = fase;
+}
+
+function _docsExibirResultado(ok, html) {
+  _docsMostrarProgresso(false);
+  var res = document.getElementById('lote-resultado');
+  if (res) {
+    res.style.display = 'block';
+    res.className     = ok ? 'lote-resultado' : 'lote-resultado erro';
+    res.innerHTML     = html;
+  }
+  document.querySelectorAll('.btn-lote-gerar, .btn-lote-enviar').forEach(function (b) {
+    b.disabled = false;
+  });
+  _restaurarBotoes();
+}
+
+function _restaurarBotoes() {
+  var btnGerar = document.querySelector('.btn-lote-gerar');
+  var btnEnviar = document.querySelector('.btn-lote-enviar');
+  if (btnGerar) btnGerar.innerHTML =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
+    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
+    '<polyline points="14 2 14 8 20 8"/></svg> Gerar Documentos Modelo';
+  if (btnEnviar) btnEnviar.innerHTML =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
+    '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> ' +
+    'Gerar + Enviar Dossiê em Lote';
+}
+
+async function _prefetchNfse(envioId) {
+  try {
+    var url = '/receitas/envios/' + envioId + '/prefetch-nfse/';
+    var r   = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+    });
+    var d = await r.json();
+    return d;
+  } catch (e) {
+    return { ok: false, status: 'erro', erro: String(e) };
+  }
+}
+
+async function _resolverEnvioId(contratoId, mes, ano) {
+  try {
+    var r = await fetch(
+      '/receitas/lote/resolver-envio/?contrato_id=' + contratoId + '&mes=' + mes + '&ano=' + ano,
+      { headers: { 'X-CSRFToken': CSRF } }
+    );
+    if (!r.ok) return null;
+    var d = await r.json();
+    return d.ok ? d.envio_id : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GERAR EM LOTE (Apenas PDFs) — 1 por vez usando a rota correta do urls.py
+═══════════════════════════════════════════════════════════════════════════ */
+async function executarGerarLote() {
+  var btnGerar  = document.querySelector('.btn-lote-gerar');
+  var mes       = parseInt(document.getElementById('lote-mes-data').value);
+  var ano       = parseInt(document.getElementById('lote-ano-data').value);
+  var novoTexto = document.getElementById('lote-preview-texto').textContent.trim();
+  var ids       = window._loteIds || [];
+
+  if (!ids.length) return;
+
+  btnGerar.disabled = true;
+  btnGerar.innerHTML = '<span class="spinner-inline"></span> Preparando...';
+  _docsMostrarProgresso(true);
+
+  var total    = ids.length;
+  var sucessos = 0, erros = 0;
+
+  _docsAtualizarBarra(0, total, 'Iniciando geração de PDFs...', '📄 Gerar documentos');
+
+  for (var i = 0; i < total; i++) {
+    var cid = ids[i];
+    _docsAtualizarBarra(
+      i, total,
+      'Gerando documentos — contrato ' + (i + 1) + ' de ' + total + '...',
+      '📄 Documento ' + (i + 1) + '/' + total
+    );
+
+    try {
+      // ✅ CORREÇÃO: Chama a rota existente '/receitas/lote/gerar/'
+      var r = await fetch('/receitas/lote/gerar/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({ contrato_ids: [cid], mes: mes, ano: ano, novo_texto_data: novoTexto }),
+      });
+      if (r.ok) {
+        var d = await r.json();
+        sucessos += d.sucessos || 0;
+        erros    += d.erros    || 0;
+      } else {
+        erros++;
+      }
+    } catch (e) {
+      erros++;
+    }
+
+    _docsAtualizarBarra(i + 1, total);
+
+    // Pequena pausa para o servidor respirar
+    if (i < total - 1) await new Promise(function (r) { setTimeout(r, 400); });
+  }
+
+  var ico  = erros === 0 ? '✅' : (sucessos > 0 ? '⚠️' : '❌');
+  var html = ico + ' <strong>' + sucessos + ' PDF(s) gerado(s)</strong>' +
+             (erros ? ' — ⚠ ' + erros + ' erro(s)' : '');
+  _docsExibirResultado(erros === 0, html);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GERAR + ENVIAR EM LOTE — Usando as views super-poderosas que você já tem
+═══════════════════════════════════════════════════════════════════════════ */
+async function executarEnviarLote() {
+  var btnEnviar = document.querySelector('.btn-lote-enviar');
+  var mes       = parseInt(document.getElementById('lote-mes-data').value);
+  var ano       = parseInt(document.getElementById('lote-ano-data').value);
+  var novoTexto = document.getElementById('lote-preview-texto').textContent.trim();
+  var ids       = window._loteIds || [];
+
+  if (!ids.length) return;
+  if (!confirm('Confirmar geração + envio para ' + ids.length + ' contrato(s)?')) return;
+
+  btnEnviar.disabled = true;
+  btnEnviar.innerHTML = '<span class="spinner-inline"></span> Processando...';
+  _docsMostrarProgresso(true);
+
+  var total       = ids.length;
+  var geradosSuc  = 0, geradosErr = 0;
+  var enviadosSuc = 0, semEmail   = 0, enviadosErr = 0;
+
+  /* ── FASE 1: Gerar PDFs (Um por vez) ─────────────────────────────────── */
+  _docsAtualizarBarra(0, total * 2, 'Fase 1/2 — Gerando documentos modelo...', '📄 Gerando PDFs');
+
+  for (var i = 0; i < ids.length; i++) {
+    var cid = ids[i];
+    _docsAtualizarBarra(i, total * 2, 'Gerando PDF — contrato ' + (i + 1) + ' de ' + total + '...', '📄 Fase 1/2 — PDFs');
+    try {
+      // ✅ CORREÇÃO: Chama a rota '/receitas/lote/gerar/'
+      var r = await fetch('/receitas/lote/gerar/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({ contrato_ids: [cid], mes: mes, ano: ano, novo_texto_data: novoTexto }),
+      });
+      var d = r.ok ? await r.json() : { ok: false };
+      geradosSuc += d.sucessos || 0;
+      geradosErr += d.erros    || (r.ok ? 0 : 1);
+    } catch (e) { geradosErr++; }
+
+    await new Promise(function (r) { setTimeout(r, 250); });
+  }
+
+  /* ── FASE 2: Enviar E-mails (Sua view já baixa a nota sozinha!) ──────── */
+  _docsAtualizarBarra(total, total * 2, 'Fase 2/2 — Baixando Notas e Enviando...', '✉️ Fase 2/2 — Envio');
+
+  for (var m = 0; m < ids.length; m++) {
+    var cidMail = ids[m];
+    _docsAtualizarBarra(total + m, total * 2, 'Enviando e-mail — contrato ' + (m + 1) + ' de ' + total + '...', '✉️ Fase 2/2 — Envio');
+
+    try {
+      // ✅ CORREÇÃO: Chama a rota '/receitas/lote/enviar/'
+      var rLote = await fetch('/receitas/lote/enviar/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body:    JSON.stringify({ contrato_ids: [cidMail], mes: mes, ano: ano }),
+      });
+
+      if (rLote.ok) {
+        var dLote = await rLote.json();
+        enviadosSuc += dLote.enviados   || 0;
+        semEmail    += dLote.sem_email  || 0;
+        enviadosErr += dLote.erros      || 0;
+      } else {
+        enviadosErr++;
+      }
+    } catch (e) {
+      enviadosErr++;
+    }
+
+    // Pausa de segurança para o SMTP (Meio segundo)
+    await new Promise(function (r) { setTimeout(r, 500); });
+  }
+
+  /* ── FINALIZAÇÃO ───────────────────────────────────────────────────── */
+  _docsAtualizarBarra(total * 2, total * 2, 'Finalizando...', '✅ Concluído');
+
+  var ok   = enviadosErr === 0;
+  var ico  = ok ? '✅' : (enviadosSuc > 0 ? '⚠️' : '❌');
+  var html =
+    '<div style="font-size:.84rem;line-height:1.7">' +
+    ico + ' <strong>Geração:</strong> ' + geradosSuc + ' OK' + (geradosErr ? ', ' + geradosErr + ' erros' : '') + '<br>' +
+    '✉️ <strong>Envio:</strong> ' + enviadosSuc + ' enviado(s)' +
+    (semEmail    ? ', ⚠ ' + semEmail    + ' sem e-mail'      : '') +
+    (enviadosErr ? ', ✗ ' + enviadosErr + ' erro(s) no envio' : '') +
+    '</div>';
+
+  _docsExibirResultado(ok, html);
+}
+
+/* ════════════════════════════════════════
+   MODAL MUNICÍPIO / ENTIDADE
+════════════════════════════════════════ */
+function abrirMunicipio(id, mun, ent) {
+  document.getElementById('mun-id').value       = id;
+  document.getElementById('mun-valor').value    = mun;
+  document.getElementById('mun-entidade').value = ent;
+  document.getElementById('modal-municipio').classList.add('open');
+  setTimeout(function () { document.getElementById('mun-valor').focus(); }, 100);
+}
+function fecharMunicipio() { document.getElementById('modal-municipio').classList.remove('open'); }
+async function salvarMunicipio() {
+  var id  = document.getElementById('mun-id').value;
+  var mun = document.getElementById('mun-valor').value.trim();
+  var ent = document.getElementById('mun-entidade').value;
+  var btn = document.getElementById('btn-mun-salvar');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    var res  = await fetch('/receitas/contratos/' + id + '/municipio/', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ municipio: mun, tipo_entidade: ent }),
+    });
+    var data = await res.json();
+    if (data.ok) { fecharMunicipio(); window.location.reload(); }
+    else { alert('Erro: ' + (data.erro || 'Tente novamente.')); }
+  } catch (e) { alert('Erro de conexão.'); }
+  finally { btn.disabled = false; btn.textContent = 'Salvar'; }
+}
+var munValor = document.getElementById('mun-valor');
+if (munValor) munValor.addEventListener('keydown', function (e) { if (e.key === 'Enter') salvarMunicipio(); });
+var modalMun = document.getElementById('modal-municipio');
+if (modalMun) modalMun.addEventListener('click', function (e) { if (e.target.id === 'modal-municipio') fecharMunicipio(); });
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+{% endblock %}

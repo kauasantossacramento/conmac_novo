@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Contratos & Receitas · CONMAC{% endblock %}
+
+{% block content %}
+
+<style>
+    /* Ajustes específicos para manter consistência com o index.html */
+    
+    /* Input de busca estilizado para parecer com os selects do filtro */
+    .search-input {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.95rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        color: #333;
+        min-width: 250px;
+    }
+    .search-input:focus {
+        border-color: #2563eb;
+        outline: none;
+    }
+
+    /* Tabela estilizada (baseada no print) */
+    .custom-table-container {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+        overflow-x: auto;
+        margin-top: 20px;
+    }
+    .custom-table { width: 100%; border-collapse: collapse; }
+    .custom-table th { 
+        background: #f9fafb; 
+        padding: 12px 16px; 
+        text-align: left; 
+        font-size: 0.85rem; 
+        font-weight: 600; 
+        color: #6b7280; 
+        text-transform: uppercase;
+        border-bottom: 1px solid #e5e7eb; 
+    }
+    .custom-table td { 
+        padding: 14px 16px; 
+        border-bottom: 1px solid #f3f4f6; 
+        color: #1f2937; 
+        font-size: 0.95rem;
+    }
+    .custom-table tr:last-child td { border-bottom: none; }
+    
+    /* Badges de Status */
+    .badge-status { 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center;
+        padding: 2px 8px; 
+        border-radius: 99px; 
+        font-size: 0.75rem; 
+        font-weight: 700; 
+        min-width: 30px;
+    }
+    .st-ativo { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; } /* Verde 10 */
+    .st-inativo { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; } /* Vermelho 99 */
+    
+    /* Alerta de Vencimento na Tabela */
+    .vencimento-alert {
+        color: #b45309;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .row-inativo { opacity: 0.6; background-color: #fafafa; }
+</style>
+
+{% if qtd_vencendo > 0 %}
+<div class="alert-prime__wrap">
+  <div class="alert-prime alert-prime--sticky" role="alert"
+       style="position:sticky;top:0;z-index:20;margin:.75rem 0;border-radius:12px;padding:12px 14px;
+              background:#FFF6E5;border:1px solid #F8D9A1;color:#7A3E00;display:flex;gap:.75rem;align-items:center;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto; stroke:#F28C52;">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+    <div style="line-height:1.25">
+      <strong>Atenção à Vigência:</strong>
+      Existem <strong>{{ qtd_vencendo }} contrato(s)</strong> vencendo nos próximos 30 dias. Verifique a lista abaixo.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<section class="viagens-hero" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
+  <div class="viagens-hero__title">
+    <div class="ico" style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 12px;">
+        <img src="{% static 'img/ic_links.svg' %}" alt="" style="filter: brightness(0) invert(1);"> 
+    </div>
+    <div class="txt txt_responsivo">
+      <h2 style="color: #fff;">Contratos & Receitas</h2>
+      <p style="color: rgba(255,255,255,0.9);">Gestão de contratos recorrentes e serviços extras.</p>
+    </div>
+  </div>
+
+  <div class="viagens-hero__kpis">
+    <div class="kpi">
+      <div class="kpi__value">R$ {{ total_recorrente|floatformat:2|intcomma }}</div>
+      <div class="kpi__label">Receita Recorrente (Ativos)</div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi__value">R$ {{ total_extra|floatformat:2|intcomma }}</div>
+      <div class="kpi__label">Serviços Extras</div>
+    </div>
+
+    <div class="kpi kpi--pendente" style="border-left: 4px solid #fff;">
+      <div class="kpi__value" style="color: #fff;">R$ {{ total_geral|floatformat:2|intcomma }}</div>
+      <div class="kpi__label" style="color: rgba(255,255,255,0.8);">Previsão Total</div>
+    </div>
+  </div>
+</section>
+
+
+<form class="viagens-filter" method="GET" action="{% url 'receitas_dashboard' %}" 
+      style="padding-top: 15px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
+  
+    <div style="position: relative;">
+        <input type="text" name="q" class="search-input" placeholder="Buscar Cliente ou Nº Contrato..." value="{{ q|default:'' }}">
+        {% if q %}
+            <a href="{% url 'receitas_dashboard' %}" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #999; text-decoration: none;">✕</a>
+        {% endif %}
+    </div>
+
+    <button class="btn-grad" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 5px;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        Buscar
+    </button>
+
+    <div style="border-left: 1px solid #ccc; height: 30px; margin: 0 10px;"></div>
+
+    <a class="btn-outline" href="{% url 'sincronizar_receitas' %}" onclick="return confirm('Isso pode levar alguns instantes. Continuar?');">
+        🔄 Sincronizar Omie
+    </a>
+
+    <button type="button" class="btn-outline" onclick="alert('Fase 3: Modal de Novo Contrato');">
+        + Novo Contrato
+    </button>
+</form>
+
+
+<section class="container" style="margin-bottom: 50px;">
+    
+    <div class="custom-table-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Nº Contrato</th>
+                    <th>Cliente</th>
+                    <th>Vigência Final</th>
+                    <th style="text-align: right;">Valor</th>
+                    <th style="text-align: center;">Status</th>
+                    <th style="text-align: center;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in contratos_list %}
+                <tr class="{% if item.is_inativo %}row-inativo{% endif %}">
+                    <td>
+                        <strong>{{ item.obj.omie_num_ctr }}</strong>
+                    </td>
+                    
+                    <td>
+                        <span style="font-weight: 500;">{{ item.obj.cliente_nome|default:"-" }}</span>
+                    </td>
+                    
+                    <td>
+                        {% if item.obj.data_vigencia_final %}
+                            {% if item.is_vencendo %}
+                                <div class="vencimento-alert">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    Até {{ item.obj.data_vigencia_final|date:"d/m/Y" }}
+                                </div>
+                            {% else %}
+                                Até {{ item.obj.data_vigencia_final|date:"d/m/Y" }}
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #999;">Indeterminado</span>
+                        {% endif %}
+                    </td>
+
+                    <td style="text-align: right; font-family: monospace; font-size: 1rem;">
+                        R$ {{ item.obj.valor_mensal|floatformat:2|intcomma }}
+                    </td>
+
+                    <td style="text-align: center;">
+                        {% if item.obj.status_omie == '99' or item.obj.status_omie == 'Cancelado' %}
+                            <span class="badge-status st-inativo" title="Contrato Cancelado/Inativo">99</span>
+                        {% else %}
+                            <span class="badge-status st-ativo" title="Ativo">10</span>
+                        {% endif %}
+                    </td>
+
+                    <td style="text-align: center;">
+                        <a href="#" style="color: #6b7280; text-decoration: none;" title="Detalhes">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="19" cy="12" r="1"></circle>
+                                <circle cx="5" cy="12" r="1"></circle>
+                            </svg>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                        Nenhum contrato encontrado com estes filtros.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 15px; text-align: right; color: #6b7280; font-size: 0.85rem;">
+        Exibindo {{ contratos_list|length }} registros
+    </div>
+</section>
+
+{% endblock %}

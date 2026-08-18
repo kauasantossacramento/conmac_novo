@@ -133,7 +133,16 @@ img { max-width:100%; display:block; }
 .home-card--reembolsos{   background: linear-gradient(90deg,#21B928 0%, #239FAB 100%); }
 .home-card--notificacoes{ background: linear-gradient(90deg,#E13A35 0%, #239FAB 100%); }
 .home-card--links{        background: linear-gradient(90deg,#E57A34 0%, #239FAB 100%); }
+/* Gradiente para o card de Contracheques (Azul para o Teal da CONMAC) */
+.home-card--contracheques {
+  background: linear-gradient(90deg, #3871c1 0%, #239FAB 100%);
+}
 
+/* Garante que ícones inline (SVG) tenham o mesmo tamanho das tags <img> */
+.home-card__icon svg {
+  width: 38px;
+  height: 38px;
+}
 
 /* ====== Checklist ====== */
 .checklist{ margin-top: 8px; }
@@ -711,3 +720,6 @@ p>input[type="file"], p>select, p>textarea, p>input[type="text"]{ width:100%; }
 
 .modal { opacity: 0; transition: opacity .12s ease; }
 .modal-root:not([hidden]) .modal { opacity: 1; }
+
+
+

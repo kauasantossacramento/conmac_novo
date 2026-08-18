@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Relatório SIOPS - {{ p.nome }}</title>
+    <style>
+        body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #333; line-height: 1.4; }
+        
+        /* Header */
+        .header { width: 100%; border-bottom: 2px solid #1a8f9e; padding-bottom: 10px; margin-bottom: 20px; }
+        .header table { width: 100%; border: none; }
+        .logo { width: 120px; } 
+        .header-title { text-align: right; vertical-align: bottom; }
+        .header-title h1 { margin: 0; color: #1a8f9e; font-size: 16px; text-transform: uppercase; font-weight: bold; }
+        .header-title p { margin: 2px 0; font-size: 10px; color: #666; }
+
+        /* Sections */
+        h2 { 
+            background-color: #f4f6f9; 
+            padding: 8px; 
+            font-size: 13px; 
+            border-left: 5px solid #e67e22; 
+            margin-top: 25px; 
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: #333;
+        }
+        h3 { 
+            color: #1a8f9e; 
+            border-bottom: 1px solid #ddd; 
+            margin-top: 15px; 
+            margin-bottom: 5px;
+            font-size: 12px; 
+            padding-bottom: 3px;
+        }
+
+        /* Data Tables */
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .data-table td { padding: 4px; vertical-align: top; border-bottom: 1px solid #eee; }
+        .label { font-weight: bold; color: #555; width: 35%; background-color: #fafafa; }
+        .value { color: #000; }
+        
+        /* Boolean Answers */
+        .tag-sim { color: #155724; font-weight: bold; background-color: #d4edda; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+        .tag-nao { color: #721c24; font-weight: bold; background-color: #f8d7da; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+        
+        /* Footer */
+        .footer { margin-top: 50px; text-align: center; color: #999; font-size: 9px; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <table>
+            <tr>
+                <td><img src="{% static 'img/logo_conmac.png' %}" class="logo" alt="CONMAC"></td>
+                <td class="header-title">
+                    <h1>Questionário SIOPS</h1>
+                    <p><strong>Prefeitura Municipal de {{ p.nome }}</strong></p>
+                    <p>Enviado em: {{ q.data_envio|date:"d/m/Y \à\s H:i" }}</p>
+                    <p>Protocolo: #{{ q.id|stringformat:"06d" }}</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>1. Identificação dos Gestores</h2>
+    
+    <h3>Prefeito(a)</h3>
+    <table class="data-table">
+        <tr><td class="label">Nome Completo:</td><td class="value">{{ q.prefeito_nome }}</td></tr>
+        <tr><td class="label">Endereço:</td><td class="value">{{ q.prefeito_endereco }}</td></tr>
+        <tr><td class="label">Telefone:</td><td class="value">{{ q.prefeito_telefone }}</td></tr>
+        <tr><td class="label">E-mail:</td><td class="value">{{ q.prefeito_email }}</td></tr>
+    </table>
+
+    <h3>Secretário(a) de Saúde</h3>
+    <table class="data-table">
+        <tr><td class="label">Nome Completo:</td><td class="value">{{ q.secretario_nome }}</td></tr>
+        <tr><td class="label">Endereço:</td><td class="value">{{ q.secretario_endereco }}</td></tr>
+        <tr><td class="label">Telefone:</td><td class="value">{{ q.secretario_telefone }}</td></tr>
+        <tr><td class="label">E-mail:</td><td class="value">{{ q.secretario_email }}</td></tr>
+    </table>
+
+    <h2>2. Conselho Municipal de Saúde</h2>
+    <table class="data-table">
+        <tr><td class="label">Data de Criação:</td><td class="value">{{ q.conselho_data_criacao|date:"d/m/Y" }}</td></tr>
+        <tr><td class="label">Instrumento Legal:</td><td class="value">{{ q.conselho_instrumento }}</td></tr>
+        <tr><td class="label">Endereço do Conselho:</td><td class="value">{{ q.conselho_endereco }}</td></tr>
+        <tr><td class="label">Periodicidade Reuniões:</td><td class="value">{{ q.conselho_periodicidade }}</td></tr>
+    </table>
+
+    <h3>Presidência do Conselho</h3>
+    <table class="data-table">
+        <tr><td class="label">Nome do Presidente:</td><td class="value">{{ q.presidente_nome }}</td></tr>
+        <tr><td class="label">Segmento:</td><td class="value">{{ q.get_presidente_segmento_display }}</td></tr>
+        <tr><td class="label">Endereço:</td><td class="value">{{ q.presidente_endereco }}</td></tr>
+        <tr><td class="label">Telefone:</td><td class="value">{{ q.presidente_telefone }}</td></tr>
+        <tr><td class="label">E-mail:</td><td class="value">{{ q.presidente_email }}</td></tr>
+    </table>
+
+    <h3>Responsável Técnico (Informações)</h3>
+    <table class="data-table">
+        <tr><td class="label">Nome:</td><td class="value">{{ q.responsavel_info_nome }}</td></tr>
+        <tr><td class="label">Telefone:</td><td class="value">{{ q.responsavel_info_telefone }}</td></tr>
+        <tr><td class="label">E-mail:</td><td class="value">{{ q.responsavel_info_email }}</td></tr>
+    </table>
+
+    <h2>3. Atuação e Fiscalização</h2>
+    <table class="data-table">
+        <tr>
+            <td class="label" style="width: 70%;">O Conselho acompanha e fiscaliza o Fundo permanentemente?</td>
+            <td class="value">{% if q.fiscaliza_fundo %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho emite Parecer ao Plano de Saúde?</td>
+            <td class="value">{% if q.parecer_plano %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho emite Parecer à Proposta de PPA?</td>
+            <td class="value">{% if q.parecer_ppa %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho delibera a Programação Anual?</td>
+            <td class="value">{% if q.delibera_programacao %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho delibera sobre a Proposta da LOA?</td>
+            <td class="value">{% if q.delibera_loa %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho delibera o Relatório de Gestão?</td>
+            <td class="value">{% if q.delibera_relatorio_gestao %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho emite Parecer no Relatório de Gestão (Anual)?</td>
+            <td class="value">{% if q.parecer_relatorio_gestao %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">O Conselho emite Parecer nas contas de cada quadrimestre?</td>
+            <td class="value">{% if q.parecer_contas_quadrimestre %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td>
+        </tr>
+    </table>
+
+    <h2>4. Fundo Municipal de Saúde</h2>
+    <table class="data-table">
+        <tr><td class="label">CNPJ Utilizado:</td><td class="value">{{ q.fundo_cnpj }}</td></tr>
+        <tr><td class="label">Tipo de Gestão:</td><td class="value">{{ q.get_fundo_tipo_gestao_display }}</td></tr>
+        <tr><td class="label">Endereço do Fundo:</td><td class="value">{{ q.fundo_endereco }}</td></tr>
+        <tr><td class="label">O Fundo está em pleno funcionamento?</td><td class="value">{% if q.fundo_pleno_funcionamento %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}</td></tr>
+        <tr><td class="label">Nome do Gestor do Fundo:</td><td class="value">{{ q.fundo_nome_gestor }}</td></tr>
+        <tr><td class="label">Local de Administração:</td><td class="value">{{ q.get_fundo_local_administracao_display }}</td></tr>
+    </table>
+
+    <h3>Responsável pelo Fundo</h3>
+    <table class="data-table">
+        <tr><td class="label">Nome:</td><td class="value">{{ q.fundo_responsavel_nome }}</td></tr>
+        <tr><td class="label">E-mail:</td><td class="value">{{ q.fundo_responsavel_email }}</td></tr>
+        <tr><td class="label">Telefone:</td><td class="value">{{ q.fundo_responsavel_telefone }}</td></tr>
+    </table>
+
+    <h3>Dados Bancários</h3>
+    <table class="data-table">
+        <tr><td class="label">Banco:</td><td class="value">{{ q.banco_nome }}</td></tr>
+        <tr><td class="label">Agência:</td><td class="value">{{ q.banco_agencia }}</td></tr>
+        <tr><td class="label">Conta Corrente:</td><td class="value">{{ q.banco_conta }}</td></tr>
+    </table>
+
+    <h3>Recursos Financeiros</h3>
+    <table class="data-table">
+        <tr>
+            <td class="label">Recursos próprios aplicados via Fundo?</td>
+            <td class="value">
+                {% if q.recursos_proprios_aplicados %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}
+                {% if q.recursos_proprios_percentual %} ({{ q.recursos_proprios_percentual }}%){% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td class="label">Recursos do SUS aplicados via Fundo?</td>
+            <td class="value">
+                {% if q.recursos_sus_aplicados %}<span class="tag-sim">SIM</span>{% else %}<span class="tag-nao">NÃO</span>{% endif %}
+                {% if q.recursos_sus_percentual %} ({{ q.recursos_sus_percentual }}%){% endif %}
+            </td>
+        </tr>
+    </table>
+
+    {% if q.possui_consorcio %}
+    <h2>5. Consórcio Intermunicipal</h2>
+    <table class="data-table">
+        <tr><td class="label">Nome do Consórcio:</td><td class="value">{{ q.consorcio_nome }}</td></tr>
+        <tr><td class="label">CNPJ:</td><td class="value">{{ q.consorcio_cnpj }}</td></tr>
+        <tr><td class="label">Responsável:</td><td class="value">{{ q.consorcio_responsavel }}</td></tr>
+        <tr><td class="label">Telefone:</td><td class="value">{{ q.consorcio_telefone }}</td></tr>
+        <tr><td class="label">E-mail:</td><td class="value">{{ q.consorcio_email }}</td></tr>
+    </table>
+    {% else %}
+    <h2>5. Consórcio Intermunicipal</h2>
+    <p style="padding: 10px; background: #fafafa; border: 1px solid #eee;">Município informou que <strong>NÃO</strong> participa de Consórcio de Saúde.</p>
+    {% endif %}
+
+    <div class="footer">
+        <p>Documento gerado eletronicamente pelo Sistema de Gestão Inteligente CONMAC em {% now "d/m/Y \à\s H:i" %}.</p>
+    </div>
+
+</body>
+</html>

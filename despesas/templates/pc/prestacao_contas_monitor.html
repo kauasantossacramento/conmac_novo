@@ -1,0 +1,587 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}Prestações de Contas · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --pc-blue:    #3b82f6;
+  --pc-yellow:  #f59e0b;
+  --pc-purple:  #8b5cf6;
+  --pc-cyan:    #06b6d4;
+  --pc-green:   #10b981;
+  --pc-gray:    #6b7280;
+  --bg:         #f4f6f9;
+  --card:       #ffffff;
+  --border:     #e2e8f0;
+  --dark:       #1a202c;
+  --muted:      #718096;
+  --gradient:   linear-gradient(135deg, #1e3a5f 0%, #0e7490 100%);
+}
+
+/* ── HERO ── */
+.pc-hero {
+  background: var(--gradient);
+  border-radius: 24px; overflow: hidden; color: #fff;
+  padding: 28px 32px; display: flex; align-items: center;
+  justify-content: space-between; gap: 24px;
+  box-shadow: 0 16px 40px rgba(14,116,144,.25); flex-wrap: wrap;
+  position: relative; margin-bottom: 24px;
+}
+.pc-hero::before {
+  content: ''; position: absolute; top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+}
+.pc-hero__left  { display: flex; align-items: center; gap: 18px; position: relative; z-index:1; }
+.pc-hero__ico   { width: 68px; height: 68px; display: grid; place-items: center;
+                  background: rgba(255,255,255,.18); border-radius: 50%;
+                  border: 2px solid rgba(255,255,255,.3); flex-shrink:0; }
+.pc-hero__txt h2 { margin: 0; font-size: 1.9rem; font-weight: 800; color: #fff; }
+.pc-hero__txt p  { margin: 6px 0 0; opacity: .85; font-size: .92rem; }
+.pc-hero__kpis  { display: flex; gap: 12px; flex-wrap: wrap; position: relative; z-index:1; }
+
+/* KPI cards */
+.kpi-card {
+  background: rgba(255,255,255); border-radius: 16px;
+  padding: 14px 20px; min-width: 110px; text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,.1); position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: var(--gradient);
+}
+.kpi-card.k--yellow::before { background: var(--pc-yellow); }
+.kpi-card.k--purple::before { background: var(--pc-purple); }
+.kpi-card.k--cyan::before   { background: var(--pc-cyan); }
+.kpi-card.k--green::before  { background: var(--pc-green); }
+.kpi__value { font-size: 1.7rem; font-weight: 800; color: var(--pc-blue); line-height:1; margin-bottom:4px; }
+.kpi__label { font-size: .68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .5px; }
+.k--yellow .kpi__value { color: var(--pc-yellow); }
+.k--purple .kpi__value { color: var(--pc-purple); }
+.k--cyan   .kpi__value { color: var(--pc-cyan); }
+.k--green  .kpi__value { color: var(--pc-green); }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+}
+.toolbar-left { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.search-wrap  { position: relative; }
+.search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+                   color: var(--muted); pointer-events: none; }
+.search-input {
+  padding: 9px 14px 9px 36px; border: 1.5px solid var(--border);
+  border-radius: 10px; width: 240px; font-size: .87rem; background: #fff; transition: .2s;
+}
+.search-input:focus { border-color: #0e7490; outline: none; box-shadow: 0 0 0 3px rgba(14,116,144,.1); }
+.filter-select {
+  padding: 9px 32px 9px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: #fff; font-size: .87rem; font-weight: 600;
+  color: var(--dark); cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.filter-select:focus { border-color: #0e7490; outline: none; }
+.btn-new {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; background: var(--pc-green); color: #fff;
+  border: none; border-radius: 10px; font-size: .87rem; font-weight: 700;
+  cursor: pointer; text-decoration: none; transition: .18s;
+}
+.btn-new:hover { background: #059669; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,.3); }
+
+/* ── SEÇÃO ── */
+.section-title {
+  font-size: 1rem; font-weight: 700; color: var(--dark);
+  margin: 28px 0 14px; display: flex; align-items: center; gap: 8px;
+}
+.section-title span.badge {
+  background: var(--border); color: var(--muted); padding: 2px 8px;
+  border-radius: 20px; font-size: .75rem; font-weight: 700;
+}
+
+/* ── GRID DE WIDGETS ── */
+.pc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+/* ── WIDGET CARD ── */
+.pc-card {
+  background: var(--card); border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  transition: transform .18s, box-shadow .18s; position: relative;
+  cursor: pointer; text-decoration: none; color: inherit;
+}
+.pc-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,.09);
+}
+.pc-card__header { display: flex; align-items: center; gap: 12px; }
+.pc-card__brasao {
+  width: 52px; height: 52px; border-radius: 10px; overflow: hidden;
+  background: #f1f5f9; display: grid; place-items: center; flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.pc-card__brasao img { width: 100%; height: 100%; object-fit: cover; }
+.pc-card__brasao .no-brasao { font-size: .6rem; color: var(--muted); text-align: center; padding: 4px; }
+.pc-card__info { flex: 1; min-width: 0; }
+.pc-card__nome { font-weight: 700; font-size: .92rem; color: var(--dark);
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-card__comp { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+/* Etapa pill */
+.etapa-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+}
+.ep--CADASTRO    { background: #dbeafe; color: #1d4ed8; }
+.ep--ANALISE     { background: #fef3c7; color: #92400e; }
+.ep--SIGA        { background: #ede9fe; color: #5b21b6; }
+.ep--ENVIO_FINAL { background: #cffafe; color: #0e7490; }
+.ep--CONCLUIDO   { background: #d1fae5; color: #065f46; }
+
+/* Editor meta */
+.pc-card__meta {
+  display: flex; align-items: center; gap: 5px;
+  font-size: .74rem; color: var(--muted);
+}
+.pc-card__meta svg { flex-shrink: 0; }
+
+/* Inconsistências badge */
+.badge-inc {
+  position: absolute; top: 12px; right: 12px;
+  background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+  border-radius: 20px; font-size: .7rem; font-weight: 700;
+  padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* ── PAGINAÇÃO ── */
+.pagination { display: flex; justify-content: center; gap: 6px; margin: 28px 0 0; flex-wrap: wrap; }
+.pagination a, .pagination span {
+  padding: 7px 12px; border-radius: 8px; font-size: .84rem; font-weight: 600;
+  border: 1.5px solid var(--border); background: #fff; color: var(--dark);
+  text-decoration: none; transition: .15s;
+}
+.pagination a:hover { background: #f0fdfe; border-color: #0e7490; color: #0e7490; }
+.pagination .current { background: #0e7490; color: #fff; border-color: #0e7490; }
+
+/* ── BADGES DE PRAZO (visíveis ao filtrar por vencendo) ── */
+.prazo-badges {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px;
+}
+.prazo-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: .68rem; font-weight: 700; letter-spacing: .2px;
+  white-space: nowrap;
+}
+.prazo-badge svg { flex-shrink: 0; }
+/* hoje */
+.prazo-badge--urgente-hoje {
+  background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+}
+/* amanhã */
+.prazo-badge--urgente-amanha {
+  background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;
+}
+
+/* ── ESTADO VAZIO ── */
+.empty-state {
+  text-align: center; padding: 50px 20px; color: var(--muted);
+  background: var(--card); border-radius: 16px; border: 1px dashed var(--border);
+}
+.empty-state p { font-size: 1.05rem; font-weight: 700; color: var(--dark); margin: 12px 0 4px; }
+.empty-state span { font-size: .85rem; }
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
+  padding: 14px 18px;
+  background: rgba(255,255,255);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  cursor: pointer;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+  background: rgba(255,255,255,0.22);
+  text-decoration: none;
+  color: inherit;
+}
+.kpi-card--active {
+  background: rgb(0 0 0 / 28%) !important;
+  border-color: rgba(255,255,255,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.20);
+}
+
+/* Card de alerta — vencendo */
+.kpi-card.k--alert {
+  background: rgb(255 255 255);
+  border-color: rgb(255 1 1 / 42%);
+}
+.kpi-card.k--alert:hover {
+  background: rgb(255 255 255);
+}
+.kpi-card.k--alert.kpi-card--active {
+  background: rgb(16 18 18 / 40%) !important;
+  border-color: rgba(255, 87, 51, 0.80) !important;
+  box-shadow: 0 0 0 3px rgba(255, 87, 51, 0.20);
+}
+.kpi__value--alert {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Pulso animado quando qtd_vencendo > 0 */
+.kpi__pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5733;
+  animation: kpi-pulse 1.4s ease-in-out infinite;
+}
+@keyframes kpi-pulse {
+  0%,100% { opacity: 1; transform: scale(1);   }
+  50%      { opacity: .4; transform: scale(1.5); }
+}
+
+</style>
+
+<!-- ── HERO ──
+<section class="pc-hero">
+  <div class="pc-hero__left">
+    <div class="pc-hero__ico">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <line x1="10" y1="9"  x2="8"  y2="9"/>
+      </svg>
+    </div>
+    <div class="pc-hero__txt">
+      <h2>Prestações de Contas</h2>
+      <p>Acompanhamento de notificações e prestações de conta — TCM/BA</p>
+    </div>
+  </div>
+  <div class="pc-hero__kpis">
+    <div class="kpi-card">
+      <div class="kpi__value">{{ total }}</div>
+      <div class="kpi__label">Total</div>
+    </div>
+    <div class="kpi-card k--yellow">
+      <div class="kpi__value">{{ em_analise }}</div>
+      <div class="kpi__label">Em Análise</div>
+    </div>
+    <div class="kpi-card k--purple">
+      <div class="kpi__value">{{ em_siga }}</div>
+      <div class="kpi__label">SIGA</div>
+    </div>
+    <div class="kpi-card k--cyan">
+      <div class="kpi__value">{{ em_envio }}</div>
+      <div class="kpi__label">Envio Final</div>
+    </div>
+    <div class="kpi-card k--green">
+      <div class="kpi__value">{{ qtd_concluidos }}</div>
+      <div class="kpi__label">Concluídos</div>
+    </div>
+  </div>
+</section>
+-->
+
+<!-- ── HERO ── -->
+<section class="pc-hero">
+  <div class="pc-hero__left">
+    <div class="pc-hero__ico">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+           stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <line x1="10" y1="9"  x2="8"  y2="9"/>
+      </svg>
+    </div>
+    <div class="pc-hero__txt">
+      <h2>Prestações de Contas</h2>
+      <p>Acompanhamento de notificações e prestações de conta — TCM/BA</p>
+    </div>
+  </div>
+
+  <div class="pc-hero__kpis">
+
+    {# ── TOTAL ── #}
+    <a href="?{% if filtro_busca %}q={{ filtro_busca|urlencode }}{% endif %}"
+       class="kpi-card{% if not filtro_etapa and not filtro_vence %} kpi-card--active{% endif %}"
+       title="Ver todas as prestações">
+      <div class="kpi__value">{{ total }}</div>
+      <div class="kpi__label">Total</div>
+    </a>
+
+    {# ── EM ANÁLISE ── #}
+    <a href="?etapa=ANALISE{% if filtro_busca %}&q={{ filtro_busca|urlencode }}{% endif %}"
+       class="kpi-card k--yellow{% if filtro_etapa == 'ANALISE' %} kpi-card--active{% endif %}"
+       title="Filtrar: Em Análise">
+      <div class="kpi__value">{{ em_analise }}</div>
+      <div class="kpi__label">Em Análise</div>
+    </a>
+
+    {# ── SIGA ── #}
+    <a href="?etapa=SIGA{% if filtro_busca %}&q={{ filtro_busca|urlencode }}{% endif %}"
+       class="kpi-card k--purple{% if filtro_etapa == 'SIGA' %} kpi-card--active{% endif %}"
+       title="Filtrar: SIGA">
+      <div class="kpi__value">{{ em_siga }}</div>
+      <div class="kpi__label">SIGA</div>
+    </a>
+
+    {# ── ENVIO FINAL ── #}
+    <a href="?etapa=ENVIO_FINAL{% if filtro_busca %}&q={{ filtro_busca|urlencode }}{% endif %}"
+       class="kpi-card k--cyan{% if filtro_etapa == 'ENVIO_FINAL' %} kpi-card--active{% endif %}"
+       title="Filtrar: Envio Final">
+      <div class="kpi__value">{{ em_envio }}</div>
+      <div class="kpi__label">Envio Final</div>
+    </a>
+
+    {# ── CONCLUÍDOS ── #}
+    <a href="?etapa=CONCLUIDO{% if filtro_busca %}&q={{ filtro_busca|urlencode }}{% endif %}"
+       class="kpi-card k--green{% if filtro_etapa == 'CONCLUIDO' %} kpi-card--active{% endif %}"
+       title="Filtrar: Concluídos">
+      <div class="kpi__value">{{ qtd_concluidos }}</div>
+      <div class="kpi__label">Concluídos</div>
+    </a>
+
+    {# ── VENCENDO (hoje + amanhã) ── #}
+    <a href="?vence=1{% if filtro_busca %}&q={{ filtro_busca|urlencode }}{% endif %}"
+       class="kpi-card k--alert{% if filtro_vence %} kpi-card--active{% endif %}"
+       title="Prestações com prazo vencendo hoje ou amanhã">
+      <div class="kpi__value kpi__value--alert">
+        {% if qtd_vencendo %}
+          <span class="kpi__pulse"></span>
+        {% endif %}
+        {{ qtd_vencendo }}
+      </div>
+      <div class="kpi__label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+             style="margin-right:3px;vertical-align:-1px">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Vencendo
+      </div>
+    </a>
+
+  </div>{# /.pc-hero__kpis #}
+</section>
+
+<!-- ── TOOLBAR ── -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <form method="get" style="display:contents;">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" name="q" class="search-input" placeholder="Buscar cliente, processo…"
+               value="{{ filtro_busca }}" autocomplete="off">
+      </div>
+      <select name="etapa" class="filter-select" onchange="this.form.submit()">
+        <option value="">Todas as Etapas</option>
+        {% for val, lbl in etapa_choices %}
+          <option value="{{ val }}" {% if filtro_etapa == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  {% if pode_cadastrar %}
+  <a href="{% url 'prestacao_contas_nova' %}" class="btn-new">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nova Prestação
+  </a>
+  {% endif %}
+</div>
+
+<!-- ── PENDENTES ── -->
+{% if pendentes %}
+<div class="section-title">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </svg>
+  Em andamento
+  <span class="badge">{{ pendentes|length }}</span>
+</div>
+
+<div class="pc-grid">
+  {% for pc in pendentes %}
+  <a href="{% url 'prestacao_contas_detalhe' pc.pk %}" class="pc-card">
+
+    {% if pc.qtd_inconsistencias > 0 %}
+    <div class="badge-inc">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2"/>
+        <line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2"/>
+      </svg>
+      {{ pc.qtd_inconsistencias }} inconsistência{{ pc.qtd_inconsistencias|pluralize }}
+    </div>
+    {% endif %}
+
+    <div class="pc-card__header">
+      <div class="pc-card__brasao">
+        {% if pc.cliente and pc.cliente.brasao %}
+          <img src="{{ pc.cliente.brasao.url }}" alt="brasão">
+        {% else %}
+          <div class="no-brasao">SEM<br>BRASÃO</div>
+        {% endif %}
+      </div>
+      <div class="pc-card__info">
+        <div class="pc-card__nome">
+          {{ pc.cliente.nome|default:pc.nome_unidade_pdf|default:"Sem cliente" }}
+        </div>
+        <div class="pc-card__comp">
+          Competência: {{ pc.competencia_str }}
+          {% if pc.numero_processo %} · Proc. {{ pc.numero_processo }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span class="etapa-pill ep--{{ pc.etapa_atual }}">
+        {{ pc.etapa_label }}
+      </span>
+      {# ── Datas de vencimento — só visíveis quando filtro "Vencendo" está ativo ── #}
+      {% if filtro_vence and pc.prazos_vence %}
+        <div class="prazo-badges">
+          {% for prazo in pc.prazos_vence %}
+            <span class="prazo-badge prazo-badge--{{ prazo.urgencia_css }}">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {{ prazo.descricao|truncatechars:22 }} · {{ prazo.data_limite|date:"d/m" }}
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="pc-card__meta">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      {% if pc.ultimo_editor %}
+        Últ. por <strong>{{ pc.ultimo_editor.get_full_name|default:pc.ultimo_editor.username|truncatechars:16 }}</strong>
+        · {{ pc.modificado_em|date:"d/m H:i" }}
+      {% else %}
+        {{ pc.modificado_em|date:"d/m/Y" }}
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state" style="margin-bottom:28px;">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" style="color:#cbd5e0;">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+  <p>Nenhum processo pendente</p>
+  <span>Todos os processos foram concluídos ou nenhum foi cadastrado ainda.</span>
+</div>
+{% endif %}
+
+<!-- ── CONCLUÍDOS ── -->
+{% if concluidos_page.object_list %}
+<div class="section-title" style="margin-top:36px;">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+  Concluídos
+  <span class="badge">{{ qtd_concluidos }}</span>
+</div>
+
+<div class="pc-grid">
+  {% for pc in concluidos_page %}
+  <a href="{% url 'prestacao_contas_detalhe' pc.pk %}" class="pc-card" style="opacity:.8;">
+    <div class="pc-card__header">
+      <div class="pc-card__brasao">
+        {% if pc.cliente and pc.cliente.brasao %}
+          <img src="{{ pc.cliente.brasao.url }}" alt="brasão">
+        {% else %}
+          <div class="no-brasao">SEM<br>BRASÃO</div>
+        {% endif %}
+      </div>
+      <div class="pc-card__info">
+        <div class="pc-card__nome">
+          {{ pc.cliente.nome|default:pc.nome_unidade_pdf|default:"Sem cliente" }}
+        </div>
+        <div class="pc-card__comp">Competência: {{ pc.competencia_str }}</div>
+      </div>
+    </div>
+    <div>
+      <span class="etapa-pill ep--CONCLUIDO">Concluído</span>
+    </div>
+    <div class="pc-card__meta">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      {{ pc.modificado_em|date:"d/m/Y" }}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Paginação -->
+{% if concluidos_page.has_other_pages %}
+<div class="pagination">
+  {% if concluidos_page.has_previous %}
+    <a href="?page={{ concluidos_page.previous_page_number }}&q={{ filtro_busca }}&etapa={{ filtro_etapa }}">
+      ← Anterior
+    </a>
+  {% endif %}
+  {% for num in concluidos_page.paginator.page_range %}
+    {% if concluidos_page.number == num %}
+      <span class="current">{{ num }}</span>
+    {% elif num > concluidos_page.number|add:'-3' and num < concluidos_page.number|add:'3' %}
+      <a href="?page={{ num }}&q={{ filtro_busca }}&etapa={{ filtro_etapa }}">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if concluidos_page.has_next %}
+    <a href="?page={{ concluidos_page.next_page_number }}&q={{ filtro_busca }}&etapa={{ filtro_etapa }}">
+      Próxima →
+    </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}

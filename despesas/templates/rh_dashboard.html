@@ -1,0 +1,1070 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Gestão de RH · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --brown:        #945f34;
+  --brown-dark:   #7a4d2a;
+  --teal:         #239FAB;
+  --teal-dark:    #1a7a84;
+  --gold:         #c8922a;
+  --dark:         #1a202c;
+  --gray:         #4a5568;
+  --muted:        #718096;
+  --border:       #e2e8f0;
+  --bg:           #f4f6f9;
+  --card:         #ffffff;
+  --gradient:     linear-gradient(135deg, var(--brown) 0%, var(--teal) 100%);
+}
+
+/* ── HERO ── */
+.rh-hero {
+  margin-top: 10px;
+  background: var(--gradient);
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 16px 40px rgba(148,95,52,0.2);
+  flex-wrap: wrap;
+  position: relative;
+}
+.rh-hero::before {
+  content: ''; position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.05); border-radius: 50%; pointer-events: none;
+}
+.rh-hero::after {
+  content: ''; position: absolute;
+  bottom: -60px; left: 30%;
+  width: 250px; height: 250px;
+  background: rgba(255,255,255,0.04); border-radius: 50%; pointer-events: none;
+}
+.rh-hero__left { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.rh-hero__ico {
+  width: 68px; height: 68px; display: grid; place-items: center;
+  background: rgba(255,255,255,0.2); border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0;
+}
+.rh-hero__txt h2 { margin: 0; font-size: 1.9rem; line-height: 1.1; font-weight: 800; color: #fff; }
+.rh-hero__txt p  { margin: 7px 0 0; opacity: .85; font-size: .95rem; color: #fff; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 12px;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  margin-top: 10px; border: 1px solid rgba(255,255,255,0.2);
+}
+.rh-hero__kpis { display: flex; gap: 14px; flex-wrap: wrap; position: relative; z-index: 1; }
+.kpi-card {
+  background: rgba(255,255,255,0.97); border-radius: 18px; padding: 18px 22px;
+  min-width: 170px; text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--gradient); border-radius: 2px 2px 0 0;
+}
+.kpi-card.kpi--danger::before { background: linear-gradient(90deg,#c53030,#fc8181); }
+.kpi-card.kpi--green::before  { background: linear-gradient(90deg,#276749,#48bb78); }
+.kpi-card.kpi--total::before  { background: linear-gradient(90deg,#945f34,#d69e2e); }
+.kpi__value { font-size: 1.45rem; font-weight: 800; margin-bottom: 5px; color: var(--teal); font-variant-numeric: tabular-nums; }
+.kpi__label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; }
+.kpi__sub   { font-size: 0.7rem; color: #a0aec0; margin-top: 3px; }
+.kpi--danger .kpi__value { color: #c53030; }
+.kpi--green  .kpi__value { color: #276749; }
+.kpi--total  .kpi__value { color: var(--brown); }
+
+/* ── BANNER COLABORADORES ── */
+.colabs-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 22px; margin: 22px 0 0 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.colabs-banner .cb-ico {
+  width: 42px; height: 42px; background: var(--gradient);
+  border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+}
+.colabs-banner .cb-text strong { font-size: 1.3rem; color: var(--dark); font-weight: 800; }
+.colabs-banner .cb-text span   { font-size: 0.8rem; color: var(--muted); display: block; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 14px;
+}
+.toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.search-wrap  { position: relative; }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  padding: 10px 16px 10px 38px; border: 1.5px solid var(--border);
+  border-radius: 10px; width: 260px; background: #fff; font-size: .88rem; transition: .2s;
+}
+.search-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(35,159,171,.1); outline: none; }
+
+/* select de filtro — mesmo visual do toggle */
+.filter-select {
+  padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: #fff; font-size: .82rem;
+  color: var(--gray); cursor: pointer; transition: .18s;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 30px;
+}
+.filter-select:focus { border-color: var(--teal); outline: none; }
+
+.toggle-label {
+  display: flex; align-items: center; gap: 7px; font-size: .82rem; color: var(--gray);
+  background: #fff; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 9px 14px; cursor: pointer; transition: .18s; user-select: none;
+}
+.toggle-label:hover { border-color: var(--teal); color: var(--teal); }
+.toggle-label input { accent-color: var(--teal); width: 14px; height: 14px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border: none; border-radius: 10px;
+  font-size: .85rem; font-weight: 700; cursor: pointer; transition: .18s;
+}
+.btn-print { background: var(--teal); color: #fff; }
+.btn-print:hover { background: var(--teal-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(35,159,171,.3); }
+
+/* ── TABELA ── */
+.table-wrap {
+  background: #fff; border-radius: 16px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,.04); overflow: hidden;
+}
+.main-table { width: 100%; border-collapse: collapse; }
+.main-table thead tr { background: #f8fafc; }
+.main-table th {
+  padding: 13px 16px; text-align: left; font-size: .72rem;
+  text-transform: uppercase; font-weight: 700; color: var(--gray);
+  border-bottom: 2px solid var(--border); letter-spacing: .4px;
+}
+.main-table td { padding: 13px 16px; border-bottom: 1px solid #f1f5f9; font-size: .88rem; color: var(--dark); vertical-align: middle; }
+.main-table tbody tr:last-child td { border-bottom: none; }
+.main-table tbody tr:hover td { background: #fafbff; }
+.row-inativo { opacity: .5; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--gradient); color: #fff;
+  font-weight: 700; font-size: .78rem; display: inline-flex; align-items: center;
+  justify-content: center; margin-right: 10px; flex-shrink: 0;
+}
+.pill {
+  display: inline-flex; align-items: center; padding: 2px 9px;
+  border-radius: 20px; font-size: .7rem; font-weight: 700;
+}
+.pill-red   { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+.pill-green { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
+
+/* pills de local */
+.pill-nucleo   { background: #ebf8ff; color: #2b6cb0; border: 1px solid #90cdf4; }
+.pill-externo  { background: #faf5ff; color: #6b46c1; border: 1px solid #d6bcfa; }
+
+.mono { font-family: 'Courier New', monospace; font-weight: 600; }
+
+/* ── PAGINAÇÃO ── */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 22px 0 8px; }
+.page-link {
+  padding: 7px 14px; border-radius: 8px; font-size: .83rem; font-weight: 600;
+  border: 1.5px solid var(--border); color: var(--muted); text-decoration: none;
+  background: #fff; transition: .18s;
+}
+.page-link:hover, .page-link.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+/* ── MODAL ── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.48); z-index: 2000;
+  display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+}
+.modal-box {
+  background: #fff; width: 92%; max-width: 480px; border-radius: 20px; padding: 32px;
+  position: relative; box-shadow: 0 24px 50px rgba(0,0,0,.22);
+  border-top: 4px solid var(--brown); animation: slideUp .28s ease-out;
+  max-height: 90vh; overflow-y: auto;
+}
+@keyframes slideUp { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-close {
+  position: absolute; top: 14px; right: 14px; width: 30px; height: 30px;
+  background: #f1f5f9; border: none; border-radius: 50%; cursor: pointer;
+  font-size: 1rem; color: var(--muted); display: grid; place-items: center;
+}
+.modal-close:hover { background: #e2e8f0; }
+.form-field { margin-bottom: 18px; }
+.form-field label { display: block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); margin-bottom: 6px; }
+.form-field input,
+.form-field select {
+  width: 100%; padding: 11px 13px; border: 1.5px solid #cbd5e0;
+  border-radius: 9px; font-size: .97rem; box-sizing: border-box; transition: .18s;
+  background: #fff; color: var(--dark);
+}
+.form-field input:focus,
+.form-field select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(35,159,171,.1); outline: none; }
+.form-field small { display: block; margin-top: 4px; font-size: .69rem; color: #a0aec0; }
+.modal-divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 20px 0 16px; 
+}
+.modal-section-label {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--muted); margin-bottom: 14px;
+}
+
+/* ── SINCRONIZAÇÃO DE CONTRACHEQUES ── */
+.btn-sync { background: var(--brown); color: #fff; }
+.btn-sync:hover { background: var(--brown-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(148,95,52,.3); }
+
+.modal-box--wide { max-width: 700px; }
+
+.sync-dropzone {
+  border: 2px dashed var(--border); border-radius: 14px; padding: 26px 18px;
+  text-align: center; margin-top: 8px; cursor: pointer; transition: .18s; background: #fafbfc;
+}
+.sync-dropzone.dragover, .sync-dropzone:hover { border-color: var(--teal); background: #f0fbfc; }
+.sync-dropzone p { margin: 10px 0 4px; font-size: .85rem; color: var(--gray); }
+
+.sync-bar { width: 100%; height: 10px; background: #edf2f7; border-radius: 6px; overflow: hidden; }
+.sync-bar-fill { height: 100%; width: 0%; background: var(--gradient); border-radius: 6px; transition: width .25s ease; }
+
+.sync-badge { padding: 5px 12px; border-radius: 20px; font-size: .74rem; font-weight: 700; }
+.sync-badge--ok     { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
+.sync-badge--warn   { background: #fffbeb; color: #b7791f; border: 1px solid #fbd38d; }
+.sync-badge--danger { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+
+.sync-btn-sm {
+  padding: 6px 12px; font-size: .75rem; font-weight: 700; border-radius: 8px; cursor: pointer;
+}
+.sync-btn-confirm { border: none; background: var(--gradient); color: #fff; }
+.sync-btn-ignore  { border: 1.5px solid var(--border); background: #fff; color: var(--gray); margin-left: 6px; }
+
+/* ── IMPRESSÃO — esconde print-area na tela ── */
+#print-area {
+  position: absolute; left: -9999px; top: 0;
+  width: 1px; height: 1px; overflow: hidden; visibility: hidden;
+}
+
+@media print {
+  * { visibility: hidden !important; }
+  #print-area, #print-area * { visibility: visible !important; }
+
+  #print-area {
+    position: absolute !important; left: 0 !important; top: 0 !important;
+    width: 100% !important; height: auto !important; overflow: visible !important;
+    background: #fff !important; font-family: Arial, sans-serif !important;
+    font-size: 9px !important; color: #1a202c !important;
+    letter-spacing: 0 !important; word-spacing: 0 !important;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+    padding: 0 !important; margin: 0 !important;
+  }
+  #print-area * { letter-spacing: 0 !important; word-spacing: 0 !important; box-sizing: border-box !important; }
+
+  .pr-header {
+    display: flex !important; align-items: center !important;
+    justify-content: space-between !important;
+    padding: 16px 24px 14px !important; border-bottom: 2px solid #239FAB !important;
+  }
+  .pr-header-logo { display: flex !important; align-items: center !important; gap: 10px !important; }
+  .pr-header-logo .logo-box {
+    width: 42px !important; height: 42px !important; background: #945f34 !important;
+    border-radius: 8px !important; display: flex !important;
+    align-items: center !important; justify-content: center !important;
+    flex-shrink: 0 !important;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+  }
+  .pr-header-logo .logo-box span { color: #fff !important; font-weight: 900 !important; font-size: 11px !important; line-height: 1.15 !important; text-align: center !important; display: block !important; }
+  .pr-header-logo .logo-text strong { display: block !important; font-size: 14px !important; font-weight: 800 !important; color: #945f34 !important; }
+  .pr-header-logo .logo-text small  { font-size: 7.5px !important; color: #718096 !important; text-transform: uppercase !important; display: block !important; }
+  .pr-header-meta { text-align: right !important; }
+  .pr-header-meta .meta-title { font-size: 12px !important; font-weight: 700 !important; color: #1a202c !important; display: block !important; }
+  .pr-header-meta .meta-sub   { font-size: 7.5px !important; color: #718096 !important; margin-top: 3px !important; display: block !important; }
+
+  .pr-kpis {
+    display: flex !important; margin: 12px 24px !important;
+    border: 1px solid #e2e8f0 !important; border-radius: 8px !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+  }
+  .pr-kpi { flex: 1 !important; padding: 10px 8px !important; text-align: center !important; border-right: 1px solid #e2e8f0 !important; }
+  .pr-kpi:last-child { border-right: none !important; }
+  .pr-kpi .kv { font-size: 11px !important; font-weight: 800 !important; color: #239FAB !important; display: block !important; margin-bottom: 2px !important; }
+  .pr-kpi .kv.red   { color: #c53030 !important; }
+  .pr-kpi .kv.brown { color: #945f34 !important; }
+  .pr-kpi .kv.green { color: #276749 !important; }
+  .pr-kpi .kl { font-size: 6.5px !important; text-transform: uppercase !important; font-weight: 700 !important; color: #718096 !important; display: block !important; }
+
+  .pr-section-title {
+    display: block !important; font-size: 7.5px !important; font-weight: 700 !important;
+    text-transform: uppercase !important; color: #718096 !important;
+    padding: 10px 24px 8px !important; border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .pr-table {
+    width: calc(100% - 48px) !important; margin: 0 24px !important;
+    border-collapse: collapse !important; font-size: 8.5px !important;
+  }
+  .pr-table thead tr { background: #945f34 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .pr-table th { padding: 8px 10px !important; font-size: 7px !important; font-weight: 700 !important; text-transform: uppercase !important; color: #fff !important; border: none !important; text-align: left !important; white-space: nowrap !important; }
+  .pr-table th.r { text-align: right !important; }
+  .pr-table th.c { text-align: center !important; }
+  .pr-table td { padding: 7px 10px !important; border-bottom: 1px solid #f0f0f0 !important; color: #1a202c !important; font-size: 8.5px !important; vertical-align: middle !important; text-align: left !important; }
+  .pr-table td.r { text-align: right !important; font-family: 'Courier New', monospace !important; white-space: nowrap !important; }
+  .pr-table td.c { text-align: center !important; }
+  .pr-table tbody tr:nth-child(even) td { background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .pr-table tfoot .tr-total td { background: #239FAB !important; color: #fff !important; font-weight: 700 !important; font-size: 8.5px !important; border-top: 2px solid #1a7a84 !important; padding: 8px 10px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .pr-table tfoot .tr-total td.r { font-family: 'Courier New', monospace !important; text-align: right !important; white-space: nowrap !important; }
+  .pr-table tr { page-break-inside: avoid !important; }
+
+  .pr-pill-red   { color: #c53030 !important; font-weight: 700 !important; }
+  .pr-pill-green { color: #276749 !important; font-weight: 700 !important; }
+  .pr-inactive td { opacity: .5 !important; }
+
+  .pr-footer {
+    display: flex !important; align-items: center !important; justify-content: space-between !important;
+    padding: 10px 24px !important; margin-top: 16px !important; border-top: 1px solid #e2e8f0 !important;
+  }
+  .pr-footer span { font-size: 7px !important; color: #a0aec0 !important; }
+  .pr-footer strong { color: #945f34 !important; }
+}
+</style>
+
+
+<!-- ── HERO ── -->
+<section class="rh-hero no-print">
+  <div class="rh-hero__left">
+    <div class="rh-hero__ico">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <div class="rh-hero__txt">
+      <h2>Gestão de RH</h2>
+      <p>Competência: {% now "F Y" %} · Salvador / BA</p>
+      <span class="hero-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+        Atualizado automaticamente
+      </span>
+    </div>
+  </div>
+
+  <div class="rh-hero__kpis">
+    <div class="kpi-card">
+      <div class="kpi__value">R$ {{ total_bruto|floatformat:2|intcomma }}</div>
+      <div class="kpi__label">Folha Bruta</div>
+      <div class="kpi__sub">Total salários</div>
+    </div>
+    <div class="kpi-card kpi--danger">
+      <div class="kpi__value">R$ {{ total_irrf|floatformat:2|intcomma }}</div>
+      <div class="kpi__label">IRRF Retido</div>
+      <div class="kpi__sub">Tabela 2026</div>
+    </div>
+    {% if exibir_fgts %}
+    <div class="kpi-card kpi--green">
+      <div class="kpi__value">R$ {{ total_fgts|floatformat:2|intcomma }}</div>
+      <div class="kpi__label">FGTS (8%)</div>
+      <div class="kpi__sub">Custo empresa</div>
+    </div>
+    <div class="kpi-card kpi--total">
+      <div class="kpi__value">R$ {{ custo_total|floatformat:2|intcomma }}</div>
+      <div class="kpi__label">Custo Empresa</div>
+      <div class="kpi__sub">Bruto + FGTS</div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ── BANNER COLABORADORES ── -->
+<div class="colabs-banner no-print">
+  <div class="cb-ico">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  </div>
+  <div class="cb-text">
+    <strong>{{ page_obj.paginator.count }} colaborador{{ page_obj.paginator.count|pluralize:"es" }}</strong>
+    <span>
+      {% if ver_inativos %}Ativos e inativos{% else %}Apenas ativos{% endif %}
+      {% if filtro_cargo %} · {{ filtro_cargo }}{% endif %}
+      {% if filtro_local %} · {{ filtro_local|title }}{% endif %}
+      {% if q %} · "{{ q }}"{% endif %}
+    </span>
+  </div>
+</div>
+
+<!-- ── TOOLBAR ── -->
+<div class="toolbar no-print" style="margin-top:20px">
+  <form method="GET" id="rh-form" style='margin-bottom: 10px;'  class="toolbar-left">
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" name="q" class="search-input" placeholder="Buscar colaborador ou CPF…" value="{{ q }}">
+    </div>
+
+    <!-- Filtro por cargo -->
+    <select name="filtro_cargo" class="filter-select" onchange="this.form.submit()">
+      <option value="">Todos os cargos</option>
+      {% for cargo in cargos_disponiveis %}
+        <option value="{{ cargo }}" {% if filtro_cargo == cargo %}selected{% endif %}>{{ cargo }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Filtro por local -->
+    <select name="filtro_local" class="filter-select" onchange="this.form.submit()">
+      <option value="">Todos os locais</option>
+      <option value="nucleo"   {% if filtro_local == 'nucleo'   %}selected{% endif %}>Núcleo</option>
+      <option value="externo"  {% if filtro_local == 'externo'  %}selected{% endif %}>Externo</option>
+    </select>
+
+    <label class="toggle-label">
+      <input type="checkbox" name="ver_fgts" onchange="this.form.submit()" {% if exibir_fgts %}checked{% endif %}>
+      FGTS
+    </label>
+  </form>
+
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-sync" onclick="abrirModalSync()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>
+      </svg>
+      Sincronizar Contracheques
+    </button>
+    <button class="btn btn-print" onclick="imprimirRelatorio()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9V2h12v7"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Imprimir Relatório
+    </button>
+  </div>
+</div>
+
+<!-- ── TABELA DA TELA ── -->
+<div class="table-wrap no-print">
+  <table class="main-table">
+    <thead>
+      <tr>
+        <th>Colaborador / CPF</th>
+        <th>Cargo / Local</th>
+        <th style="text-align:right">Salário Bruto</th>
+        <th style="text-align:right">INSS (11%)</th>
+        <th style="text-align:center">IRRF</th>
+        {% if exibir_fgts %}<th style="text-align:right">FGTS (8%)</th>{% endif %}
+        <th style="text-align:right">Líquido</th>
+        <th style="text-align:center">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in page_obj %}
+      <tr class="{% if not p.ativo %}row-inativo{% endif %}">
+        <td>
+          <div style="display:flex;align-items:center">
+            <div class="avatar">{{ p.user.get_full_name|first|upper }}</div>
+            <div>
+              <strong>{{ p.user.get_full_name }}</strong><br>
+              <small style="color:var(--muted);font-size:.77rem">{{ p.cpf|default:"—" }}</small>
+            </div>
+          </div>
+        </td>
+        <td>
+          {% if p.cargo %}
+            <span style="display:block;font-size:.82rem;font-weight:600;color:var(--dark)">{{ p.cargo }}</span>
+          {% else %}
+            <span style="color:var(--muted);font-size:.8rem">—</span>
+          {% endif %}
+          {% if p.local_trabalho == 'nucleo' %}
+            <span class="pill pill-nucleo" style="margin-top:3px">Núcleo</span>
+          {% elif p.local_trabalho == 'externo' %}
+            <span class="pill pill-externo" style="margin-top:3px">Externo</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right" class="mono">R$ {{ p.salario_base|floatformat:2|intcomma }}</td>
+        <td style="text-align:right;color:#744210" class="mono">- R$ {{ p.inss_estimado|floatformat:2|intcomma }}</td>
+        <td style="text-align:center">
+          {% if p.irrf_estimado > 0 %}
+            <span class="pill pill-red">- R$ {{ p.irrf_estimado|floatformat:2|intcomma }}</span>
+          {% else %}
+            <span class="pill pill-green">Isento</span>
+          {% endif %}
+        </td>
+        {% if exibir_fgts %}
+        <td style="text-align:right;color:#276749" class="mono">R$ {{ p.custo_fgts|floatformat:2|intcomma }}</td>
+        {% endif %}
+        <td style="text-align:right;font-weight:800" class="mono">R$ {{ p.salario_liquido|floatformat:2|intcomma }}</td>
+        <td style="text-align:center">
+          <button onclick="openModal('{{ p.id }}','{{ p.user.get_full_name }}','{{ p.salario_base }}','{{ p.irrf_manual|default:'' }}','{{ p.cargo|default:'' }}','{{ p.local_trabalho|default:'' }}')"
+                  style="background:#f8fafc;border:1.5px solid var(--border);padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--brown);font-weight:700;font-size:.78rem">
+            Ajustar
+          </button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Nenhum colaborador encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination no-print">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&ver_fgts={{ request.GET.ver_fgts }}&filtro_cargo={{ filtro_cargo }}&filtro_local={{ filtro_local }}" class="page-link">&laquo;</a>
+  {% endif %}
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="page-link active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?page={{ num }}&q={{ q }}&ver_fgts={{ request.GET.ver_fgts }}&filtro_cargo={{ filtro_cargo }}&filtro_local={{ filtro_local }}" class="page-link">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&ver_fgts={{ request.GET.ver_fgts }}&filtro_cargo={{ filtro_cargo }}&filtro_local={{ filtro_local }}" class="page-link">&raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+
+<!-- ── ÁREA DE IMPRESSÃO ── -->
+<div id="print-area">
+  <div class="pr-header">
+    <div class="pr-header-logo">
+      <img src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" height="34">
+    </div>
+    <div class="pr-header-meta">
+      <div class="meta-title">Relatório de Folha de Pagamento</div>
+      <div class="meta-sub">Competência: {% now "F Y" %} &nbsp;·&nbsp; Salvador / BA &nbsp;·&nbsp; Gerado em: {% now "d/m/Y \à\s H:i" %}</div>
+    </div>
+  </div>
+
+  <div class="pr-kpis">
+    <div class="pr-kpi">
+      <span class="kv">{{ total_colaboradores }}</span>
+      <span class="kl">Colaboradores</span>
+    </div>
+    <div class="pr-kpi">
+      <span class="kv">R$ {{ total_bruto|floatformat:2|intcomma }}</span>
+      <span class="kl">Folha Bruta</span>
+    </div>
+    <div class="pr-kpi">
+      <span class="kv">R$ {{ total_inss|floatformat:2|intcomma }}</span>
+      <span class="kl">INSS Total</span>
+    </div>
+    <div class="pr-kpi">
+      <span class="kv red">R$ {{ total_irrf|floatformat:2|intcomma }}</span>
+      <span class="kl">IRRF Retido</span>
+    </div>
+    {% if exibir_fgts %}
+    <div class="pr-kpi">
+      <span class="kv green">R$ {{ total_fgts|floatformat:2|intcomma }}</span>
+      <span class="kl">FGTS (8%)</span>
+    </div>
+    {% endif %}
+    <div class="pr-kpi">
+      <span class="kv brown">R$ {{ custo_total|floatformat:2|intcomma }}</span>
+      <span class="kl">Custo Total</span>
+    </div>
+  </div>
+
+  <div class="pr-section-title" style="padding:12px 24px 8px">
+    Detalhamento por Colaborador
+    {% if filtro_cargo %} · {{ filtro_cargo }}{% endif %}
+    {% if filtro_local %} · {{ filtro_local|title }}{% endif %}
+  </div>
+
+  <table class="pr-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Colaborador</th>
+        <th>CPF</th>
+        <th>Cargo</th>
+        <th>Local</th>
+        <th class="r">Salário Bruto</th>
+        <th class="r">INSS (11%)</th>
+        <th>IRRF</th>
+        {% if exibir_fgts %}<th class="r">FGTS (8%)</th>{% endif %}
+        <th class="r">Salário Líquido</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in todos_perfis %}
+      <tr class="{% if not p.ativo %}pr-inactive{% endif %}">
+        <td class="c" style="color:#718096;font-size:8px">{{ forloop.counter }}</td>
+        <td>
+          <strong>{{ p.user.get_full_name }}</strong>
+          {% if not p.ativo %}&nbsp;<span style="font-size:7px;color:#c53030;font-weight:700">(Inativo)</span>{% endif %}
+        </td>
+        <td style="color:#718096;font-size:8px;font-family:'Courier New',monospace">{{ p.cpf|default:"—" }}</td>
+        <td style="color:#4a5568;font-size:8px">{{ p.cargo|default:"—" }}</td>
+        <td style="font-size:8px">
+          {% if p.local_trabalho == 'nucleo' %}
+            <span class="pr-pill-green">Núcleo</span>
+          {% elif p.local_trabalho == 'externo' %}
+            <span style="color:#6b46c1;font-weight:700">Externo</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="r">R$ {{ p.salario_base|floatformat:2|intcomma }}</td>
+        <td class="r" style="color:#744210">- R$ {{ p.inss_estimado|floatformat:2|intcomma }}</td>
+        <td class="c">
+          {% if p.irrf_estimado > 0 %}
+            <span class="pr-pill-red">- R$ {{ p.irrf_estimado|floatformat:2|intcomma }}</span>
+          {% else %}
+            <span class="pr-pill-green">Isento</span>
+          {% endif %}
+        </td>
+        {% if exibir_fgts %}
+        <td class="r" style="color:#276749">R$ {{ p.custo_fgts|floatformat:2|intcomma }}</td>
+        {% endif %}
+        <td class="r" style="font-weight:800">R$ {{ p.salario_liquido|floatformat:2|intcomma }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="pr-footer">
+    <span><strong>CONMAC</strong> · Documento gerado automaticamente · Uso interno</span>
+    <span>Tabela IRRF 2026 · {% now "d/m/Y" %}</span>
+  </div>
+</div>
+
+
+<!-- ── MODAL DE AJUSTE ── -->
+<div id="modal" class="modal-backdrop no-print">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h3 style="margin:0 0 4px;color:var(--brown);font-size:1.05rem">Ajuste de Proventos</h3>
+    <p id="m-nome" style="color:var(--muted);font-size:.83rem;margin:0 0 20px;padding-bottom:14px;border-bottom:1px solid var(--border)"></p>
+
+    <form method="POST" action="{% url 'rh_atualizar_dados' %}">
+      {% csrf_token %}
+      <input type="hidden" name="perfil_id" id="m-id">
+
+      <!-- Salário e IRRF -->
+      <div class="form-field">
+        <label>Salário Bruto Base (R$)</label>
+        <input type="number" step="0.01" name="novo_salario" id="m-sal" required placeholder="0,00">
+      </div>
+      <div class="form-field">
+        <label>IRPF Retido Manual (R$)</label>
+        <input type="number" step="0.01" name="novo_irrf" id="m-irrf" placeholder="Vazio = cálculo automático">
+        <small>Ao preencher, o cálculo automático da tabela 2026 será ignorado.</small>
+      </div>
+
+      <hr class="modal-divider">
+      <div class="modal-section-label">Informações do colaborador</div>
+
+      <!-- Cargo -->
+      <div class="form-field">
+        <label>Cargo</label>
+        <input type="text" name="novo_cargo" id="m-cargo" placeholder="Ex: Analista, Coordenador…">
+      </div>
+
+      <!-- Local de trabalho -->
+      <div class="form-field">
+        <label>Local de Trabalho</label>
+        <select name="novo_local" id="m-local">
+          <option value="">— Não informado —</option>
+          <option value="nucleo">Núcleo</option>
+          <option value="externo">Externo</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+        <button type="button" onclick="closeModal()" style="padding:10px 18px;border:1.5px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;font-weight:600;color:var(--gray)">Cancelar</button>
+        <button type="submit" style="padding:10px 22px;border:none;background:var(--gradient);color:#fff;border-radius:9px;cursor:pointer;font-weight:700">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ── MODAL DE SINCRONIZAÇÃO DE CONTRACHEQUES ── -->
+<div id="modal-sync" class="modal-backdrop no-print">
+  <div class="modal-box modal-box--wide">
+    <button class="modal-close" onclick="fecharModalSync()">×</button>
+    <h3 style="margin:0 0 4px;color:var(--brown);font-size:1.05rem">Sincronizar Contracheques</h3>
+    <p style="color:var(--muted);font-size:.83rem;margin:0 0 20px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      Envie o PDF da folha de pagamento do mês — cada colaborador é identificado automaticamente por OCR.
+    </p>
+
+    <!-- Passo 1 — upload -->
+    <div id="sync-step-upload">
+      <div class="form-field" style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1">
+          <label>Mês de referência</label>
+          <select id="sync-mes" class="filter-select" style="width:100%">
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <small>Usado só se o OCR não conseguir ler a competência na página.</small>
+        </div>
+        <div style="width:110px">
+          <label>Ano</label>
+          <input type="number" id="sync-ano" class="search-input" style="width:100%">
+        </div>
+      </div>
+
+      <div id="sync-dropzone" class="sync-dropzone" onclick="document.getElementById('sync-arquivo').click()">
+        <input type="file" id="sync-arquivo" accept="application/pdf" style="display:none">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#239FAB" stroke-width="1.8" style="margin:0 auto">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Arraste o PDF da folha aqui ou <strong style="color:var(--teal)">clique para selecionar</strong></p>
+        <span id="sync-nome-arquivo" style="font-size:.78rem;color:var(--gray);font-weight:600"></span>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+        <button type="button" onclick="fecharModalSync()" style="padding:10px 18px;border:1.5px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;font-weight:600;color:var(--gray)">Cancelar</button>
+        <button type="button" id="sync-btn-iniciar" disabled onclick="iniciarSincronizacao()" style="padding:10px 22px;border:none;background:var(--gradient);color:#fff;border-radius:9px;cursor:pointer;font-weight:700;opacity:.5">
+          Iniciar Sincronização
+        </button>
+      </div>
+    </div>
+
+    <!-- Passo 2 — progresso -->
+    <div id="sync-step-progresso" style="display:none">
+      <p id="sync-progresso-label" style="font-size:.88rem;color:var(--gray);margin-bottom:14px">Enviando arquivo…</p>
+      <div class="sync-bar"><div id="sync-bar-fill" class="sync-bar-fill"></div></div>
+      <p style="font-size:.74rem;color:var(--muted);margin-top:10px">
+        O processamento roda em segundo plano no servidor — você pode deixar essa janela aberta
+        acompanhando o progresso, ou fechar e conferir depois; nada é perdido.
+      </p>
+      <div id="sync-erro-box" style="display:none;margin-top:16px;padding:14px 16px;background:#fff5f5;border:1px solid #feb2b2;border-radius:10px">
+        <p id="sync-erro-msg" style="font-size:.82rem;color:#c53030;margin:0 0 10px;font-weight:600"></p>
+        <button type="button" onclick="verificarStatus()" style="padding:8px 16px;border:none;background:#c53030;color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-size:.8rem">
+          Tentar novamente
+        </button>
+      </div>
+    </div>
+
+    <!-- Passo 3 — revisão / confirmação -->
+    <div id="sync-step-revisao" style="display:none">
+      <div id="sync-resumo" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap"></div>
+      <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:12px">
+        <table class="main-table" style="font-size:.82rem">
+          <thead>
+            <tr>
+              <th>Extraído do PDF</th>
+              <th>Colaborador</th>
+              <th style="text-align:center">Confiança</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sync-tabela-corpo"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:18px">
+        <button type="button" onclick="finalizarSincronizacao()" style="padding:10px 22px;border:none;background:var(--gradient);color:#fff;border-radius:9px;cursor:pointer;font-weight:700">
+          Concluir
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+function openModal(id, nome, salario, irrf, cargo, local) {
+  document.getElementById('m-id').value    = id;
+  document.getElementById('m-nome').textContent = 'Colaborador: ' + nome;
+  document.getElementById('m-sal').value   = salario.replace(',', '.');
+  document.getElementById('m-irrf').value  = irrf  ? irrf.replace(',', '.')  : '';
+  document.getElementById('m-cargo').value = cargo || '';
+  document.getElementById('m-local').value = local || '';
+  document.getElementById('modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+window.addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function imprimirRelatorio() { window.print(); }
+
+// ═══════════════════════════════════════════════════════════════
+// SINCRONIZAÇÃO DE CONTRACHEQUES
+// ═══════════════════════════════════════════════════════════════
+// A view web só ENFILEIRA o lote e CONSULTA o progresso — quem processa
+// de verdade (OCR) é o worker em background (Always-on Task), que roda
+// fora do sandbox do web app. Por isso aqui é só um polling simples de
+// status, sem "chunks" nem lógica de reprocessamento manual.
+const CSRF_TOKEN = '{{ csrf_token }}';
+let syncState = { loteId: null, total: 0, processadas: 0, timer: null, semAvancoDesde: null };
+
+// truques para montar URLs com <int:...> na rota a partir do template —
+// troca o "1" fixo pelo id real em runtime.
+function urlStatus(loteId) {
+  return "{% url 'rh_contracheque_status' lote_id=1 %}".replace('/1/', '/' + loteId + '/');
+}
+function urlPendencias(loteId) {
+  return "{% url 'rh_contracheque_pendencias' lote_id=1 %}".replace('/1/', '/' + loteId + '/');
+}
+
+function abrirModalSync() {
+  const hoje = new Date();
+  document.getElementById('sync-mes').value = hoje.getMonth() + 1;
+  document.getElementById('sync-ano').value = hoje.getFullYear();
+  document.getElementById('modal-sync').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  resetModalSync();
+}
+function fecharModalSync() {
+  document.getElementById('modal-sync').style.display = 'none';
+  document.body.style.overflow = '';
+  if (syncState.timer) clearTimeout(syncState.timer);
+}
+function resetModalSync() {
+  if (syncState.timer) clearTimeout(syncState.timer);
+  syncState = { loteId: null, total: 0, processadas: 0, timer: null, semAvancoDesde: null };
+  document.getElementById('sync-step-upload').style.display = 'block';
+  document.getElementById('sync-step-progresso').style.display = 'none';
+  document.getElementById('sync-step-revisao').style.display = 'none';
+  document.getElementById('sync-arquivo').value = '';
+  document.getElementById('sync-nome-arquivo').textContent = '';
+  document.getElementById('sync-btn-iniciar').disabled = true;
+  document.getElementById('sync-btn-iniciar').style.opacity = '.5';
+  document.getElementById('sync-bar-fill').style.width = '0%';
+}
+
+document.getElementById('sync-arquivo').addEventListener('change', function () {
+  const f = this.files[0];
+  document.getElementById('sync-nome-arquivo').textContent = f ? f.name : '';
+  document.getElementById('sync-btn-iniciar').disabled = !f;
+  document.getElementById('sync-btn-iniciar').style.opacity = f ? '1' : '.5';
+});
+
+const syncDropzone = document.getElementById('sync-dropzone');
+['dragenter', 'dragover'].forEach(evt => syncDropzone.addEventListener(evt, e => {
+  e.preventDefault(); e.stopPropagation(); syncDropzone.classList.add('dragover');
+}));
+['dragleave', 'drop'].forEach(evt => syncDropzone.addEventListener(evt, e => {
+  e.preventDefault(); e.stopPropagation(); syncDropzone.classList.remove('dragover');
+}));
+syncDropzone.addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    document.getElementById('sync-arquivo').files = e.dataTransfer.files;
+    document.getElementById('sync-nome-arquivo').textContent = f.name;
+    document.getElementById('sync-btn-iniciar').disabled = false;
+    document.getElementById('sync-btn-iniciar').style.opacity = '1';
+  }
+});
+
+const SYNC_TIMEOUT_MS = 20000;      // timeout por requisição individual (upload/status são leves e rápidos)
+const SYNC_INTERVALO_POLL_MS = 1500; // intervalo entre consultas de status
+const SYNC_AVISO_PARADO_MS = 90000;  // se não avançar nenhuma página nesse tempo, avisa que o worker pode estar parado
+
+function fetchComTimeout(url, options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+function mostrarErroProgresso(mensagem) {
+  document.getElementById('sync-erro-msg').textContent = mensagem;
+  document.getElementById('sync-erro-box').style.display = 'block';
+}
+function ocultarErroProgresso() {
+  document.getElementById('sync-erro-box').style.display = 'none';
+}
+
+function iniciarSincronizacao() {
+  const arquivo = document.getElementById('sync-arquivo').files[0];
+  if (!arquivo) return;
+
+  const fd = new FormData();
+  fd.append('arquivo_pdf', arquivo);
+  fd.append('mes', document.getElementById('sync-mes').value);
+  fd.append('ano', document.getElementById('sync-ano').value);
+  fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
+  document.getElementById('sync-step-upload').style.display = 'none';
+  document.getElementById('sync-step-progresso').style.display = 'block';
+  document.getElementById('sync-progresso-label').textContent = 'Enviando arquivo…';
+  ocultarErroProgresso();
+
+  fetchComTimeout("{% url 'rh_contracheque_upload' %}", { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.erro) { alert(data.erro); resetModalSync(); return; }
+      syncState.loteId = data.lote_id;
+      syncState.total = data.total_paginas;
+      syncState.semAvancoDesde = Date.now();
+      document.getElementById('sync-progresso-label').textContent =
+        `Arquivo enviado — aguardando o processamento em segundo plano (0 de ${syncState.total})…`;
+      verificarStatus();
+    })
+    .catch(err => {
+      const motivo = err.name === 'AbortError'
+        ? 'O envio demorou demais e foi cancelado (tempo esgotado).'
+        : 'Falha ao enviar o arquivo. Verifique sua conexão.';
+      mostrarErroProgresso(motivo);
+    });
+}
+
+function verificarStatus() {
+  ocultarErroProgresso();
+  fetchComTimeout(urlStatus(syncState.loteId), { method: 'GET' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.processadas > syncState.processadas) {
+        syncState.processadas = data.processadas;
+        syncState.semAvancoDesde = Date.now();
+      }
+
+      document.getElementById('sync-bar-fill').style.width = data.progresso_pct + '%';
+      document.getElementById('sync-progresso-label').textContent =
+        `Processando em segundo plano — página ${data.processadas} de ${data.total}…`;
+
+      if (data.status === 'ERRO') {
+        mostrarErroProgresso(
+          `O processamento em segundo plano encontrou um erro: ${data.erro || 'falha desconhecida'}.`
+        );
+        return;
+      }
+
+      if (data.concluido) {
+        carregarRevisao();
+        return;
+      }
+
+      // se faz tempo que nenhuma página nova foi processada, avisa que o
+      // worker em background pode não estar rodando (Always-on Task
+      // parada, ou Scheduled Task ainda não disparou)
+      if (Date.now() - syncState.semAvancoDesde > SYNC_AVISO_PARADO_MS) {
+        mostrarErroProgresso(
+          'Nenhuma página nova foi processada nos últimos 90s. Verifique se o worker em segundo plano ' +
+          '(Always-on Task "processar_lotes_contracheque") está rodando. O processamento continua de ' +
+          'onde parou assim que o worker voltar — não precisa reenviar o arquivo.'
+        );
+      }
+
+      syncState.timer = setTimeout(verificarStatus, SYNC_INTERVALO_POLL_MS);
+    })
+    .catch(err => {
+      const motivo = err.name === 'AbortError'
+        ? 'A consulta de status demorou demais (tempo esgotado).'
+        : 'Falha de comunicação ao consultar o progresso.';
+      mostrarErroProgresso(motivo + ' Clique em "Tentar novamente".');
+    });
+}
+
+function carregarRevisao() {
+  document.getElementById('sync-step-progresso').style.display = 'none';
+  document.getElementById('sync-step-revisao').style.display = 'block';
+
+  fetch(urlPendencias(syncState.loteId))
+    .then(r => r.json())
+    .then(renderRevisao)
+    .catch(() => alert('Falha ao carregar itens para revisão.'));
+}
+
+
+function renderRevisao(data) {
+  document.getElementById('sync-resumo').innerHTML = `
+    <span class="sync-badge sync-badge--ok">${data.resumo.confirmados} confirmados automaticamente</span>
+    <span class="sync-badge sync-badge--warn">${data.resumo.pendentes} para revisar</span>
+    <span class="sync-badge sync-badge--danger">${data.resumo.sem_correspondencia} sem correspondência</span>
+  `;
+
+  const corpo = document.getElementById('sync-tabela-corpo');
+  corpo.innerHTML = '';
+
+  if (data.itens.length === 0) {
+    corpo.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:26px;color:var(--muted)">Tudo confirmado automaticamente. 🎉</td></tr>';
+    return;
+  }
+
+  data.itens.forEach(item => {
+    const opcoes = data.perfis.map(p =>
+      `<option value="${p.id}" ${p.id === item.perfil_sugerido_id ? 'selected' : ''}>${p.nome}</option>`
+    ).join('');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <strong>${item.nome_extraido || '—'}</strong><br>
+        <small style="color:var(--muted)">${item.cargo_extraido || ''} · ${item.competencia}</small>
+      </td>
+      <td>
+        <select class="filter-select" style="width:100%" id="sel-${item.id}">
+          <option value="">— selecionar colaborador —</option>
+          ${opcoes}
+        </select>
+      </td>
+      <td style="text-align:center">${item.score_match ? item.score_match + '%' : '—'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="sync-btn-sm sync-btn-confirm" onclick="confirmarPendencia(${item.id})">Confirmar</button>
+        <button class="sync-btn-sm sync-btn-ignore" onclick="ignorarPendencia(${item.id})">Ignorar</button>
+      </td>
+    `;
+    corpo.appendChild(tr);
+  });
+}
+
+function confirmarPendencia(itemId, forcar) {
+  const select = document.getElementById(`sel-${itemId}`);
+  const perfilId = select ? select.value : null;
+  if (!perfilId) { alert('Selecione um colaborador antes de confirmar.'); return; }
+
+  const fd = new FormData();
+  fd.append('contracheque_id', itemId);
+  fd.append('perfil_id', perfilId);
+  if (forcar) fd.append('force', '1');
+  fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
+  fetch("{% url 'rh_contracheque_confirmar' %}", { method: 'POST', body: fd })
+    .then(r => r.json().then(data => ({ status: r.status, data })))
+    .then(({ status, data }) => {
+      if (status === 409) {
+        if (confirm(data.mensagem)) confirmarPendencia(itemId, true);
+        return;
+      }
+      if (data.ok) carregarRevisao();
+    })
+    .catch(() => alert('Falha ao confirmar.'));
+}
+
+function ignorarPendencia(itemId) {
+  if (!confirm('Marcar este item como sem correspondência?')) return;
+  const fd = new FormData();
+  fd.append('contracheque_id', itemId);
+  fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
+  fetch("{% url 'rh_contracheque_ignorar' %}", { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => { if (data.ok) carregarRevisao(); })
+    .catch(() => alert('Falha ao ignorar.'));
+}
+
+function finalizarSincronizacao() {
+  fecharModalSync();
+  location.reload();
+}
+
+window.addEventListener('click', e => { if (e.target === document.getElementById('modal-sync')) fecharModalSync(); });
+</script>
+
+{% endblock %}

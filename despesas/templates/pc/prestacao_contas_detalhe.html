@@ -1,0 +1,1654 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}PC · {{ pc }} · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --pc-blue:#3b82f6;--pc-yellow:#f59e0b;--pc-purple:#8b5cf6;
+  --pc-cyan:#06b6d4;--pc-green:#10b981;--pc-red:#ef4444;
+  --bg:#f4f6f9;--card:#fff;--border:#e2e8f0;
+  --dark:#1a202c;--muted:#718096;
+  --gradient:linear-gradient(135deg,#1e3a5f 0%,#0e7490 100%);
+}
+
+/* ── HEADER ── */
+.pc-header{background:var(--gradient);border-radius:20px;color:#fff;padding:22px 28px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+.pc-header__left{display:flex;align-items:center;gap:14px;}
+.pc-brasao{width:60px;height:60px;border-radius:12px;overflow:hidden;
+  background:rgba(255,255,255,.2);display:grid;place-items:center;flex-shrink:0;}
+.pc-brasao img{width:100%;height:100%;object-fit:cover;}
+.pc-header__title h2{margin:0;font-size:1.45rem;font-weight:800;color:#fff;}
+.pc-header__title p{margin:4px 0 0;opacity:.85;font-size:.86rem;}
+.pc-header__right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+
+/* ── BOTÃO SPLIT ── */
+.btn-split{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;
+  border-radius:20px;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);
+  color:rgba(255,255,255,.9);font-size:.73rem;font-weight:700;cursor:pointer;transition:.18s;white-space:nowrap;}
+.btn-split:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.7);}
+.btn-split.active{background:#fff;color:#0e7490;}
+
+/* ── STEPPER ── */
+.stepper{display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  margin-bottom:18px;background:#fff;border-radius:14px;
+  border:1px solid var(--border);padding:10px 16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.step{display:flex;align-items:center;gap:6px;font-size:.72rem;
+  font-weight:700;text-transform:uppercase;padding:5px 10px;border-radius:20px;color:#94a3b8;}
+.step::after{content:'→';margin:0 2px;color:#cbd5e0;font-size:.88rem;}
+.step:last-child::after{display:none;}
+.step .dot{width:9px;height:9px;border-radius:50%;background:#e2e8f0;flex-shrink:0;}
+.step.done{color:#10b981;}.step.done .dot{background:#10b981;}.step.done::after{color:#10b981;}
+.step.active{background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;}
+.step.active .dot{background:#22c55e;animation:pulse 1.4s infinite;}
+.step.pending{color:#cbd5e0;}.step.pending .dot{background:#e2e8f0;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.85);}}
+
+/* ── LAYOUT NORMAL ── */
+.pc-layout{display:grid;grid-template-columns:1fr 340px;gap:18px;}
+@media(max-width:900px){.pc-layout{grid-template-columns:1fr;}}
+.pc-main{display:flex;flex-direction:column;gap:14px;}
+.pc-side{display:flex;flex-direction:column;gap:14px;}
+
+/* ── LAYOUT SPLIT ── */
+#splitWrapper{display:none;}
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:calc(100vh - 220px);min-height:480px;}
+.split-pdf,.split-itens{background:#fff;border-radius:16px;border:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;}
+.split-pdf iframe{flex:1;width:100%;border:none;}
+.split-itens__scroll{flex:1;overflow-y:auto;padding:12px 14px;}
+.split-panel-head{padding:10px 14px;font-weight:700;font-size:.82rem;color:var(--dark);
+  border-bottom:1px solid var(--border);background:#f8fafc;flex-shrink:0;}
+.split-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;}
+.split-panel{background:#fff;border-radius:14px;border:1px solid var(--border);
+  max-height:240px;overflow-y:auto;}
+.split-panel__body{padding:10px 14px;}
+
+/* ── SEÇÕES ── */
+.pc-section{background:var(--card);border-radius:16px;border:1px solid var(--border);overflow:hidden;}
+.pc-section__head{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 18px;border-bottom:1px solid var(--border);background:#f8fafc;cursor:pointer;}
+.pc-section__head h4{margin:0;font-size:.9rem;font-weight:700;color:var(--dark);display:flex;align-items:center;gap:6px;}
+.pc-section__body{padding:14px 18px;}
+.pdf-frame{width:100%;height:600px;border:1px solid var(--border);border-radius:10px;background:#f4f6f9;}
+
+/* ── ITENS ── */
+.item-row{display:flex;align-items:flex-start;gap:8px;padding:8px 11px;border-radius:10px;
+  border:1px solid var(--border);margin-bottom:6px;transition:all .15s;background:#fff;}
+.item-row:hover{background:#f8fafc;}
+.item-row.st-INCONSISTENTE{border-color:#fca5a5;background:#fff5f5;}
+.item-row.st-OK_ANALISE{border-color:#86efac;background:#f0fdf4;}
+.item-row.st-CONFIRMADO_SIGA{border-color:#6ee7b7;background:#d1fae5;}
+.item-row.st-DEVOLVIDO{border-color:#fdba74;background:#fff7ed;}
+.item-row__num{font-size:.7rem;font-weight:700;color:var(--muted);min-width:32px;padding-top:2px;flex-shrink:0;}
+.item-row__level-1{font-weight:700;}
+.item-row__level-2{padding-left:14px;}
+.item-row__level-3{padding-left:26px;}
+.item-row__level-4{padding-left:38px;font-size:.8rem;}
+
+/* ── BADGES ── */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;
+  font-size:.65rem;font-weight:700;text-transform:uppercase;white-space:nowrap;}
+.sb-PENDENTE{background:#f1f5f9;color:#64748b;}
+.sb-INCONSISTENTE{background:#fef2f2;color:#dc2626;}
+.sb-OK_ANALISE{background:#f0fdf4;color:#16a34a;}
+.sb-CONFIRMADO_SIGA{background:#d1fae5;color:#065f46;}
+.sb-DEVOLVIDO{background:#fff7ed;color:#c2410c;}
+
+/* ── ANOTAÇÕES ── */
+.anotacao-thread{margin-top:7px;padding-left:12px;border-left:2px solid var(--border);display:none;}
+.anotacao-thread.open{display:block;}
+.anotacao-item{display:flex;gap:7px;margin-bottom:5px;padding:5px 9px;border-radius:8px;font-size:.76rem;}
+.anot-meta{font-size:.68rem;color:var(--muted);margin-top:2px;}
+.anot-autor{font-weight:700;}
+.anot-form{margin-top:7px;display:none;padding:9px;background:#f8fafc;border-radius:10px;border:1px solid var(--border);}
+.anot-form.open{display:block;}
+.anot-form select,.anot-form textarea{width:100%;padding:6px 9px;border-radius:8px;
+  border:1.5px solid var(--border);font-size:.8rem;margin-bottom:5px;box-sizing:border-box;background:#fff;}
+.anot-form select:focus,.anot-form textarea:focus{border-color:var(--pc-blue);outline:none;}
+
+/* ── BOTÕES ITEM ── */
+.item-actions{display:flex;gap:3px;align-items:center;flex-shrink:0;flex-wrap:wrap;}
+.ia-btn{padding:3px 7px;border-radius:6px;font-size:.68rem;font-weight:700;
+  border:1.5px solid var(--border);background:#fff;cursor:pointer;
+  display:inline-flex;align-items:center;gap:3px;transition:.15s;white-space:nowrap;}
+.ia-btn:hover{background:#f1f5f9;}
+.ia-btn.danger{border-color:#fca5a5;color:#dc2626;}.ia-btn.danger:hover{background:#fef2f2;}
+.ia-btn.success{border-color:#86efac;color:#16a34a;}.ia-btn.success:hover{background:#f0fdf4;}
+.ia-btn.info{border-color:#93c5fd;color:#1d4ed8;}.ia-btn.info:hover{background:#eff6ff;}
+.ia-btn.orange{border-color:#fdba74;color:#c2410c;}.ia-btn.orange:hover{background:#fff7ed;}
+
+/* ── SIDE CARDS ── */
+.side-card{background:var(--card);border-radius:16px;border:1px solid var(--border);overflow:hidden;}
+.side-card__head{padding:12px 16px;border-bottom:1px solid var(--border);
+  background:#f8fafc;font-weight:700;font-size:.86rem;color:var(--dark);
+  display:flex;align-items:center;gap:7px;}
+.side-card__body{padding:13px 15px;}
+
+/* ── AVANÇAR ── */
+.btn-avancar{width:100%;padding:11px;border:none;border-radius:10px;
+  font-size:.88rem;font-weight:700;cursor:pointer;transition:.18s;
+  display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-avancar:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.12);}
+.btn-avancar.ANALISE{background:#f59e0b;color:#fff;}
+.btn-avancar.SIGA{background:#8b5cf6;color:#fff;}
+.btn-avancar.ENVIO_FINAL{background:#06b6d4;color:#fff;}
+.btn-avancar.CONCLUIDO{background:#10b981;color:#fff;}
+
+/* ── HISTÓRICO ── */
+.hist-item{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:.78rem;}
+.hist-item:last-child{border-bottom:none;}
+.hist-dot{width:8px;height:8px;border-radius:50%;background:var(--pc-blue);flex-shrink:0;margin-top:3px;}
+.hist-item__body{flex:1;}
+.hist-item__trans{font-weight:700;color:var(--dark);}
+.hist-item__meta{color:var(--muted);margin-top:2px;}
+
+/* ── ANEXOS ── */
+.anexo-item{display:flex;align-items:center;gap:7px;padding:7px 9px;
+  border-radius:8px;border:1px solid var(--border);margin-bottom:5px;font-size:.78rem;background:#fafafa;}
+.anexo-item a{color:var(--pc-blue);text-decoration:none;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.etapa-badge{font-size:.63rem;padding:2px 6px;border-radius:10px;background:#f1f5f9;color:var(--muted);font-weight:700;}
+
+/* ── UPLOAD ── */
+.upload-drop{border:2px dashed var(--border);border-radius:10px;padding:14px;
+  text-align:center;cursor:pointer;transition:.2s;background:#fafafa;font-size:.8rem;color:var(--muted);}
+.upload-drop:hover,.upload-drop.drag{border-color:var(--pc-blue);background:#eff6ff;}
+
+/* ── MISC ── */
+.vincular-row{display:flex;gap:7px;align-items:center;}
+.vincular-row select{flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--border);font-size:.83rem;background:#fff;}
+.btn-sm{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
+  border-radius:8px;font-size:.77rem;font-weight:700;cursor:pointer;
+  border:1.5px solid var(--border);background:#fff;color:var(--dark);transition:.15s;}
+.btn-sm:hover{background:#f1f5f9;}
+.btn-sm.primary{background:var(--pc-blue);color:#fff;border-color:transparent;}
+.btn-sm.primary:hover{background:#2563eb;}
+.periodo-select{width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:.85rem;background:#fff;margin-bottom:8px;}
+.periodo-select:focus{border-color:var(--pc-blue);outline:none;}
+.periodo-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:700;background:#ede9fe;color:#5b21b6;}
+
+/* ── PRAZOS ── */
+.prazo-normal{color:#475569;}.prazo-proximo{color:#d97706;font-weight:700;}
+.prazo-urgente{color:#dc2626;font-weight:700;animation:blink 1s infinite;}
+.prazo-vencido{color:#7f1d1d;background:#fef2f2;padding:2px 6px;border-radius:4px;}
+.prazo-ok{color:#16a34a;text-decoration:line-through;opacity:.7;}
+@keyframes blink{50%{opacity:.5;}}
+.prazo-row{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;
+  border:1px solid var(--border);margin-bottom:5px;font-size:.8rem;background:#fafafa;}
+.prazo-row .pr-desc{flex:1;font-weight:600;}.prazo-row .pr-data{font-size:.73rem;white-space:nowrap;}
+
+/* ── MODAIS ── */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:18px;padding:24px;width:90%;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,.2);}
+.modal-box h4{margin:0 0 11px;font-size:.98rem;}
+.modal-box textarea{width:100%;padding:9px 12px;border-radius:10px;border:1.5px solid var(--border);
+  font-size:.87rem;min-height:88px;resize:vertical;box-sizing:border-box;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:13px;}
+</style>
+
+<!-- CABEÇALHO -->
+<header class="pc-header">
+  <div class="pc-header__left">
+    <div class="pc-brasao">
+      {% if pc.cliente and pc.cliente.brasao %}
+        <img src="{{ pc.cliente.brasao.url }}" alt="brasão">
+      {% else %}
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      {% endif %}
+    </div>
+    <div class="pc-header__title">
+      <h2>{{ pc.cliente.nome|default:pc.nome_unidade_pdf|default:"Sem cliente" }}</h2>
+      <p>
+        Competência {{ pc.competencia_str }}
+        {% if pc.numero_processo %} · Proc. {{ pc.numero_processo }}{% endif %}
+        {% if pc.inspetoria %} · {{ pc.inspetoria }}{% endif %}
+        {% if pc.periodo %} · <span style="background:rgba(255,255,255,.2);padding:2px 8px;border-radius:20px;font-size:.78rem;">{{ pc.get_periodo_display }}</span>{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="pc-header__right">
+    <button class="btn-split" id="btnSplit" onclick="toggleSplit()" title="Ativar modo lado a lado">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/>
+      </svg>
+      Lado a lado
+    </button>
+    <a href="{% url 'prestacao_contas_monitor' %}"
+       style="color:rgba(255,255,255,.8);text-decoration:none;font-size:.8rem;font-weight:600;white-space:nowrap;">
+      ← Monitor
+    </a>
+  </div>
+</header>
+
+<!-- STEPPER -->
+<div class="stepper">
+  <div class="step {% if pc.etapa_atual == 'CADASTRO' %}active{% else %}done{% endif %}"><span class="dot"></span> Cadastro</div>
+  <div class="step {% if pc.etapa_atual == 'ANALISE' %}active{% elif pc.etapa_atual == 'SIGA' or pc.etapa_atual == 'ENVIO_FINAL' or pc.etapa_atual == 'CONCLUIDO' %}done{% else %}pending{% endif %}"><span class="dot"></span> Análise</div>
+  <div class="step {% if pc.etapa_atual == 'SIGA' %}active{% elif pc.etapa_atual == 'ENVIO_FINAL' or pc.etapa_atual == 'CONCLUIDO' %}done{% else %}pending{% endif %}"><span class="dot"></span> SIGA</div>
+  <div class="step {% if pc.etapa_atual == 'ENVIO_FINAL' %}active{% elif pc.etapa_atual == 'CONCLUIDO' %}done{% else %}pending{% endif %}"><span class="dot"></span> Envio Final</div>
+  <div class="step {% if pc.etapa_atual == 'CONCLUIDO' %}done{% else %}pending{% endif %}"><span class="dot"></span> Concluído</div>
+</div>
+
+<!-- ══ LAYOUT NORMAL ══ -->
+<div class="pc-layout" id="normalLayout">
+  <div class="pc-main">
+
+    <!-- PDF -->
+    {% if pc.documento_principal %}
+    <div class="pc-section">
+      <div class="pc-section__head" onclick="toggleSection('secPdf')">
+        <h4>📄 Documento Principal (PDF)</h4>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="ico-secPdf"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="pc-section__body" id="secPdf">
+        <iframe src="{{ pc.documento_principal.url }}" class="pdf-frame" title="Documento PC"></iframe>
+        <div style="margin-top:7px;text-align:right;">
+          <a href="{{ pc.documento_principal.url }}" target="_blank" class="btn-sm">↗ Abrir em nova aba</a>
+        </div>
+      </div>
+    </div>
+    {% else %}
+      {% if perfil_pc == 'JURIDICO' or perfil_pc == 'ADMIN' %}
+      <div class="pc-section">
+        <div class="pc-section__head"><h4>Upload do Documento Principal</h4></div>
+        <div class="pc-section__body">
+          <div class="upload-drop" onclick="document.getElementById('inputDocMain').click()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:7px;color:#94a3b8;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p style="margin:0;font-weight:600;">Clique ou arraste o PDF aqui</p>
+            <span style="font-size:.73rem;">Somente .pdf</span>
+          </div>
+          <input type="file" id="inputDocMain" accept=".pdf" style="display:none;" onchange="uploadDoc(this)">
+          <div id="feedbackDoc" style="margin-top:7px;display:none;font-size:.8rem;"></div>
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- ITENS -->
+    {% if itens %}
+    <div class="pc-section">
+      <div class="pc-section__head" onclick="toggleSection('secItens')">
+        <h4>
+          📋 Itens do Documento
+          {% with qtd=pc.qtd_inconsistencias %}
+            {% if qtd > 0 %}
+              <span style="font-size:.68rem;background:#fef2f2;color:#dc2626;padding:2px 7px;border-radius:20px;">
+                {{ qtd }} inconsistência{{ qtd|pluralize }}
+              </span>
+            {% endif %}
+          {% endwith %}
+        </h4>
+
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="ico-secItens">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      <div class="pc-section__body" id="secItens">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
+          <span class="status-badge sb-INCONSISTENTE">⚠ Inconsistente</span>
+          <span class="status-badge sb-OK_ANALISE">✓ OK Análise</span>
+          <span class="status-badge sb-CONFIRMADO_SIGA">✓ Confirmado SIGA</span>
+          <span class="status-badge sb-DEVOLVIDO">↩ Devolvido</span>
+          <span class="status-badge sb-PENDENTE">● Pendente</span>
+        </div>
+
+        {% for item in itens %}
+        <div class="item-row item-row__level-{{ item.nivel_hierarquico }} st-{{ item.status_siga|default:'PENDENTE' }}" id="item-row-{{ item.pk|stringformat:'d' }}">
+
+          <div class="item-row__num">
+            {{ item.numero }}
+          </div>
+
+          <div class="item-row__desc item-row__level-{{ item.nivel_hierarquico }}" style="flex:1;">
+
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+              <span>{{ item.descricao }}</span>
+
+              {% if item.status_siga and item.status_siga != 'PENDENTE' %}
+                <span class="status-badge sb-{{ item.status_siga }}" id="badge-{{ item.pk|stringformat:'d' }}">
+                  {% if item.status_siga == 'CONFIRMADO_SIGA' %}
+                    ✓ Confirmado
+                  {% elif item.status_siga == 'OK_ANALISE' %}
+                    ✓ OK
+                  {% elif item.status_siga == 'INCONSISTENTE' %}
+                    ⚠ Inconsistente
+                  {% elif item.status_siga == 'DEVOLVIDO' %}
+                    ↩ Devolvido
+                  {% endif %}
+                </span>
+              {% else %}
+                <span class="status-badge sb-PENDENTE" id="badge-{{ item.pk|stringformat:'d' }}"></span>
+              {% endif %}
+
+              {% if item.confirmado_por %}
+                <span style="font-size:.66rem;color:#6b7280;">
+                  por {{ item.confirmado_por.get_full_name|default:item.confirmado_por.username }} em {{ item.confirmado_em|date:"d/m H:i" }}
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- Thread anotações -->
+            <div class="anotacao-thread" id="thread-{{ item.pk|stringformat:'d' }}">
+              {% for anot in item.anotacoes_visiveis %}
+                <div class="anotacao-item" style="background:{{ anot.cor_bg }};color:{{ anot.cor_texto }};">
+                  <div style="flex:1;">
+                    <span class="anot-autor">
+                      {{ anot.get_tipo_display }}
+                    </span>
+                    — {{ anot.texto }}
+
+                    <div class="anot-meta">
+                      {{ anot.usuario.get_full_name|default:anot.usuario.username|default:"Sistema" }}
+                      ·
+                      {{ anot.criado_em|date:"d/m/Y H:i" }}
+
+                      {% if perfil_pc == 'ADMIN' and anot.perfil_autor_pc %}
+                        · {{ anot.perfil_autor_pc }}
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% empty %}
+                <p style="font-size:.73rem;color:var(--muted);margin:4px 0;" id="sem-anot-{{ item.pk|stringformat:'d' }}">
+                  Nenhuma anotação.
+                </p>
+              {% endfor %}
+            </div>
+
+            <!-- Form anotação -->
+            <div class="anot-form" id="anot-form-{{ item.pk }}">
+              <select id="anot-tipo-{{ item.pk }}">
+                {% if perfil_pc == 'SIGA' or perfil_pc == 'ADMIN' %}
+                  <option value="CONFIRMACAO">✓ Confirmação SIGA</option>
+                  <option value="DEVOLUCAO">↩ Devolução</option>
+                  <option value="OBSERVACAO">💬 Observação</option>
+                {% else %}
+                  <option value="INCONSISTENCIA">⚠ Inconsistência</option>
+                  <option value="OK">✓ OK</option>
+                  <option value="OBSERVACAO">💬 Observação</option>
+                {% endif %}
+              </select>
+
+              <textarea id="anot-txt-{{ item.pk }}" placeholder="Descreva sua anotação…" rows="2"></textarea>
+
+              <div style="display:flex;gap:5px;">
+                <button type="button" class="ia-btn info" onclick="salvarAnotacao({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                  Salvar
+                </button>
+
+                <button type="button" class="ia-btn" onclick="toggleAnotForm({{ item.pk|stringformat:'d' }})">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ações -->
+          <div class="item-actions">
+
+            <button type="button" class="ia-btn info" title="Anotações" onclick="toggleThread({{ item.pk|stringformat:'d' }})">
+              💬
+              {% if item.qtd_anotacoes_visiveis > 0 %}
+                {{ item.qtd_anotacoes_visiveis }}
+              {% endif %}
+            </button>
+
+            <button type="button" class="ia-btn" title="Anotar" onclick="toggleAnotForm({{ item.pk|stringformat:'d' }})">
+              ✎
+            </button>
+
+            {# ⚠ Marcar inconsistência — Jurídico só em CADASTRO; Análise só em ANALISE #}
+            {% if item.status_siga != 'CONFIRMADO_SIGA' %}
+              {% if perfil_pc == 'ADMIN' %}
+                <button type="button" class="ia-btn {% if item.tem_inconsistencia %}danger{% endif %}" onclick="toggleInc({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                  ⚠
+                </button>
+              {% elif perfil_pc == 'JURIDICO' and pc.etapa_atual == 'CADASTRO' %}
+                <button type="button" class="ia-btn {% if item.tem_inconsistencia %}danger{% endif %}" onclick="toggleInc({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                  ⚠
+                </button>
+              {% elif perfil_pc == 'ANALISE' and pc.etapa_atual == 'ANALISE' %}
+                <button type="button" class="ia-btn {% if item.tem_inconsistencia %}danger{% endif %}" onclick="toggleInc({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                  ⚠
+                </button>
+              {% endif %}
+            {% endif %}
+
+            {# ✓ OK — Jurídico só em CADASTRO #}
+            {% if item.status_siga != 'CONFIRMADO_SIGA' %}
+              {% if perfil_pc == 'ADMIN' or perfil_pc == 'JURIDICO' and pc.etapa_atual == 'CADASTRO' %}
+                <button type="button" class="ia-btn success" id="btn-ok-{{ item.pk|stringformat:'d' }}"
+                        title="{% if item.status_siga == 'OK_ANALISE' %}Remover OK{% else %}Marcar OK{% endif %}"
+                        onclick="okJuridico({{ pc.pk|stringformat:'d' }}, {{ item.pk|stringformat:'d' }})">
+                  {% if item.status_siga == 'OK_ANALISE' %}
+                    ✓ Remover OK
+                  {% else %}
+                    ✓ OK
+                  {% endif %}
+                </button>
+              {% endif %}
+            {% endif %}
+
+            {# ✓ Confirmar — SIGA só na etapa SIGA #}
+            {% if perfil_pc == 'SIGA' or perfil_pc == 'ADMIN' %}
+              {% if item.tem_inconsistencia and item.status_siga != 'CONFIRMADO_SIGA' and pc.etapa_atual == 'SIGA' %}
+                <button type="button" class="ia-btn success" title="Confirmar resolução" onclick="confirmarSiga({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                  ✓ Confirmado
+                </button>
+              {% endif %}
+
+              {% if item.status_siga == 'CONFIRMADO_SIGA' %}
+                <span class="ia-btn success" style="cursor:default;opacity:.8;">
+                  ✓ Resolvido
+                </span>
+              {% endif %}
+            {% endif %}
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+
+  </div><!-- /pc-main -->
+
+  <div class="pc-side">
+
+    <!-- AVANÇAR + COMPROVANTE abaixo -->
+    {% if pode_avancar and pc.proxima_etapa %}
+    <div class="side-card">
+      <div class="side-card__head">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        Avançar para: {{ proxima_etapa_label }}
+      </div>
+      <div class="side-card__body">
+        <textarea id="obs-avanco" placeholder="Observação (opcional)…"
+                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);
+                         font-size:.82rem;resize:vertical;min-height:60px;box-sizing:border-box;margin-bottom:10px;" rows="2"></textarea>
+        <button type="button" class="btn-avancar {{ pc.proxima_etapa }}" onclick="avancarEtapa({{ pc.pk }},'{{ pc.proxima_etapa }}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Enviar para {{ proxima_etapa_label }}
+        </button>
+        <div id="feedback-avanco" style="margin-top:7px;display:none;font-size:.8rem;border-radius:8px;padding:7px;"></div>
+
+        {# Comprovante abaixo do botão, apenas em ENVIO_FINAL #}
+        {% if perfil_pc == 'JURIDICO' or perfil_pc == 'ADMIN' %}
+          {% if pc.etapa_atual == 'ENVIO_FINAL' %}
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+            <p style="font-size:.78rem;font-weight:700;color:var(--dark);margin:0 0 8px;">
+              📎 Comprovante de Envio <span style="font-weight:400;color:var(--muted);">— necessário para concluir</span>
+            </p>
+            {% if pc.comprovante_envio %}
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <a href="{{ pc.comprovante_envio.url }}" target="_blank" class="btn-sm" style="font-size:.75rem;">Ver comprovante</a>
+            </div>
+            {% else %}
+            <div class="upload-drop" style="padding:10px;" onclick="document.getElementById('inputComp').click()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:4px;color:#94a3b8;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p style="margin:0;font-size:.78rem;font-weight:600;">Clique para anexar</p>
+            </div>
+            <input type="file" id="inputComp" style="display:none;" onchange="uploadComprovante(this)">
+            <div id="feedbackComp" style="margin-top:6px;display:none;font-size:.79rem;"></div>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% elif pc.etapa_atual == 'CONCLUIDO' and pc.comprovante_envio %}
+    <div class="side-card">
+      <div class="side-card__head">📎 Comprovante de Envio</div>
+      <div class="side-card__body"><a href="{{ pc.comprovante_envio.url }}" target="_blank" class="btn-sm">Ver comprovante</a></div>
+    </div>
+    {% endif %}
+
+    <!-- DEVOLVER (SIGA) -->
+    {% if perfil_pc == 'SIGA' or perfil_pc == 'ADMIN' %}
+      {% if pc.etapa_atual == 'SIGA' %}
+      <div class="side-card">
+        <div class="side-card__head" style="color:#c2410c;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Devolver Prestação à Análise
+        </div>
+        <div class="side-card__body">
+          <p style="font-size:.78rem;color:var(--muted);margin:0 0 9px;">Devolve <strong>todo o processo</strong> ao setor de Análise.</p>
+          <button type="button" class="ia-btn orange" style="width:100%;justify-content:center;padding:9px;"
+                  onclick="document.getElementById('modalRetorno').classList.add('open')">↩ Solicitar Retorno à Análise</button>
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- PERÍODO / QUADRIMESTRE -->
+    <div class="side-card">
+      <div class="side-card__head">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Período
+        {% if pc.periodo %}<span class="periodo-badge" style="margin-left:auto;font-size:.65rem;">{{ pc.get_periodo_display }}</span>{% endif %}
+      </div>
+      <div class="side-card__body">
+        {% if perfil_pc == 'JURIDICO' or perfil_pc == 'ADMIN' %}
+        <select class="periodo-select" id="selectPeriodo">
+          <option value="">— Selecione o período —</option>
+          <option value="1Q"    {% if pc.periodo == '1Q'    %}selected{% endif %}>1º Quadrimestre (Jan–Abr)</option>
+          <option value="2Q"    {% if pc.periodo == '2Q'    %}selected{% endif %}>2º Quadrimestre (Mai–Ago)</option>
+          <option value="3Q"    {% if pc.periodo == '3Q'    %}selected{% endif %}>3º Quadrimestre (Set–Dez)</option>
+          <option value="ANUAL" {% if pc.periodo == 'ANUAL' %}selected{% endif %}>Anual (Jan–Dez)</option>
+        </select>
+        <button type="button" class="btn-sm primary" style="width:100%;" onclick="salvarPeriodo({{ pc.pk }})">Salvar Período</button>
+        <div id="feedbackPeriodo" style="display:none;margin-top:6px;font-size:.79rem;border-radius:8px;padding:6px;"></div>
+        {% else %}
+          {% if pc.periodo %}<p style="font-size:.85rem;color:var(--dark);margin:0;font-weight:600;">{{ pc.get_periodo_display }}</p>
+          {% else %}<p style="font-size:.8rem;color:var(--muted);margin:0;">Período não definido.</p>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- VINCULAR CLIENTE -->
+    {% if not pc.cliente %}
+      {% if perfil_pc == 'JURIDICO' or perfil_pc == 'ADMIN' %}
+      <div class="side-card">
+        <div class="side-card__head">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          Cliente não vinculado
+        </div>
+        <div class="side-card__body">
+          {% if pc.nome_unidade_pdf %}<p style="font-size:.78rem;color:var(--muted);margin:0 0 7px;">PDF: <strong>{{ pc.nome_unidade_pdf }}</strong></p>{% endif %}
+          <div class="vincular-row">
+            <select id="selectCliente">
+              <option value="">Selecione…</option>
+              {% for c in clientes %}<option value="{{ c.pk }}">{{ c.nome }}</option>{% endfor %}
+            </select>
+            <button type="button" class="btn-sm primary" onclick="vincularCliente({{ pc.pk }})">Vincular</button>
+          </div>
+          <div id="feedback-vincular" style="margin-top:5px;display:none;font-size:.78rem;"></div>
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- PRAZOS -->
+    <div class="side-card">
+      <div class="side-card__head">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Prazos
+        {% if perfil_pc == 'JURIDICO' or perfil_pc == 'ADMIN' %}
+        <button type="button" onclick="document.getElementById('modalPrazos').classList.add('open')"
+                style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--pc-blue);font-size:.75rem;font-weight:700;">+ Gerenciar</button>
+        {% endif %}
+      </div>
+      <div class="side-card__body" id="listaPrazos"><p style="font-size:.78rem;color:var(--muted);">Carregando…</p></div>
+    </div>
+
+    <!-- ANEXOS -->
+    <div class="side-card">
+      <div class="side-card__head">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        Anexos
+      </div>
+      <div class="side-card__body">
+        {% for anexo in anexos %}
+        <div class="anexo-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <a href="{{ anexo.arquivo.url }}" target="_blank">{{ anexo.arquivo.name|slice:"-38:" }}</a>
+          <span class="etapa-badge">{{ anexo.get_etapa_display }}</span>
+        </div>
+        {% empty %}<p style="font-size:.78rem;color:var(--muted);margin:0 0 9px;">Nenhum anexo ainda.</p>{% endfor %}
+        <div style="margin-top:8px;">
+          <div class="upload-drop" onclick="document.getElementById('inputAnexo').click()" style="padding:10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:#94a3b8;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span style="font-size:.73rem;">Adicionar anexo</span>
+          </div>
+          <input type="file" id="inputAnexo" style="display:none;" onchange="uploadAnexo(this)">
+          <input type="text" id="descAnexo" placeholder="Descrição (opcional)"
+                 style="margin-top:5px;width:100%;padding:6px;border-radius:8px;border:1.5px solid var(--border);font-size:.78rem;box-sizing:border-box;">
+          <div id="feedbackAnexo" style="margin-top:5px;display:none;font-size:.78rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="side-card">
+      <div class="side-card__head">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Histórico
+      </div>
+      <div class="side-card__body">
+        {% for h in historico %}
+        <div class="hist-item">
+          <div class="hist-dot" style="background:{% if h.etapa_nova == 'CONCLUIDO' %}#10b981{% elif h.etapa_nova == 'SIGA' %}#8b5cf6{% elif h.etapa_nova == 'ANALISE' %}#f59e0b{% else %}#3b82f6{% endif %};"></div>
+          <div class="hist-item__body">
+            <div class="hist-item__trans">{% if h.etapa_anterior %}{{ h.etapa_anterior }} → {% endif %}{{ h.get_etapa_nova_display }}</div>
+            {% if h.observacao %}<div style="font-size:.75rem;color:var(--dark);margin-top:1px;">{{ h.observacao }}</div>{% endif %}
+            <div class="hist-item__meta">{{ h.alterado_por.get_full_name|default:h.alterado_por.username|default:"Sistema" }} · {{ h.criado_em|date:"d/m/Y H:i" }}</div>
+          </div>
+        </div>
+        {% empty %}<p style="font-size:.78rem;color:var(--muted);margin:0;">Nenhum histórico.</p>{% endfor %}
+      </div>
+    </div>
+
+  </div><!-- /pc-side -->
+</div><!-- /pc-layout -->
+
+<!-- ══ MODO LADO A LADO ══ -->
+<div id="splitWrapper">
+  <div class="split-grid">
+    <div class="split-pdf">
+      <div class="split-panel-head">📄 Documento Principal
+        {% if pc.documento_principal %}<a href="{{ pc.documento_principal.url }}" target="_blank" class="btn-sm" style="margin-left:auto;font-size:.7rem;">↗</a>{% endif %}
+      </div>
+      {% if pc.documento_principal %}
+      <iframe src="{{ pc.documento_principal.url }}" title="PDF"></iframe>
+      {% else %}
+      <div style="flex:1;display:grid;place-items:center;color:var(--muted);font-size:.85rem;">Nenhum documento.</div>
+      {% endif %}
+    </div>
+    <div class="split-itens">
+      <div class="split-panel-head">
+        📋 Itens
+        {% with qtd=pc.qtd_inconsistencias %}{% if qtd > 0 %}<span style="font-size:.65rem;background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:20px;margin-left:6px;">{{ qtd }} inconsistência{{ qtd|pluralize }}</span>{% endif %}{% endwith %}
+      </div>
+
+      <div class="split-itens__scroll">
+          {% if itens %}
+
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+              <span class="status-badge sb-INCONSISTENTE">⚠</span>
+              <span class="status-badge sb-OK_ANALISE">✓ OK</span>
+              <span class="status-badge sb-CONFIRMADO_SIGA">✓ SIGA</span>
+              <span class="status-badge sb-DEVOLVIDO">↩</span>
+              <span class="status-badge sb-PENDENTE">● Pendente</span>
+            </div>
+
+            {% for item in itens %}
+              <div class="item-row item-row__level-{{ item.nivel_hierarquico }} st-{{ item.status_siga|default:'PENDENTE' }}" id="split-item-{{ item.pk|stringformat:'d' }}">
+
+                <div class="item-row__num">
+                  {{ item.numero }}
+                </div>
+
+                <div style="flex:1;font-size:.8rem;">
+
+                  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+                    <span>{{ item.descricao }}</span>
+
+                    {% if item.status_siga and item.status_siga != 'PENDENTE' %}
+                      <span class="status-badge sb-{{ item.status_siga }}" style="margin-left:4px;" id="split-badge-{{ item.pk|stringformat:'d' }}">
+                        {% if item.status_siga == 'CONFIRMADO_SIGA' %}
+                          ✓ SIGA
+                        {% elif item.status_siga == 'OK_ANALISE' %}
+                          ✓ OK
+                        {% elif item.status_siga == 'INCONSISTENTE' %}
+                          ⚠
+                        {% elif item.status_siga == 'DEVOLVIDO' %}
+                          ↩
+                        {% endif %}
+                      </span>
+                    {% else %}
+                      <span class="status-badge sb-PENDENTE" style="margin-left:4px;" id="split-badge-{{ item.pk|stringformat:'d' }}"></span>
+                    {% endif %}
+
+                    {% if item.confirmado_por %}
+                      <span style="font-size:.66rem;color:#6b7280;">
+                        por {{ item.confirmado_por.get_full_name|default:item.confirmado_por.username }} em {{ item.confirmado_em|date:"d/m H:i" }}
+                      </span>
+                    {% endif %}
+                  </div>
+
+                  <!-- Thread anotações - modo split -->
+                  <div class="anotacao-thread" id="split-thread-{{ item.pk|stringformat:'d' }}">
+                    {% for anot in item.anotacoes_visiveis %}
+                      <div class="anotacao-item" style="background:{{ anot.cor_bg }};color:{{ anot.cor_texto }};">
+                        <div style="flex:1;">
+                          <span class="anot-autor">
+                            {{ anot.get_tipo_display }}
+                          </span>
+                          — {{ anot.texto }}
+
+                          <div class="anot-meta">
+                            {{ anot.usuario.get_full_name|default:anot.usuario.username|default:"Sistema" }}
+                            ·
+                            {{ anot.criado_em|date:"d/m/Y H:i" }}
+
+                            {% if perfil_pc == 'ADMIN' and anot.perfil_autor_pc %}
+                              · {{ anot.perfil_autor_pc }}
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    {% empty %}
+                      <p style="font-size:.73rem;color:var(--muted);margin:4px 0;" id="split-sem-anot-{{ item.pk|stringformat:'d' }}">
+                        Nenhuma anotação.
+                      </p>
+                    {% endfor %}
+                  </div>
+
+                  <!-- Form anotação - modo split -->
+                  <div class="anot-form" id="split-anot-form-{{ item.pk|stringformat:'d' }}">
+                    <select id="split-anot-tipo-{{ item.pk|stringformat:'d' }}">
+                      {% if perfil_pc == 'SIGA' or perfil_pc == 'ADMIN' %}
+                        <option value="CONFIRMACAO">✓ Confirmação SIGA</option>
+                        <option value="DEVOLUCAO">↩ Devolução</option>
+                        <option value="OBSERVACAO">💬 Observação</option>
+                      {% else %}
+                        <option value="INCONSISTENCIA">⚠ Inconsistência</option>
+                        <option value="OK">✓ OK</option>
+                        <option value="OBSERVACAO">💬 Observação</option>
+                      {% endif %}
+                    </select>
+
+                    <textarea id="split-anot-txt-{{ item.pk|stringformat:'d' }}" placeholder="Descreva sua anotação…" rows="2"></textarea>
+
+                    <div style="display:flex;gap:5px;">
+                      <button type="button" class="ia-btn info" onclick="salvarAnotacao({{ pc.pk }}, {{ item.pk|stringformat:'d' }}, 'split')">
+                        Salvar
+                      </button>
+
+                      <button type="button" class="ia-btn" onclick="toggleAnotForm({{ item.pk|stringformat:'d' }}, 'split')">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div class="item-actions">
+
+                  <button type="button" class="ia-btn info" title="Anotações" onclick="toggleThread({{ item.pk|stringformat:'d' }}, 'split')">
+                    💬
+                    {% if item.qtd_anotacoes_visiveis > 0 %}
+                      {{ item.qtd_anotacoes_visiveis }}
+                    {% endif %}
+                  </button>
+
+                  <button type="button" class="ia-btn" title="Anotar" onclick="toggleAnotForm({{ item.pk|stringformat:'d' }}, 'split')">
+                    ✎
+                  </button>
+
+                  {% if item.status_siga != 'CONFIRMADO_SIGA' %}
+
+                    {% if perfil_pc == 'ADMIN' or perfil_pc == 'JURIDICO' and pc.etapa_atual == 'CADASTRO' or perfil_pc == 'ANALISE' and pc.etapa_atual == 'ANALISE' %}
+                      <button type="button" class="ia-btn {% if item.tem_inconsistencia %}danger{% endif %}" onclick="toggleInc({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                        ⚠
+                      </button>
+                    {% endif %}
+
+                    {% if perfil_pc == 'ADMIN' or perfil_pc == 'JURIDICO' and pc.etapa_atual == 'CADASTRO' %}
+                      <button type="button" class="ia-btn success" onclick="okJuridico({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                        {% if item.status_siga == 'OK_ANALISE' %}
+                          ✓ Remover OK
+                        {% else %}
+                          ✓ OK
+                        {% endif %}
+                      </button>
+                    {% endif %}
+
+                  {% endif %}
+
+                  {% if perfil_pc == 'SIGA' or perfil_pc == 'ADMIN' %}
+
+                    {% if item.tem_inconsistencia and item.status_siga != 'CONFIRMADO_SIGA' and pc.etapa_atual == 'SIGA' %}
+                      <button type="button" class="ia-btn success" onclick="confirmarSiga({{ pc.pk }},{{ item.pk|stringformat:'d' }})">
+                        ✓
+                      </button>
+                    {% endif %}
+
+                    {% if item.status_siga == 'CONFIRMADO_SIGA' %}
+                      <span class="ia-btn success" style="cursor:default;opacity:.8;">
+                        ✓
+                      </span>
+                    {% endif %}
+
+                  {% endif %}
+
+                </div>
+              </div>
+            {% endfor %}
+
+          {% else %}
+            <p style="color:var(--muted);font-size:.82rem;">Nenhum item.</p>
+          {% endif %}
+        </div>
+
+    </div>
+  </div>
+  <!-- Painéis inferiores -->
+  <div class="split-bottom">
+    <div class="split-panel">
+      <div class="split-panel-head" style="padding:8px 12px;font-weight:700;font-size:.8rem;border-bottom:1px solid var(--border);">⏰ Prazos</div>
+      <div class="split-panel__body" id="splitPrazos"><p style="font-size:.76rem;color:var(--muted);margin:0;">Carregando…</p></div>
+    </div>
+    <div class="split-panel">
+      <div class="split-panel-head" style="padding:8px 12px;font-weight:700;font-size:.8rem;border-bottom:1px solid var(--border);">📎 Anexos</div>
+      <div class="split-panel__body">
+        {% for anexo in anexos %}
+        <div class="anexo-item"><a href="{{ anexo.arquivo.url }}" target="_blank">{{ anexo.arquivo.name|slice:"-30:" }}</a><span class="etapa-badge">{{ anexo.get_etapa_display }}</span></div>
+        {% empty %}<p style="font-size:.76rem;color:var(--muted);margin:0;">Nenhum.</p>{% endfor %}
+      </div>
+    </div>
+    <div class="split-panel">
+      <div class="split-panel-head" style="padding:8px 12px;font-weight:700;font-size:.8rem;border-bottom:1px solid var(--border);">🕐 Histórico</div>
+      <div class="split-panel__body">
+        {% for h in historico %}
+        <div class="hist-item" style="font-size:.74rem;">
+          <div class="hist-dot" style="background:{% if h.etapa_nova == 'CONCLUIDO' %}#10b981{% elif h.etapa_nova == 'SIGA' %}#8b5cf6{% else %}#3b82f6{% endif %};margin-top:2px;"></div>
+          <div><div style="font-weight:700;">{% if h.etapa_anterior %}{{ h.etapa_anterior }} → {% endif %}{{ h.get_etapa_nova_display }}</div>
+            <div style="color:var(--muted);font-size:.67rem;">{{ h.alterado_por.get_full_name|default:h.alterado_por.username|default:"Sistema" }} · {{ h.criado_em|date:"d/m H:i" }}</div>
+          </div>
+        </div>
+        {% empty %}<p style="font-size:.76rem;color:var(--muted);margin:0;">Nenhum.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RETORNO -->
+<div class="modal-overlay" id="modalRetorno">
+  <div class="modal-box">
+    <h4 style="color:#c2410c;">↩ Devolver Prestação à Análise</h4>
+    <p style="font-size:.81rem;color:var(--muted);margin:0 0 11px;">Devolve <strong>todo o processo</strong>. Informe o que precisa ser revisado.</p>
+    <textarea id="motivoRetorno" rows="4" placeholder="Ex.: Faltam documentos comprobatórios dos itens 6.1 e 6.3…"></textarea>
+    <div id="retornoFeedback" style="display:none;font-size:.8rem;border-radius:8px;padding:7px;margin-top:7px;"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-sm" onclick="document.getElementById('modalRetorno').classList.remove('open')">Cancelar</button>
+      <button type="button" class="btn-sm" style="background:#c2410c;color:#fff;border-color:#c2410c;" onclick="enviarRetorno({{ pc.pk }})">Confirmar Devolução</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRAZOS -->
+<div class="modal-overlay" id="modalPrazos">
+  <div class="modal-box" style="max-width:560px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h4 style="margin:0;">⏰ Prazos — {{ pc }}</h4>
+      <button type="button" onclick="document.getElementById('modalPrazos').classList.remove('open')"
+              style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:#999;">&times;</button>
+    </div>
+    <div id="modalListaPrazos" style="max-height:240px;overflow-y:auto;margin-bottom:14px;">
+      <p style="color:var(--muted);font-size:.8rem;">Carregando…</p>
+    </div>
+    {% if perfil_pc == 'JURIDICO' or perfil_pc == 'ADMIN' %}
+    <div style="border-top:1px solid var(--border);padding-top:13px;">
+      <p style="font-size:.81rem;font-weight:700;color:var(--dark);margin:0 0 9px;">Adicionar prazo</p>
+      <div style="display:grid;grid-template-columns:1fr 140px 80px;gap:7px;margin-bottom:7px;">
+        <input type="text" id="pz_desc" placeholder="Descrição…" style="padding:7px;border-radius:8px;border:1.5px solid var(--border);font-size:.82rem;">
+        <input type="date" id="pz_data" style="padding:7px;border-radius:8px;border:1.5px solid var(--border);font-size:.82rem;">
+        <input type="number" id="pz_lemb" value="3" min="1" max="30" title="Dias de lembrete" style="padding:7px;border-radius:8px;border:1.5px solid var(--border);font-size:.82rem;">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.73rem;color:var(--muted);">↑ dias de lembrete</span>
+        <button type="button" class="btn-sm primary" style="margin-left:auto;" onclick="salvarPrazo({{ pc.pk }})">+ Adicionar</button>
+      </div>
+      <div id="pzFeedback" style="display:none;margin-top:5px;font-size:.8rem;border-radius:8px;padding:5px;"></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const CSRF  = '{{ csrf_token }}';
+const PC_PK = {{ pc.pk }};
+
+/* ── Helpers ── */
+function getEl(id) {
+  return document.getElementById(id);
+}
+
+function setFeedback(el, bg, color, text) {
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.background = bg;
+  el.style.color = color;
+  el.textContent = text;
+}
+
+/* ── Seção toggle ── */
+function toggleSection(id) {
+  const body = getEl(id);
+  const ico  = getEl('ico-' + id);
+
+  if (!body) return;
+
+  const hidden = body.style.display === 'none';
+
+  body.style.display = hidden ? '' : 'none';
+
+  if (ico) {
+    ico.style.transform = hidden ? '' : 'rotate(-90deg)';
+  }
+}
+
+/* ── Modo lado a lado ── */
+function toggleSplit() {
+  const normal = getEl('normalLayout');
+  const split  = getEl('splitWrapper');
+  const btn    = getEl('btnSplit');
+
+  if (!normal || !split || !btn) return;
+
+  const on = split.style.display !== 'none';
+
+  normal.style.display = on ? '' : 'none';
+  split.style.display  = on ? 'none' : 'block';
+
+  btn.classList.toggle('active', !on);
+
+  if (!on) {
+    carregarPrazos(PC_PK);
+  }
+}
+
+/* ── Avançar etapa ── */
+async function avancarEtapa(pcPk, prox) {
+  const obs = getEl('obs-avanco')?.value || '';
+  const fb  = getEl('feedback-avanco');
+
+  if ('{{ pc.etapa_atual }}' === 'CADASTRO' && !{{ pc.cliente_id|default:"null" }}) {
+    setFeedback(fb, '#fef2f2', '#dc2626', 'Vincule o cliente antes de avançar.');
+    return;
+  }
+
+  const fd = new FormData();
+
+  fd.append('observacao', obs);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  try {
+    const r = await fetch(`/prestacao-contas/${pcPk}/avancar/`, {
+      method: 'POST',
+      body: fd
+    });
+
+    const d = await r.json();
+
+    if (d.ok) {
+      setFeedback(fb, '#d1fae5', '#065f46', 'Avançado para: ' + d.etapa_nova_label);
+      setTimeout(() => location.reload(), 900);
+    } else {
+      setFeedback(fb, '#fef2f2', '#dc2626', d.error || 'Erro.');
+    }
+  } catch (e) {
+    setFeedback(fb, '#fef2f2', '#dc2626', 'Erro de rede.');
+  }
+}
+
+/* ── Toggle inconsistência ── */
+async function toggleInc(pcPk, itemPk) {
+  const fd = new FormData();
+
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/item/${itemPk}/toggle/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    atualizarStatusItem(itemPk, d.tem_inconsistencia ? 'INCONSISTENTE' : 'PENDENTE');
+  }
+}
+
+/* ── Threads anotações ── */
+function toggleThread(itemPk, origem = null) {
+  const ids = origem === 'split'
+    ? [`split-thread-${itemPk}`]
+    : origem === 'normal'
+      ? [`thread-${itemPk}`]
+      : [`thread-${itemPk}`, `split-thread-${itemPk}`];
+
+  ids.forEach(id => {
+    const el = getEl(id);
+
+    if (el) {
+      el.classList.toggle('open');
+    }
+  });
+}
+
+function toggleAnotForm(itemPk, origem = null) {
+  const ids = origem === 'split'
+    ? [`split-anot-form-${itemPk}`]
+    : origem === 'normal'
+      ? [`anot-form-${itemPk}`]
+      : [`anot-form-${itemPk}`, `split-anot-form-${itemPk}`];
+
+  ids.forEach(id => {
+    const el = getEl(id);
+
+    if (el) {
+      el.classList.toggle('open');
+    }
+  });
+}
+
+/* ── Salvar anotação ── */
+async function salvarAnotacao(pcPk, itemPk, origem = 'normal') {
+  const prefix = origem === 'split' ? 'split-' : '';
+
+  const tipoEl  = getEl(`${prefix}anot-tipo-${itemPk}`);
+  const textoEl = getEl(`${prefix}anot-txt-${itemPk}`);
+
+  const tipo  = tipoEl?.value;
+  const texto = textoEl?.value?.trim();
+
+  if (!texto) return;
+
+  const fd = new FormData();
+
+  fd.append('tipo', tipo);
+  fd.append('texto', texto);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/item/${itemPk}/anotar/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    const form = getEl(`${prefix}anot-form-${itemPk}`);
+
+    if (form) {
+      form.classList.remove('open');
+    }
+
+    if (textoEl) {
+      textoEl.value = '';
+    }
+
+    appendAnotacaoThread(itemPk, d);
+    atualizarStatusItem(itemPk, d.status_item);
+  }
+}
+
+/* ── Adiciona anotação na thread visualmente ── */
+function appendAnotacaoThread(itemPk, d) {
+  const payload = d.anotacao ? d.anotacao : d;
+
+  const threadIds = [
+    `thread-${itemPk}`,
+    `split-thread-${itemPk}`
+  ];
+
+  threadIds.forEach(threadId => {
+    const thread = getEl(threadId);
+
+    if (!thread) return;
+
+    thread.classList.add('open');
+
+    if (threadId.startsWith('split-')) {
+      getEl(`split-sem-anot-${itemPk}`)?.remove();
+    } else {
+      getEl(`sem-anot-${itemPk}`)?.remove();
+    }
+
+    const div = document.createElement('div');
+
+    div.className = 'anotacao-item';
+    div.style.cssText = `background:${payload.cor_bg};color:${payload.cor_texto};`;
+
+    div.innerHTML = `
+      <div style="flex:1;">
+        <span class="anot-autor">${payload.tipo_label}</span>
+        — ${payload.texto}
+        <div class="anot-meta">
+          ${payload.usuario} · ${payload.criado_em}
+        </div>
+      </div>
+    `;
+
+    thread.appendChild(div);
+  });
+
+  atualizarContadorAnotacoes(itemPk);
+}
+
+/* ── Atualiza contador de anotações ── */
+function atualizarContadorAnotacoes(itemPk) {
+  const seletores = [
+    `#item-row-${itemPk} .ia-btn.info[onclick*="toggleThread"]`,
+    `#split-item-${itemPk} .ia-btn.info[onclick*="toggleThread"]`
+  ];
+
+  seletores.forEach(seletor => {
+    const btn = document.querySelector(seletor);
+
+    if (!btn) return;
+
+    const m = btn.textContent.match(/\d+/);
+    const atual = m ? parseInt(m[0]) : 0;
+
+    btn.textContent = `💬 ${atual + 1}`;
+  });
+}
+
+/* ── Atualiza status visual do item ── */
+function atualizarStatusItem(itemPk, status) {
+  ['item-row-', 'split-item-'].forEach(prefix => {
+    const row = getEl(prefix + itemPk);
+
+    if (!row) return;
+
+    row.className = row.className.replace(/\bst-\S+/g, '').trim();
+
+    if (status && status !== 'PENDENTE') {
+      row.classList.add(`st-${status}`);
+    } else {
+      row.classList.add('st-PENDENTE');
+    }
+  });
+
+  const labelsNormal = {
+    INCONSISTENTE: '⚠ Inconsistente',
+    OK_ANALISE: '✓ OK',
+    CONFIRMADO_SIGA: '✓ Confirmado',
+    DEVOLVIDO: '↩ Devolvido',
+    PENDENTE: ''
+  };
+
+  const labelsSplit = {
+    INCONSISTENTE: '⚠',
+    OK_ANALISE: '✓ OK',
+    CONFIRMADO_SIGA: '✓ SIGA',
+    DEVOLVIDO: '↩',
+    PENDENTE: ''
+  };
+
+  const sbClass = {
+    INCONSISTENTE: 'sb-INCONSISTENTE',
+    OK_ANALISE: 'sb-OK_ANALISE',
+    CONFIRMADO_SIGA: 'sb-CONFIRMADO_SIGA',
+    DEVOLVIDO: 'sb-DEVOLVIDO',
+    PENDENTE: 'sb-PENDENTE'
+  };
+
+  const badge = getEl(`badge-${itemPk}`);
+
+  if (badge) {
+    badge.className = `status-badge ${sbClass[status] || 'sb-PENDENTE'}`;
+    badge.textContent = labelsNormal[status] || '';
+  }
+
+  const splitBadge = getEl(`split-badge-${itemPk}`);
+
+  if (splitBadge) {
+    splitBadge.className = `status-badge ${sbClass[status] || 'sb-PENDENTE'}`;
+    splitBadge.style.marginLeft = '4px';
+    splitBadge.textContent = labelsSplit[status] || '';
+  }
+}
+
+/* ── OK Jurídico toggle + exibe anotação ── */
+async function okJuridico(pcPk, itemPk) {
+  const fd = new FormData();
+
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/item/${itemPk}/ok-juridico/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (!d.ok) return;
+
+  atualizarStatusItem(itemPk, d.status_novo);
+
+  const btnNormal = getEl(`btn-ok-${itemPk}`);
+  const btnSplit  = getEl(`split-btn-ok-${itemPk}`);
+
+  const textoBtn = d.status_novo === 'OK_ANALISE' ? '✓ Remover OK' : '✓ OK';
+
+  if (btnNormal) {
+    btnNormal.textContent = textoBtn;
+  }
+
+  if (btnSplit) {
+    btnSplit.textContent = textoBtn;
+  }
+
+  if (d.anotacao) {
+    appendAnotacaoThread(itemPk, d.anotacao);
+  }
+}
+
+/* ── Confirmar SIGA + exibe anotação ── */
+async function confirmarSiga(pcPk, itemPk) {
+  const fd = new FormData();
+
+  fd.append('observacao', '');
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/item/${itemPk}/confirmar-siga/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (!d.ok) return;
+
+  atualizarStatusItem(itemPk, 'CONFIRMADO_SIGA');
+
+  if (d.anotacao) {
+    appendAnotacaoThread(itemPk, d.anotacao);
+  }
+
+  if (d.todos_ok) {
+    const banner = document.createElement('div');
+
+    banner.style.cssText = 'background:#d1fae5;color:#065f46;padding:9px 13px;border-radius:10px;font-weight:700;margin-bottom:10px;';
+    banner.textContent = '✓ Todas as inconsistências foram confirmadas!';
+
+    getEl('secItens')?.prepend(banner);
+
+    const splitScroll = document.querySelector('.split-itens__scroll');
+
+    if (splitScroll) {
+      const bannerSplit = banner.cloneNode(true);
+      splitScroll.prepend(bannerSplit);
+    }
+  }
+}
+
+/* ── Retorno SIGA → Análise ── */
+async function enviarRetorno(pcPk) {
+  const motivo = getEl('motivoRetorno')?.value?.trim();
+  const fb = getEl('retornoFeedback');
+
+  if (!motivo) {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;';
+      fb.textContent = 'Informe o motivo.';
+    }
+    return;
+  }
+
+  const fd = new FormData();
+
+  fd.append('motivo', motivo);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/solicitar-retorno/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#d1fae5;color:#065f46;';
+      fb.textContent = 'Devolvido! Redirecionando…';
+    }
+
+    setTimeout(() => location.reload(), 1000);
+  } else {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;';
+      fb.textContent = d.error || 'Erro.';
+    }
+  }
+}
+
+/* ── Período ── */
+async function salvarPeriodo(pcPk) {
+  const val = getEl('selectPeriodo')?.value;
+  const fb  = getEl('feedbackPeriodo');
+
+  const fd  = new FormData();
+
+  fd.append('periodo', val);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/salvar-periodo/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#d1fae5;color:#065f46;';
+      fb.textContent = 'Período salvo: ' + d.periodo_label;
+    }
+
+    setTimeout(() => location.reload(), 800);
+  } else {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;';
+      fb.textContent = d.error || 'Erro.';
+    }
+  }
+}
+
+/* ── Uploads ── */
+async function _upload(url, fd, feedbackId, reloadDelay) {
+  const fb = getEl(feedbackId);
+
+  if (fb) {
+    fb.style.display = 'block';
+    fb.textContent = 'Enviando…';
+    fb.style.color = '#0e7490';
+  }
+
+  const r = await fetch(url, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    if (fb) {
+      fb.style.color = '#10b981';
+      fb.textContent = 'Enviado!';
+    }
+
+    setTimeout(() => location.reload(), reloadDelay || 800);
+  } else {
+    if (fb) {
+      fb.style.color = '#dc2626';
+      fb.textContent = d.error || 'Erro.';
+    }
+  }
+}
+
+function uploadDoc(input) {
+  if (!input.files.length) return;
+
+  const fd = new FormData();
+
+  fd.append('arquivo', input.files[0]);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  _upload(`/prestacao-contas/${PC_PK}/upload-anexo/`, fd, 'feedbackDoc');
+}
+
+function uploadComprovante(input) {
+  if (!input.files.length) return;
+
+  const fd = new FormData();
+
+  fd.append('comprovante', input.files[0]);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  _upload(`/prestacao-contas/${PC_PK}/upload-comprovante/`, fd, 'feedbackComp');
+}
+
+function uploadAnexo(input) {
+  if (!input.files.length) return;
+
+  const desc = getEl('descAnexo')?.value || '';
+
+  const fd = new FormData();
+
+  fd.append('arquivo', input.files[0]);
+  fd.append('descricao', desc);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  _upload(`/prestacao-contas/${PC_PK}/upload-anexo/`, fd, 'feedbackAnexo');
+}
+
+/* ── Vincular cliente ── */
+async function vincularCliente(pcPk) {
+  const sel = getEl('selectCliente');
+  const fb  = getEl('feedback-vincular');
+
+  if (!sel?.value) {
+    if (fb) {
+      fb.style.display = 'block';
+      fb.textContent = 'Selecione um cliente.';
+    }
+
+    return;
+  }
+
+  const fd = new FormData();
+
+  fd.append('cliente_id', sel.value);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/vincular-cliente/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    if (fb) {
+      fb.style.display = 'block';
+      fb.style.color = '#10b981';
+      fb.textContent = 'Vinculado: ' + d.cliente_nome;
+    }
+
+    setTimeout(() => location.reload(), 700);
+  } else {
+    if (fb) {
+      fb.style.display = 'block';
+      fb.style.color = '#dc2626';
+      fb.textContent = d.error || 'Erro.';
+    }
+  }
+}
+
+/* ── Prazos ── */
+async function carregarPrazos(pcPk) {
+  const r = await fetch(`/prestacao-contas/${pcPk}/prazos/`);
+  const d = await r.json();
+
+  if (!d.ok) return;
+
+  renderPrazosModal(d.prazos, pcPk);
+
+  const lista = getEl('listaPrazos');
+
+  if (lista) {
+    if (!d.prazos.length) {
+      lista.innerHTML = '<p style="font-size:.76rem;color:var(--muted);margin:0;">Nenhum prazo.</p>';
+    } else {
+      lista.innerHTML = d.prazos.map(p => `
+        <div class="prazo-row">
+          <div class="pr-desc ${p.status_css}">
+            ${p.concluido ? '✓ ' : ''}${p.descricao}
+          </div>
+          <div class="pr-data ${p.status_css}">
+            ${p.data_limite}
+            ${!p.concluido ? ` <span style="font-size:.68rem;">(${p.dias_restantes >= 0 ? p.dias_restantes + 'd' : 'vencido'})</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  const sp = getEl('splitPrazos');
+
+  if (sp) {
+    if (!d.prazos.length) {
+      sp.innerHTML = '<p style="font-size:.75rem;color:var(--muted);margin:0;">Nenhum prazo.</p>';
+    } else {
+      sp.innerHTML = d.prazos.map(p => `
+        <div class="prazo-row" style="margin-bottom:3px;">
+          <div class="pr-desc ${p.status_css}" style="font-size:.75rem;">
+            ${p.concluido ? '✓ ' : ''}${p.descricao}
+          </div>
+          <div class="pr-data ${p.status_css}">
+            ${p.data_limite}
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function renderPrazosModal(prazos, pcPk) {
+  const el = getEl('modalListaPrazos');
+
+  if (!el) return;
+
+  if (!prazos.length) {
+    el.innerHTML = '<p style="font-size:.8rem;color:var(--muted);">Nenhum prazo ainda.</p>';
+    return;
+  }
+
+  el.innerHTML = prazos.map(p => `
+    <div class="prazo-row" id="prazo-row-${p.id}">
+      <div class="pr-desc ${p.status_css}">
+        ${p.concluido ? '✓ ' : ''}${p.descricao}
+      </div>
+
+      <div class="pr-data ${p.status_css}">
+        ${p.data_limite}
+        ${!p.concluido ? ` <span style="font-size:.68rem;margin-left:3px;">(${p.dias_restantes >= 0 ? p.dias_restantes + 'd' : '⚠ vencido'})</span>` : ''}
+      </div>
+
+      <button type="button" class="ia-btn ${p.concluido ? '' : 'success'}" onclick="concluirPrazo(${pcPk},${p.id})">
+        ${p.concluido ? '↩' : '✓'}
+      </button>
+
+      <button type="button" class="ia-btn danger" onclick="excluirPrazo(${pcPk},${p.id})">
+        ✕
+      </button>
+    </div>
+  `).join('');
+}
+
+async function salvarPrazo(pcPk) {
+  const desc = getEl('pz_desc')?.value?.trim();
+  const data = getEl('pz_data')?.value;
+  const lemb = getEl('pz_lemb')?.value || 3;
+  const fb   = getEl('pzFeedback');
+
+  if (!desc || !data) {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;';
+      fb.textContent = 'Preencha descrição e data.';
+    }
+
+    return;
+  }
+
+  const fd = new FormData();
+
+  fd.append('descricao', desc);
+  fd.append('data_limite', data);
+  fd.append('dias_lembrete', lemb);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  const r = await fetch(`/prestacao-contas/${pcPk}/prazos/salvar/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  const d = await r.json();
+
+  if (d.ok) {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#d1fae5;color:#065f46;';
+      fb.textContent = 'Prazo adicionado!';
+    }
+
+    if (getEl('pz_desc')) getEl('pz_desc').value = '';
+    if (getEl('pz_data')) getEl('pz_data').value = '';
+
+    setTimeout(() => {
+      if (fb) fb.style.display = 'none';
+      carregarPrazos(pcPk);
+    }, 700);
+  } else {
+    if (fb) {
+      fb.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;';
+      fb.textContent = d.error || 'Erro.';
+    }
+  }
+}
+
+async function concluirPrazo(pcPk, prazoPk) {
+  const fd = new FormData();
+
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  await fetch(`/prestacao-contas/${pcPk}/prazos/${prazoPk}/concluir/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  carregarPrazos(pcPk);
+}
+
+async function excluirPrazo(pcPk, prazoPk) {
+  if (!confirm('Excluir este prazo?')) return;
+
+  const fd = new FormData();
+
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  await fetch(`/prestacao-contas/${pcPk}/prazos/${prazoPk}/excluir/`, {
+    method: 'POST',
+    body: fd
+  });
+
+  carregarPrazos(pcPk);
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => {
+  carregarPrazos(PC_PK);
+
+  // Toasts de prazos urgentes
+  {% for p in pc.prazos.all %}
+    {% if not p.concluido and p.dias_restantes <= 3 and p.dias_restantes >= 0 %}
+      setTimeout(() => {
+        const b = document.createElement('div');
+
+        b.style.cssText = 'position:fixed;top:14px;right:14px;z-index:9999;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:12px;padding:11px 15px;font-size:.83rem;font-weight:700;max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,.1);cursor:pointer;';
+
+        b.innerHTML = '⏰ Prazo: <strong>{{ p.descricao|truncatechars:35 }}</strong><br><span style="font-weight:400;">Vence em {{ p.dias_restantes }}d ({{ p.data_limite|date:"d/m/Y" }})</span>';
+
+        b.onclick = () => {
+          b.remove();
+          getEl('modalPrazos')?.classList.add('open');
+        };
+
+        document.body.appendChild(b);
+
+        setTimeout(() => b.remove(), 8000);
+      }, 600);
+    {% endif %}
+  {% endfor %}
+});
+
+
+/* ── Compatibilidade com botões do modo split ── */
+function toggleThreadSplit(itemPk) {
+  toggleThread(itemPk, 'split');
+}
+
+function toggleAnotFormSplit(itemPk) {
+  toggleAnotForm(itemPk, 'split');
+}
+
+function salvarAnotacaoSplit(pcPk, itemPk) {
+  salvarAnotacao(pcPk, itemPk, 'split');
+}
+
+</script>
+
+{% endblock %}

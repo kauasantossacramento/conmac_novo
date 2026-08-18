@@ -1,0 +1,2141 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Notas por Competência · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --brown:#945f34; --teal:#239FAB; --teal-dk:#1a7a84;
+  --green:#276749; --green-lt:#f0fff4;
+  --red:#c53030;   --red-lt:#fff5f5;
+  --gold:#c8922a;
+  --purple:#6b46c1; --purple-lt:#ede9fe; --purple-bd:#c4b5fd;
+  --cyan:#0e7490;   --cyan-lt:#ecfeff;   --cyan-bd:#a5f3fc;
+  --amber:#a16207;  --amber-lt:#fef9c3;  --amber-bd:#fde047;
+  --dark:#1a202c; --gray:#4a5568; --muted:#718096;
+  --border:#e2e8f0;
+  --grad:linear-gradient(135deg,#945f34 0%,#239FAB 100%);
+  font-family:'Sora',sans-serif;
+}
+
+.notas-hero {
+  margin-top:10px; background:var(--grad); border-radius:24px;
+  color:#fff; padding:26px 32px; display:flex; align-items:center;
+  justify-content:space-between; gap:20px;
+  box-shadow:0 16px 40px rgba(148,95,52,.2); flex-wrap:wrap;
+  position:relative; overflow:hidden;
+}
+.notas-hero::before { content:''; position:absolute; top:-40px; right:-40px; width:200px; height:200px; background:rgba(255,255,255,.05); border-radius:50%; }
+.hero-left { display:flex; align-items:center; gap:18px; position:relative; z-index:1; }
+.hero-ico  { width:60px; height:60px; display:grid; place-items:center; background:rgba(255,255,255,.18); border-radius:50%; border:2px solid rgba(255,255,255,.28); flex-shrink:0; }
+.hero-txt h2 { margin:0; font-size:1.75rem; font-weight:800; color:#fff; letter-spacing:-.4px; }
+.hero-txt p  { margin:5px 0 0; opacity:.85; font-size:.88rem; }
+.comp-badge  { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.25); border-radius:20px; padding:4px 14px; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-top:8px; }
+.hero-kpis   { display:flex; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
+
+.kpi-card { background:rgba(255,255,255,.97); border-radius:16px; padding:16px 20px; min-width:140px; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,.1); position:relative; overflow:hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--grad); }
+.kpi--green::before { background:linear-gradient(90deg,#276749,#48bb78); }
+.kpi--red::before   { background:linear-gradient(90deg,#c53030,#fc8181); }
+.kpi--gold::before  { background:linear-gradient(90deg,#945f34,#d69e2e); }
+.kpi--gray::before  { background:linear-gradient(90deg,#718096,#a0aec0); }
+.kpi__val {font-size:1.25rem; font-weight:800; color:var(--teal); }
+.kpi--green .kpi__val { color:var(--green); }
+.kpi--red   .kpi__val { color:var(--red); }
+.kpi--gold  .kpi__val { color:var(--brown); }
+.kpi--gray  .kpi__val { color:var(--muted); }
+.kpi__lbl { font-size:.64rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.5px; margin-top:4px; }
+.kpi__sub { font-size:.64rem; color:#a0aec0; margin-top:2px; }
+
+.progress-bar-wrap { background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px 22px; margin:14px 0 0; box-shadow:0 2px 8px rgba(0,0,0,.04); display:flex; align-items:center; gap:16px; }
+.pb-track { flex:1; height:10px; background:#e2e8f0; border-radius:99px; overflow:hidden; }
+.pb-fill  { height:100%; border-radius:99px; background:linear-gradient(90deg,#276749,#48bb78); transition:width .6s ease; }
+.pb-pct   { font-family:'JetBrains Mono',monospace; font-size:.85rem; font-weight:700; color:var(--green); white-space:nowrap; }
+
+.filter-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:18px 0 12px; }
+.filter-left  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.filter-right { display:flex; gap:8px; align-items:center; }
+.fsel {
+  padding:8px 30px 8px 12px; border:1.5px solid var(--border); border-radius:10px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  font-size:.82rem; color:var(--gray); cursor:pointer; appearance:none; -webkit-appearance:none;
+  font-family:'Sora',sans-serif; transition:.18s; outline:none;
+}
+.fsel:focus { border-color:var(--teal); }
+.fsel.on    { border-color:var(--teal); background-color:#f0fdff; }
+
+.btn-sync  { display:inline-flex; align-items:center; gap:7px; padding:9px 15px; background:var(--teal); color:#fff; border:none; border-radius:10px; font-size:.82rem; font-weight:700; cursor:pointer; text-decoration:none; transition:.18s; font-family:'Sora',sans-serif; }
+.btn-sync:hover { background:var(--teal-dk); }
+.btn-print { display:inline-flex; align-items:center; gap:7px; padding:9px 15px; background:#fff; color:var(--brown); border:1.5px solid var(--brown); border-radius:10px; font-size:.82rem; font-weight:700; cursor:pointer; text-decoration:none; transition:.18s; font-family:'Sora',sans-serif; }
+.btn-print:hover { background:var(--brown); color:#fff; }
+.btn-rel   { display:inline-flex; align-items:center; gap:6px; padding:9px 15px; background:#fff; color:var(--gray); border:1.5px solid var(--border); border-radius:10px; font-size:.82rem; font-weight:700; cursor:pointer; text-decoration:none; transition:.18s; font-family:'Sora',sans-serif; }
+.btn-rel:hover { border-color:var(--gray); }
+
+/* ── Toggles de visibilidade de colunas ── */
+.btn-col-toggle {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:7px 11px; border-radius:8px; font-size:.76rem; font-weight:600;
+  cursor:pointer; border:1.5px solid var(--border); background:#fff;
+  color:var(--muted); transition:.18s; font-family:'Sora',sans-serif;
+  white-space:nowrap; user-select:none;
+}
+.btn-col-toggle:hover  { border-color:var(--teal); color:var(--teal-dk); background:#f7feff; }
+.btn-col-toggle.active { border-color:var(--teal); color:var(--teal);    background:#f0fdff; }
+
+.badge-mun     { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:.69rem; font-weight:700; background:var(--purple-lt); color:var(--purple); border:1px solid var(--purple-bd); }
+.badge-ent-mun { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:.66rem; font-weight:700; background:var(--cyan-lt); color:var(--cyan); border:1px solid var(--cyan-bd); }
+.badge-ent-cam { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:.66rem; font-weight:700; background:var(--amber-lt); color:var(--amber); border:1px solid var(--amber-bd); }
+
+.table-wrap { background:#fff; border-radius:16px; border:1px solid var(--border); box-shadow:0 2px 12px rgba(0,0,0,.04); overflow:hidden; }
+.notas-table { width:100%; border-collapse:collapse; }
+.notas-table thead tr { background:#f8fafc; }
+.notas-table th { padding:12px 14px; text-align:left; font-size:.69rem; text-transform:uppercase; font-weight:700; color:var(--gray); border-bottom:2px solid var(--border); letter-spacing:.45px; font-family:'Sora',sans-serif; }
+.notas-table td { padding:12px 14px; border-bottom:1px solid #f1f5f9; font-size:.87rem; color:var(--dark); vertical-align:middle; }
+.notas-table tbody tr:last-child td { border-bottom:none; }
+.notas-table tbody tr:hover td { background:#fafbff; }
+.notas-table tbody tr.row-inativa td { opacity:.52; background:#fafafa; }
+
+.grp-sep td {
+  background:linear-gradient(90deg,#f3eeff 0%,#f8fafc 100%);
+  padding:10px 14px; font-size:.72rem; font-weight:800;
+  color:var(--purple); text-transform:uppercase; letter-spacing:.8px;
+  border-top:2px solid #ddd6fe; border-bottom:1px solid #e9d8fd;
+}
+.grp-sep .grp-ent { font-weight:600; color:var(--muted); font-size:.68rem; text-transform:none; letter-spacing:0; margin-left:10px; }
+
+.subtotal-row td {
+  background:#f8f4ff; padding:9px 14px;
+  border-top:1px solid #e9d8fd; font-size:.8rem;
+  font-weight:700; font-family:'JetBrains Mono',monospace;
+}
+
+.pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:.69rem; font-weight:700; font-family:'Sora',sans-serif; }
+.pill-paga   { background:var(--green-lt); color:var(--green); border:1px solid #9ae6b4; }
+.pill-pend   { background:#fff8f1; color:var(--gold); border:1px solid #fbd38d; }
+.pill-inativa{ background:#f7fafc; color:var(--muted); border:1px solid #cbd5e0; }
+
+.btn-confirmar { padding:5px 12px; border-radius:8px; font-size:.75rem; font-weight:700; cursor:pointer; border:none; transition:.18s; font-family:'Sora',sans-serif; }
+.btn-confirmar.nao-paga { background:var(--green-lt); color:var(--green); border:1.5px solid #9ae6b4; }
+.btn-confirmar.nao-paga:hover { background:var(--green); color:#fff; }
+.btn-confirmar.ja-paga  { background:var(--red-lt); color:var(--red); border:1.5px solid #feb2b2; }
+.btn-confirmar.ja-paga:hover  { background:var(--red); color:#fff; }
+.btn-inativar { padding:5px 10px; border-radius:8px; font-size:.72rem; font-weight:700; cursor:pointer; border:1.5px solid #cbd5e0; background:#f7fafc; color:var(--muted); transition:.18s; font-family:'Sora',sans-serif; }
+.btn-inativar:hover { border-color:var(--red); color:var(--red); background:var(--red-lt); }
+.btn-reativar { padding:5px 10px; border-radius:8px; font-size:.72rem; font-weight:700; cursor:pointer; border:1.5px solid #9ae6b4; background:var(--green-lt); color:var(--green); transition:.18s; font-family:'Sora',sans-serif; }
+.btn-reativar:hover { background:var(--green); color:#fff; }
+.mono { font-family:'JetBrains Mono',monospace; font-weight:600; }
+
+.modal-back { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-back.open { display:flex; }
+@keyframes slideUp { from{transform:translateY(12px) scale(.97);opacity:0} to{transform:none;opacity:1} }
+.modal-box { background:#fff; width:92%; max-width:440px; border-radius:20px; padding:28px; position:relative; box-shadow:0 24px 50px rgba(0,0,0,.2); animation:slideUp .25s ease-out; font-family:'Sora',sans-serif; }
+.modal-box.modal-verde  { border-top:4px solid var(--green); }
+.modal-box.modal-cinza  { border-top:4px solid var(--muted); }
+.modal-box.modal-desfaz { border-top:4px solid var(--red); }
+.modal-close { position:absolute; top:12px; right:12px; width:28px; height:28px; background:#f1f5f9; border:none; border-radius:50%; cursor:pointer; font-size:.95rem; color:var(--muted); display:grid; place-items:center; }
+.modal-close:hover { background:#e2e8f0; }
+.rec-field { margin-bottom:14px; }
+.rec-field label { display:block; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--gray); margin-bottom:4px; }
+.rec-field input,.rec-field textarea { width:100%; padding:9px 12px; border:1.5px solid #cbd5e0; border-radius:8px; font-size:.9rem; font-family:'Sora',sans-serif; box-sizing:border-box; transition:.18s; outline:none; }
+.rec-field input:focus,.rec-field textarea:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(35,159,171,.1); }
+.rec-field textarea { resize:vertical; min-height:56px; }
+.btn-cancel-m { padding:9px 16px; border:1.5px solid var(--border); background:#fff; border-radius:8px; cursor:pointer; font-weight:600; color:var(--gray); font-family:'Sora',sans-serif; }
+
+.empty-state { text-align:center; padding:52px 20px; color:var(--muted); }
+.empty-state h3 { font-size:1rem; color:var(--gray); margin:0 0 6px; }
+
+/* IMPRESSÃO */
+@media print {
+  .notas-hero,.filter-row,.progress-bar-wrap,
+  .btn-sync,.btn-print,.btn-rel,
+  .btn-confirmar,.btn-inativar,.btn-reativar,
+  .modal-back,nav,header,footer,
+  .col-acoes,.previsao-panel { display:none !important; }
+  * { font-family:Arial,sans-serif !important; }
+  body { font-size:10.5px; color:#000; background:#fff; margin:0; }
+  .print-header { display:block !important; }
+  .table-wrap { box-shadow:none; border:1px solid #bbb; border-radius:0; }
+  .notas-table { font-size:9.5px; }
+  .notas-table thead tr { background:#e8e8e8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .notas-table th { padding:6px 9px; font-size:8.5px; border-bottom:1.5px solid #aaa; }
+  .notas-table td { padding:6px 9px; border-bottom:1px solid #e0e0e0; }
+  .grp-sep td { background:#ede9fe !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; padding:6px 9px; font-size:8.5px; border-top:1.5px solid #9f7aea; }
+  .subtotal-row td { background:#f3eeff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; padding:6px 9px; font-size:9px; }
+  .subtotal-row .col-acoes { display:none !important; }
+  .pill,.badge-mun,.badge-ent-mun,.badge-ent-cam { border:1px solid #aaa !important; background:none !important; color:#000 !important; padding:1px 5px; font-size:8px; }
+  .row-inativa { display:none !important; }
+  /* Totais consolidados na impressão */
+  #totais-wrap {
+    display:flex !important;
+    border:1.5px solid #bbb !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    padding:8px 12px !important;
+    margin-top:6px !important;
+    page-break-inside:avoid;
+  }
+  #totais-wrap .divider-line { display:block !important; }
+  #gt-liq, #gt-rec, #gt-pend { font-size:.9rem !important; }
+  #gt-bar { display:none !important; }
+  @page { margin:1.5cm 1.5cm 2cm; size:A4; }
+}
+.print-header { display:none; margin-bottom:18px; padding-bottom:12px; border-bottom:2.5px solid #333; }
+.print-header__top { display:flex; justify-content:space-between; align-items:flex-start; }
+.print-header h2 { font-size:15px; margin:0 0 3px; font-weight:800; }
+.print-header .print-meta { font-size:9.5px; color:#555; margin-top:2px; }
+.print-header .print-logo { font-size:20px; font-weight:900; color:#945f34; letter-spacing:-1px; }
+.print-header .print-filtros { margin-top:8px; padding:6px 10px; background:#f3f4f6; border-left:3px solid #945f34; font-size:9.5px; color:#374151; display:flex; gap:16px; flex-wrap:wrap; }
+.print-header .print-filtros strong { color:#000; }
+</style>
+
+<!-- CABEÇALHO DE IMPRESSÃO -->
+<div class="print-header">
+  <div class="print-header__top">
+    <div>
+      <h2>CONMAC — Relatório de NFS-e Emitidas</h2>
+      <div class="print-meta">Competência: <strong>{{ meses_label }} / {{ ano_sel }}</strong> · Emitido em {% now "d/m/Y \à\s H:i" %}</div>
+    </div>
+  </div>
+  <div class="print-filtros">
+    <span>Competência: <strong>{{ meses_label }} / {{ ano_sel }}</strong></span>
+    {% if municipio_sel %}<span>Município: <strong>{{ municipio_sel }}</strong></span>{% endif %}
+    {% if entidade_sel  %}<span>Entidade: <strong>{% if entidade_sel == 'municipio' %}Prefeitura Municipal{% elif entidade_sel == 'camara' %}Câmara Municipal{% endif %}</strong></span>{% endif %}
+    {% if status_sel    %}<span>Status: <strong>{{ status_sel|capfirst }}</strong></span>{% endif %}
+    {% if not municipio_sel and not entidade_sel and not status_sel %}<span>Todos os registros ativos</span>{% endif %}
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="notas-hero">
+  <div class="hero-left">
+    <div class="hero-ico">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </div>
+    <div class="hero-txt">
+      <h2>Notas por Competência</h2>
+      <p>Controle de recebimentos · NFS-e sincronizadas do Omie</p>
+      <span class="comp-badge">{{ meses_label }} ● {{ ano_sel|stringformat:"s" }}</span>
+    </div>
+  </div>
+  <div class="hero-kpis">
+    <div class="kpi-card"><div class="kpi__val">{{ qtd_emitidas }}</div><div class="kpi__lbl">Emitidas</div><div class="kpi__sub">{{ mes_nome }}</div></div>
+    <div class="kpi-card kpi--green"><div class="kpi__val">R$ {{ total_recebido|floatformat:2|intcomma }}</div><div class="kpi__lbl">Recebido</div><div class="kpi__sub">{{ qtd_pagas }} nota{{ qtd_pagas|pluralize:"s" }}</div></div>
+    <div class="kpi-card kpi--red"><div class="kpi__val">R$ {{ a_receber|floatformat:2|intcomma }}</div><div class="kpi__lbl">A Receber</div><div class="kpi__sub">{{ qtd_pendentes }} pendente{{ qtd_pendentes|pluralize:"s" }}</div></div>
+    <div class="kpi-card kpi--gold"><div class="kpi__val">R$ {{ total_emitido|floatformat:2|intcomma }}</div><div class="kpi__lbl">Total Emitido</div><div class="kpi__sub">Faturamento bruto</div></div>
+    {% if qtd_inativas > 0 %}
+    <div class="kpi-card kpi--gray"><div class="kpi__val">{{ qtd_inativas }}</div><div class="kpi__lbl">Inativas</div><div class="kpi__sub">ocultas</div></div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- PROGRESSO -->
+<div class="progress-bar-wrap">
+  <span style="font-size:.82rem;color:var(--gray);white-space:nowrap;font-weight:600">Recebimento</span>
+  <div class="pb-track"><div class="pb-fill" style="width:{{ pct_recebido }}%"></div></div>
+  <span class="pb-pct">{{ pct_recebido }}%</span>
+  <span style="font-size:.76rem;color:var(--muted)">de R$ {{ total_emitido|floatformat:2|intcomma }} confirmado</span>
+</div>
+
+{% load static %}
+
+<!-- ═══════════════════════════════════════════════════════════
+     ESTILOS — multi-select + modal
+════════════════════════════════════════════════════════════════ -->
+<style>
+/* ── Multi-select dropdown ── */
+.ms-wrap          { position:relative; display:inline-block; }
+.ms-trigger       { cursor:pointer; user-select:none; display:flex;
+                    align-items:center; gap:6px; white-space:nowrap; }
+.ms-trigger::after{ content:'▾'; font-size:10px; opacity:.6; }
+.ms-panel         { display:none; position:absolute; top:calc(100% + 4px); left:0;
+                    background:#fff; border:1px solid #dde1ea; border-radius:8px;
+                    box-shadow:0 6px 24px rgba(0,0,0,.12); min-width:200px;
+                    max-height:280px; overflow-y:auto; z-index:400; padding:8px 0; }
+.ms-panel.open    { display:block; }
+.ms-panel label   { display:flex; align-items:center; gap:8px;
+                    padding:7px 14px; cursor:pointer; font-size:13px;
+                    color:#374151; transition:background .15s; }
+.ms-panel label:hover { background:#f3f4f6; }
+.ms-panel input   { accent-color:#4f46e5; width:15px; height:15px; cursor:pointer; }
+.ms-panel .ms-actions { display:flex; justify-content:space-between;
+                        padding:8px 14px 4px; border-top:1px solid #eee; margin-top:4px; }
+.ms-panel .ms-actions button { background:none; border:none; font-size:12px;
+                                color:#4f46e5; cursor:pointer; padding:0; }
+.ms-panel .ms-actions button:hover { text-decoration:underline; }
+.fsel.on, .ms-trigger.on { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+
+/* ── Modal overlay ── */
+.pivot-overlay    { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+                    z-index:900; align-items:center; justify-content:center; }
+.pivot-overlay.open { display:flex; }
+.pivot-modal      { background:#fff; border-radius:12px; width:96vw; max-width:1200px;
+                    max-height:92vh; display:flex; flex-direction:column;
+                    box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden; }
+
+/* ── Modal header ── */
+.piv-header       { display:flex; align-items:center; justify-content:space-between;
+                    padding:16px 22px; border-bottom:1px solid #e5e7eb; flex-shrink:0; }
+.piv-header-left  { display:flex; align-items:center; gap:14px; }
+.piv-header h2    { font-size:15px; font-weight:600; color:#111827; margin:0; }
+.piv-close        { background:none; border:none; font-size:22px; color:#6b7280;
+                    cursor:pointer; line-height:1; padding:2px 6px; border-radius:6px; }
+.piv-close:hover  { background:#f3f4f6; color:#111; }
+
+/* ── Modal filters bar ── */
+.piv-filters      { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+                    padding:12px 22px; background:#f9fafb; border-bottom:1px solid #e5e7eb;
+                    flex-shrink:0; }
+.piv-filters .fsel{ height:32px; font-size:12px; padding:0 10px; }
+.piv-filters .ms-trigger { font-size:12px; height:32px; padding:0 10px;
+                            border:1px solid #d1d5db; border-radius:6px;
+                            background:#fff; color:#374151; }
+
+/* ── Modal body / table ── */
+.piv-body         { overflow:auto; flex:1; padding:0; }
+.piv-table-wrap   { min-width:100%; }
+.piv-table        { width:100%; border-collapse:collapse; font-size:12px; }
+.piv-table th     { background:#f3f4f6; color:#374151; font-weight:600;
+                    padding:9px 12px; text-align:center; white-space:nowrap;
+                    border-bottom:2px solid #d1d5db; position:sticky; top:0; z-index:2; }
+.piv-table th.city-col { text-align:left; min-width:170px; left:0; z-index:3;
+                          border-right:2px solid #d1d5db; }
+.piv-table th.total-col { background:#eef2ff; color:#4338ca; }
+.piv-table th.yr-header { background:#fef9c3; color:#92400e; border-bottom:1px solid #d1d5db; }
+.piv-table th.yr-header-2 { background:#dbeafe; color:#1e40af; }
+.piv-table td     { padding:8px 12px; border-bottom:1px solid #f0f0f0;
+                    text-align:right; white-space:nowrap; color:#374151; }
+.piv-table td.city-col { text-align:left; font-weight:500; position:sticky; left:0;
+                          background:#fff; border-right:2px solid #e5e7eb; z-index:1; }
+.piv-table td.total-col { font-weight:600; background:#f5f3ff; color:#4338ca; }
+.piv-table tr:hover td  { background:#fafafa; }
+.piv-table tr:hover td.city-col  { background:#fafafa; }
+.piv-table tr:hover td.total-col { background:#eef2ff; }
+.piv-table .total-row td { font-weight:700; background:#f3f4f6 !important;
+                            border-top:2px solid #d1d5db; color:#111827; }
+.piv-table .total-row td.total-col { background:#e0e7ff !important; color:#3730a3; }
+.dash-cell        { color:#c4c9d4; }
+
+/* ── Modal footer / actions ── */
+.piv-footer       { display:flex; justify-content:flex-end; gap:10px;
+                    padding:12px 22px; border-top:1px solid #e5e7eb; flex-shrink:0; }
+.btn-piv          { display:flex; align-items:center; gap:6px; padding:8px 16px;
+                    border-radius:8px; font-size:13px; font-weight:500; cursor:pointer;
+                    border:1px solid transparent; transition:all .18s; }
+.btn-piv-outline  { background:#fff; border-color:#d1d5db; color:#374151; }
+.btn-piv-outline:hover { background:#f3f4f6; }
+.btn-piv-primary  { background:#4f46e5; color:#fff; }
+.btn-piv-primary:hover{ background:#4338ca; }
+
+/* ── Loading spinner ── */
+.piv-loading      { display:flex; align-items:center; justify-content:center;
+                    height:200px; color:#6b7280; font-size:14px; gap:10px; }
+.piv-spinner      { width:22px; height:22px; border:3px solid #e5e7eb;
+                    border-top-color:#4f46e5; border-radius:50%;
+                    animation:spin .7s linear infinite; }
+@keyframes spin   { to { transform:rotate(360deg); } }
+
+/* ── Tipo toggle (Total / Recebido / Pendente) ── */
+.piv-tipo-toggle { display:flex; gap:3px; background:#f1f5f9; padding:3px; border-radius:8px; flex-shrink:0; }
+.btn-tipo { padding:4px 13px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:transparent; color:#6b7280; transition:.15s; white-space:nowrap; }
+.btn-tipo:hover { color:#374151; }
+.btn-tipo.active          { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+.btn-tipo.active.tipo-em  { color:#92400e; }
+.btn-tipo.active.tipo-rec { color:#166534; }
+.btn-tipo.active.tipo-pen { color:#b45309; }
+.btn-filtrar {
+    border: none;
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 900px;
+    cursor: pointer;
+    background: linear-gradient(90deg, #E57A34 0%, #239FAB 100%);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, .12);
+    font-weight: 700;
+    text-transform: lowercase;
+/* ── PDF print area ── */
+#piv-print-area   { display:none; }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FILTROS — multi-select para mês e município
+════════════════════════════════════════════════════════════════ -->
+<div class="filter-row">
+
+  <form method="GET" class="filter-left" id="filtro-form">
+
+      <!-- ── Mês ── -->
+      <div class="ms-wrap" id="ms-mes-wrap">
+        <button type="button"
+                class="fsel ms-trigger {% if meses_sel|length > 0 and meses_sel|length < 12 %}on{% endif %}"
+                id="ms-mes-btn">
+          {{ meses_label }}
+        </button>
+        <div class="ms-panel" id="ms-mes-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="msSelectAll('mes')">Todos</button>
+            <button type="button" onclick="msSelectNone('mes')">Nenhum</button>
+          </div>
+          {% for m in meses_range %}
+          <label>
+            <input type="checkbox" name="mes" value="{{ m }}"
+                   {% if m in meses_sel %}checked{% endif %}>
+            {{ MESES|slice:m|last }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Ano ── -->
+      <div class="ms-wrap" id="ms-ano-wrap">
+        <button type="button"
+                class="fsel ms-trigger {% if anos_sel|length > 0 and anos_sel|length < anos_range|length %}on{% endif %}"
+                id="ms-ano-btn">
+          {{ anos_label }}
+        </button>
+        <div class="ms-panel" id="ms-ano-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="msSelectAll('ano')">Todos</button>
+            <button type="button" onclick="msSelectNone('ano')">Nenhum</button>
+          </div>
+          {% for a in anos_range %}
+          <label>
+            {# stringformat:"d" evita formatação pt-BR "2.026" #}
+            <input type="checkbox" name="ano" value="{{ a|stringformat:"d" }}"
+                   {% if a in anos_sel %}checked{% endif %}>
+            {{ a|stringformat:"d" }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Município ── -->
+      <div class="ms-wrap" id="ms-mun-wrap">
+        <button type="button"
+                class="fsel ms-trigger {% if municipios_sel %}on{% endif %}"
+                id="ms-mun-btn">
+          {% if not municipios_sel %}Todos municípios
+          {% elif municipios_sel|length == 1 %}{{ municipios_sel.0 }}
+          {% else %}{{ municipios_sel|length }} municípios
+          {% endif %}
+        </button>
+        <div class="ms-panel" id="ms-mun-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="msSelectAll('municipio')">Todos</button>
+            <button type="button" onclick="msSelectNone('municipio')">Nenhum</button>
+          </div>
+          {% for mun in municipios %}
+          <label>
+            <input type="checkbox" name="municipio" value="{{ mun }}"
+                   {% if mun in municipios_sel %}checked{% endif %}>
+            {{ mun }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Entidade ── -->
+      <div class="ms-wrap" id="ms-ent-wrap">
+        <button type="button"
+                class="fsel ms-trigger {% if entidades_sel %}on{% endif %}"
+                id="ms-ent-btn">
+          {{ entidades_label }}
+        </button>
+        <div class="ms-panel" id="ms-ent-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="msSelectAll('entidade')">Todos</button>
+            <button type="button" onclick="msSelectNone('entidade')">Nenhum</button>
+          </div>
+          {% for val, label in ENTIDADES %}
+          <label>
+            <input type="checkbox" name="entidade" value="{{ val }}"
+                   {% if val in entidades_sel %}checked{% endif %}>
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Contrato ── -->
+      <div class="ms-wrap" id="ms-ctr-wrap">
+        <button type="button"
+                class="fsel ms-trigger {% if contratos_sel %}on{% endif %}"
+                id="ms-ctr-btn">
+          {{ contratos_label }}
+        </button>
+        <div class="ms-panel" id="ms-ctr-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="msSelectAll('contrato')">Todos</button>
+            <button type="button" onclick="msSelectNone('contrato')">Nenhum</button>
+          </div>
+          {% for c in contratos_filtro %}
+          <label>
+            <input type="checkbox" name="contrato" value="{{ c.id }}"
+                   {% if c.id|stringformat:"s" in contratos_sel %}checked{% endif %}>
+            {{ c.cliente_nome|default:c.omie_num_ctr }}{% if c.municipio %} · {{ c.municipio }}{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Status ── -->
+      <div class="ms-wrap" id="ms-sta-wrap">
+        <button type="button"
+                class="fsel ms-trigger {% if status_sel %}on{% endif %}"
+                id="ms-sta-btn">
+          {{ status_label }}
+        </button>
+        <div class="ms-panel" id="ms-sta-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="msSelectAll('status')">Todos</button>
+            <button type="button" onclick="msSelectNone('status')">Nenhum</button>
+          </div>
+          {% for val, label in STATUS_OPTS %}
+          <label>
+            <input type="checkbox" name="status" value="{{ val }}"
+                   {% if val in status_sel %}checked{% endif %}>
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Botão Filtrar ── -->
+      <button type="submit" class="fsel btn-filtrar">
+        🔍 Filtrar
+      </button>
+
+    </form>
+
+  <div class="filter-right">
+    <!-- Botão que abre o modal de pivot -->
+    <button type="button" class="btn-rel" onclick="abrirPivotModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      Relatório por Cidade
+    </button>
+
+    <a href="{% url 'relatorio_receitas' %}?ano={{ ano_sel|stringformat:'d' }}" class="btn-rel">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6"  y1="20" x2="6"  y2="14"/>
+      </svg>
+      Relatório Anual
+    </a>
+
+    <a href="{% url 'receitas_dashboard' %}?ano={{ ano_sel }}" class="btn-rel">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.92 15.45V19h-2.5v-1.48c-1.45-.26-2.6-1.2-2.79-2.5h1.73c.16.68.86 1.19 2.3 1.19 1.32 0 2.03-.75 2.03-1.58 0-1.04-.8-1.57-2.72-2-.91-.21-3.15-.74-3.15-3.14 0-1.63 1.31-2.66 2.52-2.93V5.5h2.5v1.43c1.23.22 2.12 1 2.3 2.29h-1.74c-.1-.61-.7-1.06-1.73-1.06-1.01 0-1.9.55-1.9 1.52 0 .83.65 1.27 2.59 1.71 2.07.47 3.21 1.48 3.21 3.04 0 1.77-1.43 2.79-2.73 3.02z"/>
+      </svg>
+      Ver Contratos
+    </a>
+
+    <!-- ── Separador visual ── -->
+    <div style="width:1px;height:22px;background:var(--border);align-self:center;flex-shrink:0;"></div>
+
+    <!-- ── Toggles: Valor Recebido e Status ── -->
+    <button id="btn-col-vr" class="btn-col-toggle active"
+            onclick="toggleCol('vr')"
+            title="Mostrar / ocultar coluna Valor Recebido">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      Recebido
+    </button>
+
+    <button id="btn-col-st" class="btn-col-toggle active"
+            onclick="toggleCol('st')"
+            title="Mostrar / ocultar coluna Status">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      Status
+    </button>
+
+    <!-- ── Separador visual ── -->
+    <div style="width:1px;height:22px;background:var(--border);align-self:center;flex-shrink:0;"></div>
+
+    <button onclick="window.print()" class="btn-print">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Imprimir
+    </button>
+
+    <!--
+    <a href="{% url 'sincronizar_nfse' %}?mes={{ meses_sel.0 }}&ano={{ ano_sel }}&next=notas_competencia"
+       class="btn-sync"
+       onclick="return confirm('Sincronizar competência {{ meses_label }}/{{ ano_sel }} com o Omie?');">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Sincronizar Omie
+    </a>
+    -->
+
+  </div>
+</div>
+
+
+
+<div class="table-wrap">
+  <table class="notas-table" id="tabela-notas">
+    <thead>
+      <tr>
+        <th>NFS-e / Data</th>
+        <th>Cliente / Contrato</th>
+        <th>Município · Entidade</th>
+        <th style="text-align:right">Valor Líquido</th>
+        <th style="text-align:right" class="col-vr">Valor Recebido</th>
+        <th style="text-align:center" class="col-st">Status</th>
+        <th style="text-align:center" class="col-acoes">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if notas_list %}
+        {% regroup notas_list by municipio as por_municipio %}
+        {% for grp_mun in por_municipio %}
+          {% regroup grp_mun.list by tipo_entidade_display as por_entidade %}
+          {% for grp_ent in por_entidade %}
+
+          <tr class="grp-sep">
+            <td colspan="7">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"
+                   style="margin-right:6px;vertical-align:middle">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              </svg>
+              {% if grp_mun.grouper %}{{ grp_mun.grouper }}{% else %}Sem município{% endif %}
+              {% if grp_ent.grouper %}<span class="grp-ent">— {{ grp_ent.grouper }}</span>{% endif %}
+            </td>
+          </tr>
+
+          {% for item in grp_ent.list %}
+          {# fix 1: data-grp agora aponta para o subtotal do grupo correto #}
+          {# fix 2: stringformat:".2f" garante ponto decimal para o JS     #}
+          <tr id="row-{{ item.nota.id|stringformat:'d' }}"
+              data-grp="{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}"
+              data-liq="{{ item.nota.valor_liquido|stringformat:'.2f' }}"
+              data-rec="{% if item.paga %}{{ item.valor_recebido|default:item.nota.valor_liquido|stringformat:'.2f' }}{% else %}0{% endif %}"
+              data-paga="{% if item.paga %}1{% else %}0{% endif %}"
+              class="{% if item.nota.status == 'inativa' %}row-inativa{% endif %}">
+
+            <td>
+              <strong style="font-family:'JetBrains Mono',monospace;font-size:.84rem">
+                {{ item.nota.numero_nfse|default:"—" }}
+              </strong><br>
+              <small style="color:var(--muted);font-size:.73rem">
+                {{ item.nota.data_emissao|date:"d/m/Y"|default:"—" }}
+              </small>
+            </td>
+
+            <td>
+              <span style="font-weight:600">{{ item.nota.cliente_nome|default:"—" }}</span><br>
+              {% if item.nota.contrato %}
+                <small style="color:var(--muted);font-size:.73rem">Ctr {{ item.nota.contrato.omie_num_ctr }}</small>
+              {% else %}
+                <small style="color:var(--muted);font-size:.73rem">Nota avulsa</small>
+              {% endif %}
+            </td>
+
+            <td>
+              <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;">
+                {% if item.municipio %}
+                  <span class="badge-mun">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                    </svg>
+                    {{ item.municipio }}
+                  </span>
+                {% else %}
+                  <span style="color:#cbd5e0;font-size:.76rem">—</span>
+                {% endif %}
+                {% if item.tipo_entidade == 'municipio' %}
+                  <span class="badge-ent-mun">Prefeitura Municipal</span>
+                {% elif item.tipo_entidade == 'camara' %}
+                  <span class="badge-ent-cam">Câmara Municipal</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <td style="text-align:right" class="mono">
+              R$ {{ item.nota.valor_liquido|floatformat:2|intcomma }}
+            </td>
+
+            <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600"
+                id="vr-{{ item.nota.id|stringformat:'d' }}" class="col-vr">
+              {% if item.paga %}
+                <span style="color:var(--green);font-weight:700">
+                  R$ {{ item.valor_recebido|floatformat:2|intcomma }}
+                </span>
+                {% if item.data_recebimento %}
+                  <br><small style="color:var(--muted);font-size:.71rem">
+                    {{ item.data_recebimento|date:"d/m/Y" }}
+                  </small>
+                {% endif %}
+              {% else %}
+                <span style="color:#a0aec0">—</span>
+              {% endif %}
+            </td>
+
+            <td style="text-align:center" id="st-{{ item.nota.id|stringformat:'d' }}" class="col-st">
+              {% if item.nota.status == 'inativa' %}
+                <span class="pill pill-inativa">🚫 Inativa</span>
+              {% elif item.paga %}
+                <span class="pill pill-paga">✓ Recebida</span>
+              {% else %}
+                <span class="pill pill-pend">⏳ Pendente</span>
+              {% endif %}
+            </td>
+
+            <td style="text-align:center;white-space:nowrap" class="col-acoes">
+              {% if item.nota.status == 'inativa' %}
+                <button class="btn-reativar"
+                        data-nota="{{ item.nota.id|stringformat:'d' }}"
+                        onclick="reativarNota(this)">↩ Reativar</button>
+              {% else %}
+                {% if item.paga %}
+                  <button class="btn-confirmar ja-paga"
+                          data-nota="{{ item.nota.id|stringformat:'d' }}"
+                          data-paga="1"
+                          data-valor="{{ item.nota.valor_liquido|stringformat:'.2f' }}"
+                          onclick="abrirModal(this)"
+                          style="margin-right:4px">Desfazer</button>
+                {% else %}
+                  <button class="btn-confirmar nao-paga"
+                          data-nota="{{ item.nota.id|stringformat:'d' }}"
+                          data-paga="0"
+                          data-valor="{{ item.nota.valor_liquido|stringformat:'.2f' }}"
+                          onclick="abrirModal(this)"
+                          style="margin-right:4px">Confirmar</button>
+                {% endif %}
+                <button class="btn-inativar"
+                        data-nota="{{ item.nota.id|stringformat:'d' }}"
+                        onclick="abrirModalInativar(this)"
+                        title="Inativar nota">🚫</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}{# grp_ent.list #}
+
+          {# fix 3: data-grp agora corresponde ao data-grp das linhas acima #}
+          <tr class="subtotal-row"
+              data-grp="{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+            <td colspan="3"
+                style="text-align:right;font-size:.76rem;font-weight:700;
+                       color:var(--purple);font-family:'Sora',sans-serif">
+              Subtotal ·
+              {% if grp_mun.grouper %}{{ grp_mun.grouper }}{% else %}Sem município{% endif %}
+              {% if grp_ent.grouper %} — {{ grp_ent.grouper }}{% endif %}
+            </td>
+            <td style="text-align:right;color:var(--purple)">
+              <span class="st-liq">—</span>
+            </td>
+            <td style="text-align:right;color:var(--green)" class="col-vr">
+              <span class="st-rec">—</span>
+            </td>
+            <td style="text-align:center;color:var(--muted);font-size:.72rem;
+                       font-family:'Sora',sans-serif" class="col-st">
+              <span class="st-qtd"></span>
+            </td>
+            <td class="col-acoes"></td>
+          </tr>
+
+          {% endfor %}{# por_entidade #}
+        {% endfor %}{# por_municipio #}
+
+      {% else %}
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5"
+                 style="opacity:.3;margin-bottom:14px">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <h3>Nenhuma nota encontrada</h3>
+            <p>Tente sincronizar com o Omie ou ajuste os filtros.</p>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+// Preenche os subtotais de cada grupo agrupando por data-grp
+document.querySelectorAll('.subtotal-row').forEach(subRow => {
+  const grp  = subRow.dataset.grp;
+  const rows = document.querySelectorAll(`tr[data-grp="${grp}"]`);
+
+  let liq = 0, rec = 0, qtd = 0, pagas = 0;
+  rows.forEach(r => {
+    liq   += parseFloat(r.dataset.liq || 0);
+    rec   += parseFloat(r.dataset.rec || 0);
+    qtd   += 1;
+    pagas += parseInt(r.dataset.paga || 0);
+  });
+
+  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  subRow.querySelector('.st-liq').textContent = fmt(liq);
+  subRow.querySelector('.st-rec').textContent = rec > 0 ? fmt(rec) : '—';
+  subRow.querySelector('.st-qtd').textContent =
+    `${qtd} nota${qtd !== 1 ? 's' : ''} · ${pagas} paga${pagas !== 1 ? 's' : ''}`;
+});
+</script>
+
+<!-- TOTAIS CONSOLIDADOS (calculados via JS) -->
+<div id="totais-wrap" style="
+  margin-top:10px; background:#fff; border:1px solid var(--border);
+  border-radius:16px; padding:16px 22px;
+  box-shadow:0 2px 12px rgba(0,0,0,.05);
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+">
+  <!-- Lado esquerdo: label + qtd -->
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:36px;height:36px;background:var(--purple-lt);border-radius:10px;display:grid;place-items:center;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+    </div>
+    <div>
+      <div style="font-size:.68rem;text-transform:uppercase;font-weight:700;letter-spacing:.5px;color:var(--muted);">Total</div>
+      <div style="font-size:.82rem;color:var(--dark);font-weight:600;">
+        <span id="gt-qtd" style="color:var(--purple);">—</span> notas
+      </div>
+    </div>
+  </div>
+
+  <!-- Divisor -->
+  <div style="flex:1;height:1px;background:var(--border);min-width:20px;display:none" class="divider-line"></div>
+
+  <!-- KPIs inline -->
+  <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+
+    <div style="text-align:center;padding:0 16px;border-right:1px solid var(--border);">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:800;color:var(--brown);" id="gt-liq">—</div>
+      <div style="font-size:.63rem;text-transform:uppercase;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-top:2px;">Total</div>
+    </div>
+
+    <div style="text-align:center;padding:0 16px;border-right:1px solid var(--border);">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:800;color:var(--green);" id="gt-rec">—</div>
+      <div style="font-size:.63rem;text-transform:uppercase;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-top:2px;">Recebido</div>
+    </div>
+
+    <div style="text-align:center;padding:0 16px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:800;color:var(--red);" id="gt-pend">—</div>
+      <div style="font-size:.63rem;text-transform:uppercase;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-top:2px;">A Receber</div>
+    </div>
+
+  </div>
+
+  <!-- Barra de progresso inline -->
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;min-width:180px;">
+    <div style="flex:1;height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
+      <div id="gt-bar" style="height:100%;border-radius:99px;background:linear-gradient(90deg,#276749,#48bb78);width:0%;transition:width .5s ease;"></div>
+    </div>
+    <span id="gt-pct" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:700;color:var(--green);white-space:nowrap;">0%</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAINEL — Previsão de Pagamento (por município · entidade)
+════════════════════════════════════════════════════════════════ -->
+<section class="previsao-panel" id="previsao-panel">
+  <div class="previsao-panel__head">
+    <div class="previsao-panel__title">
+      <div class="previsao-ico">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <path d="m9 16 2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <h3>Previsão de Pagamento</h3>
+        <p>Acompanhamento por município · entidade — competência {{ meses_label }} / {{ anos_label }}</p>
+      </div>
+    </div>
+    <button type="button" class="btn-nova-previsao" onclick="abrirModalPrevisao()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Nova Previsão
+    </button>
+  </div>
+
+  <div class="previsao-grid" id="previsao-grid"><!-- injetado via JS --></div>
+  <div class="previsao-empty" id="previsao-empty" style="display:none">
+    Nenhuma previsão cadastrada para esta competência. Clique em "Nova Previsão" para começar.
+  </div>
+</section>
+
+{{ previsoes_data|json_script:"previsoes-data" }}
+{{ competencias_selecionadas|json_script:"competencias-data" }}
+{{ municipios|json_script:"previsao-municipios-data" }}
+
+<!-- MODAL PREVISÃO — Criar / Editar -->
+<div class="modal-back" id="modal-previsao">
+  <div class="modal-box modal-verde" id="modal-previsao-box" style="max-width:480px">
+    <button class="modal-close" onclick="fecharModal('modal-previsao')">×</button>
+    <h3 id="modal-previsao-titulo" style="margin:0 0 4px;font-size:1rem;color:var(--teal-dk)">Nova Previsão de Pagamento</h3>
+    <p id="modal-previsao-sub" style="color:var(--muted);font-size:.81rem;margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--border)">Informe os dados da previsão abaixo.</p>
+
+    <input type="hidden" id="prev-editando-id">
+
+    <div class="rec-field-row">
+      <div class="rec-field">
+        <label>Município</label>
+        <input type="text" id="prev-municipio" list="prev-municipios-list" placeholder="Nome do município">
+        <datalist id="prev-municipios-list"></datalist>
+      </div>
+      <div class="rec-field">
+        <label>Entidade</label>
+        <select id="prev-entidade">
+          {% for val, label in ENTIDADES %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="rec-field-row">
+      <div class="rec-field">
+        <label>Competência (mês)</label>
+        <select id="prev-comp-mes">
+          {% for m in meses_range %}
+          <option value="{{ m }}">{{ MESES|slice:m|last }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="rec-field">
+        <label>Competência (ano)</label>
+        <select id="prev-comp-ano">
+          {% for a in anos_range %}
+          <option value="{{ a|stringformat:'d' }}">{{ a|stringformat:'d' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="rec-field-row">
+      <div class="rec-field">
+        <label>Data prevista</label>
+        <input type="date" id="prev-data">
+      </div>
+      <div class="rec-field">
+        <label>Valor previsto (R$)</label>
+        <input type="number" step="0.01" id="prev-valor" placeholder="0,00">
+      </div>
+    </div>
+
+    <div class="rec-field"><label>Observação</label><textarea id="prev-obs" placeholder="Opcional…"></textarea></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <button onclick="fecharModal('modal-previsao')" class="btn-cancel-m">Cancelar</button>
+      <button id="modal-previsao-btn-salvar" onclick="salvarPrevisao()" style="padding:9px 20px;border:none;background:var(--grad);color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-family:'Sora',sans-serif;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVISÃO — Marcar status (cumprida / não cumprida / reaberta) -->
+<div class="modal-back" id="modal-previsao-marcar">
+  <div class="modal-box modal-verde" id="modal-previsao-marcar-box">
+    <button class="modal-close" onclick="fecharModal('modal-previsao-marcar')">×</button>
+    <h3 id="modal-previsao-marcar-titulo" style="margin:0 0 4px;font-size:1rem;color:var(--green)">Marcar previsão</h3>
+    <p style="color:var(--muted);font-size:.81rem;margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--border)">Isso gera um novo evento no histórico desta previsão.</p>
+    <input type="hidden" id="marcar-previsao-id"><input type="hidden" id="marcar-novo-status">
+    <div class="rec-field"><label>Observação</label><textarea id="marcar-obs" placeholder="Opcional…"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <button onclick="fecharModal('modal-previsao-marcar')" class="btn-cancel-m">Cancelar</button>
+      <button id="modal-previsao-marcar-btn" onclick="confirmarMarcarPrevisao()" style="padding:9px 20px;border:none;background:var(--grad);color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-family:'Sora',sans-serif;">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ESTILOS — Painel de Previsão de Pagamento
+════════════════════════════════════════════════════════════════ -->
+<style>
+.previsao-panel {
+  margin-top:18px; background:#fff; border:1px solid var(--border); border-radius:16px;
+  padding:20px 22px; box-shadow:0 2px 12px rgba(0,0,0,.04);
+}
+.previsao-panel__head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+.previsao-panel__title { display:flex; align-items:center; gap:14px; }
+.previsao-ico { width:42px; height:42px; border-radius:12px; background:var(--cyan-lt); display:grid; place-items:center; flex-shrink:0; border:1px solid var(--cyan-bd); }
+.previsao-panel__title h3 { margin:0; font-size:1.02rem; font-weight:800; color:var(--dark); letter-spacing:-.2px; }
+.previsao-panel__title p  { margin:2px 0 0; font-size:.78rem; color:var(--muted); }
+
+.btn-nova-previsao {
+  display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border:none; border-radius:10px;
+  background:var(--grad); color:#fff; font-size:.82rem; font-weight:700; cursor:pointer;
+  font-family:'Sora',sans-serif; transition:.18s; box-shadow:0 6px 16px rgba(148,95,52,.18);
+}
+.btn-nova-previsao:hover { filter:brightness(1.06); transform:translateY(-1px); }
+
+.previsao-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+
+.prev-card { border:1.5px solid var(--border); border-radius:14px; padding:15px 17px; background:#fcfcfd; transition:.18s; position:relative; overflow:hidden; }
+.prev-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:#cbd5e0; }
+.prev-card.status-pendente::before     { background:linear-gradient(90deg,#a16207,#facc15); }
+.prev-card.status-cumprida::before     { background:linear-gradient(90deg,#276749,#48bb78); }
+.prev-card.status-nao_cumprida::before { background:linear-gradient(90deg,#c53030,#fc8181); }
+.prev-card:hover { border-color:#cbd5e0; box-shadow:0 4px 14px rgba(0,0,0,.06); }
+
+.prev-card__top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.prev-card__loc { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+
+.pill-prev-pendente     { background:var(--amber-lt); color:var(--amber); border:1px solid var(--amber-bd); }
+.pill-prev-cumprida     { background:var(--green-lt); color:var(--green); border:1px solid #9ae6b4; }
+.pill-prev-nao_cumprida { background:var(--red-lt);   color:var(--red);   border:1px solid #feb2b2; }
+
+.prev-card__comp { font-size:.71rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:10px; }
+
+.prev-card__body { display:flex; gap:18px; margin-bottom:10px; flex-wrap:wrap; }
+.prev-card__field label { display:block; font-size:.63rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin-bottom:2px; }
+.prev-card__field span  { font-family:'JetBrains Mono',monospace; font-size:.88rem; font-weight:700; color:var(--dark); }
+.prev-card__field.venc-atrasado span { color:var(--red); }
+
+.prev-card__obs { font-size:.78rem; color:var(--gray); background:#f8fafc; border-left:3px solid var(--border); padding:6px 10px; border-radius:6px; margin-bottom:10px; }
+
+.prev-card__actions { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.btn-prev-mini {
+  padding:5px 11px; border-radius:8px; font-size:.71rem; font-weight:700; cursor:pointer;
+  border:1.5px solid var(--border); background:#fff; color:var(--gray); transition:.18s; font-family:'Sora',sans-serif;
+}
+.btn-prev-mini:hover { border-color:var(--teal); color:var(--teal-dk); background:#f7feff; }
+.btn-prev-mini.ok:hover     { border-color:var(--green); color:var(--green); background:var(--green-lt); }
+.btn-prev-mini.fail:hover   { border-color:var(--red);   color:var(--red);   background:var(--red-lt); }
+.btn-prev-mini.reab:hover   { border-color:var(--gold);  color:var(--brown); background:#fff8f1; }
+
+.prev-card__hist-toggle {
+  border:none; background:none; color:var(--teal-dk); font-size:.72rem; font-weight:700; cursor:pointer;
+  padding:0; font-family:'Sora',sans-serif; display:flex; align-items:center; gap:4px;
+}
+.prev-card__hist-toggle:hover { text-decoration:underline; }
+.prev-card__historico { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); display:flex; flex-direction:column; gap:8px; }
+
+.hist-evt { display:flex; gap:8px; font-size:.75rem; }
+.hist-evt__dot { width:8px; height:8px; border-radius:50%; background:var(--teal); flex-shrink:0; margin-top:4px; }
+.hist-evt.ev-cumprida .hist-evt__dot     { background:var(--green); }
+.hist-evt.ev-nao_cumprida .hist-evt__dot { background:var(--red); }
+.hist-evt.ev-reaberta .hist-evt__dot     { background:var(--gold); }
+.hist-evt__body { flex:1; }
+.hist-evt__head { font-weight:700; color:var(--dark); }
+.hist-evt__meta { color:var(--muted); font-size:.7rem; margin-top:1px; }
+.hist-evt__obs  { color:var(--gray); font-size:.72rem; margin-top:2px; font-style:italic; }
+
+.previsao-empty { text-align:center; padding:30px 20px; color:var(--muted); font-size:.85rem; }
+
+/* Campos do modal de previsão — reaproveita .rec-field */
+.rec-field-row { display:flex; gap:10px; }
+.rec-field-row .rec-field { flex:1; }
+.rec-field select { width:100%; padding:9px 12px; border:1.5px solid #cbd5e0; border-radius:8px; font-size:.9rem; font-family:'Sora',sans-serif; box-sizing:border-box; outline:none; background:#fff; }
+.rec-field select:focus { border-color:var(--teal); }
+</style>
+
+<!-- MODAL RECEBIMENTO -->
+<div class="modal-back" id="modal-rec">
+  <div class="modal-box modal-verde" id="modal-rec-box">
+    <button class="modal-close" onclick="fecharModal('modal-rec')">×</button>
+    <h3 id="modal-rec-titulo" style="margin:0 0 4px;font-size:1rem;color:var(--green)">Confirmar Recebimento</h3>
+    <p id="modal-rec-sub" style="color:var(--muted);font-size:.81rem;margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--border)">Informe os dados do recebimento abaixo.</p>
+    <input type="hidden" id="modal-nota-id"><input type="hidden" id="modal-acao">
+    <div class="rec-field"><label>Valor Recebido (R$)</label><input type="number" step="0.01" id="modal-valor" placeholder="Vazio = valor da nota"></div>
+    <div class="rec-field"><label>Data do Recebimento</label><input type="date" id="modal-data"></div>
+    <div class="rec-field"><label>Observação</label><textarea id="modal-obs" placeholder="Opcional…"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <button onclick="fecharModal('modal-rec')" class="btn-cancel-m">Cancelar</button>
+      <button id="modal-btn-salvar" onclick="salvarRecebimento()" style="padding:9px 20px;border:none;background:var(--grad);color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-family:'Sora',sans-serif;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INATIVAR -->
+<div class="modal-back" id="modal-inativar">
+  <div class="modal-box modal-cinza">
+    <button class="modal-close" onclick="fecharModal('modal-inativar')">×</button>
+    <h3 style="margin:0 0 4px;font-size:1rem;color:var(--muted)">🚫 Inativar Nota</h3>
+    <p style="color:var(--muted);font-size:.81rem;margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--border)">A nota será ocultada do relatório. Poderá ser reativada depois.</p>
+    <input type="hidden" id="inativar-nota-id">
+    <div class="rec-field"><label>Motivo da inativação</label><textarea id="inativar-motivo" placeholder="Ex: cancelada na prefeitura, duplicada…"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <button onclick="fecharModal('modal-inativar')" class="btn-cancel-m">Cancelar</button>
+      <button onclick="confirmarInativacao()" style="padding:9px 20px;border:none;background:#718096;color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-family:'Sora',sans-serif;">Inativar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — Relatório Pivot por Cidade × Mês
+════════════════════════════════════════════════════════════════ -->
+<div class="pivot-overlay" id="pivotOverlay">
+  <div class="pivot-modal" role="dialog" aria-modal="true" aria-label="Relatório por cidade">
+
+    <!-- Header -->
+    <div class="piv-header">
+      <div class="piv-header-left">
+        <img src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" height="30">
+        <h2 id="pivTitle">Relatório de Receitas por Cidade</h2>
+      </div>
+      <button class="piv-close" onclick="fecharPivotModal()" title="Fechar">×</button>
+    </div>
+
+    <!-- Filtros do modal -->
+    <div class="piv-filters" id="pivFilters">
+
+      <!-- Anos (multi-select) -->
+      <div class="ms-wrap">
+        <button type="button" class="fsel ms-trigger" id="piv-ano-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          Ano
+        </button>
+        <div class="ms-panel" id="piv-ano-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="pivMsAll('piv-ano-panel')">Todos</button>
+            <button type="button" onclick="pivMsNone('piv-ano-panel')">Nenhum</button>
+          </div>
+          {% for a in anos_range %}
+          <label>
+            <input type="checkbox" class="piv-ano-cb" value="{{ a|stringformat:"d" }}"
+                   {% if a == ano_sel %}checked{% endif %}
+                   onchange="pivUpdateLabel();pivCarregar()">
+            {{ a|stringformat:"d" }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Entidade -->
+      <select class="fsel" id="piv-entidade" onchange="pivCarregar()" style="height:32px;font-size:12px;padding:0 10px;">
+        <option value="">Todas entidades</option>
+        <option value="municipio">Prefeitura</option>
+        <option value="camara">Câmara</option>
+      </select>
+
+      <!-- Cidades (multi-select dinâmico) -->
+      <div class="ms-wrap">
+        <button type="button" class="fsel ms-trigger" id="piv-mun-btn">Todas cidades</button>
+        <div class="ms-panel" id="piv-mun-panel">
+          <div class="ms-actions">
+            <button type="button" onclick="pivMsAll('piv-mun-panel');pivCarregar()">Todos</button>
+            <button type="button" onclick="pivMsNone('piv-mun-panel');pivCarregar()">Nenhum</button>
+          </div>
+          <div id="piv-mun-options"><!-- preenchido via JS --></div>
+        </div>
+      </div>
+
+      <span id="piv-status" style="font-size:11px;color:#6b7280;margin-left:4px;"></span>
+
+      <!-- Tipo de valor -->
+      <div class="piv-tipo-toggle" style="margin-left:auto">
+        <button class="btn-tipo tipo-em active" data-tipo="emitido"  onclick="pivSetTipo('emitido')">📄 Total</button>
+        <button class="btn-tipo tipo-rec"        data-tipo="recebido" onclick="pivSetTipo('recebido')">✅ Recebido</button>
+        <button class="btn-tipo tipo-pen"        data-tipo="pendente" onclick="pivSetTipo('pendente')">⏳ Pendente</button>
+      </div>
+    </div><!-- /piv-filters -->
+
+    <!-- Corpo — tabela pivot -->
+    <div class="piv-body" id="pivBody">
+      <div class="piv-loading">
+        <div class="piv-spinner"></div> Carregando dados…
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="piv-footer">
+      <button class="btn-piv btn-piv-outline" onclick="fecharPivotModal()">Fechar</button>
+      <button class="btn-piv btn-piv-outline" onclick="pivExportarCSV()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Exportar CSV
+      </button>
+      <button class="btn-piv btn-piv-primary" onclick="pivExportarPDF()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        Exportar PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Área de impressão PDF (fora do modal) -->
+<div id="piv-print-area"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+// ─────────────────────────────────────
+// Helpers de formatação
+// ─────────────────────────────────────
+const BRL = v =>
+  v === 0 ? '<span class="dash-cell">-</span>'
+          : v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+const BRL_plain = v =>
+  v === 0 ? '-' : v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+// ─────────────────────────────────────
+// Multi-select genérico (filtros da página principal)
+// ─────────────────────────────────────
+let msSubmitTimer = null;
+
+function msAutoSubmit() {
+  clearTimeout(msSubmitTimer);
+  msSubmitTimer = setTimeout(() => document.getElementById('filtro-form').submit(), 600);
+}
+
+function msSelectAll(name) {
+  document.querySelectorAll(`input[name="${name}"]`).forEach(cb => cb.checked = true);
+  msAutoSubmit();
+}
+function msSelectNone(name) {
+  document.querySelectorAll(`input[name="${name}"]`).forEach(cb => cb.checked = false);
+  msAutoSubmit();
+}
+
+// Toggle painéis dropdown
+document.addEventListener('click', e => {
+  document.querySelectorAll('.ms-panel.open').forEach(p => {
+    if (!p.previousElementSibling.contains(e.target) && !p.contains(e.target))
+      p.classList.remove('open');
+  });
+  const btn = e.target.closest('.ms-trigger');
+  if (btn) {
+    const panel = btn.nextElementSibling;
+    if (panel?.classList.contains('ms-panel'))
+      panel.classList.toggle('open');
+  }
+});
+
+// ─────────────────────────────────────
+// Modal Pivot — estado global
+// ─────────────────────────────────────
+let pivData = null;
+let pivTipo = 'emitido'; // 'emitido' | 'recebido' | 'pendente'
+
+const PIV_TIPO_LABELS = {
+  emitido:  { label: 'Total Emitido',    cor: '#92400e', bgTotal: '#fef3c7', corTotal: '#92400e' },
+  recebido: { label: 'Total Recebido',   cor: '#166534', bgTotal: '#dcfce7', corTotal: '#166534' },
+  pendente: { label: 'Total Pendente',   cor: '#b45309', bgTotal: '#fef9c3', corTotal: '#b45309' },
+};
+
+function pivSetTipo(tipo) {
+  pivTipo = tipo;
+  document.querySelectorAll('.btn-tipo').forEach(b =>
+    b.classList.toggle('active', b.dataset.tipo === tipo));
+  if (pivData) pivRenderizar(pivData,
+    [...document.querySelectorAll('#piv-mun-panel input:checked')].map(c => c.value));
+}
+
+function abrirPivotModal() {
+  document.getElementById('pivotOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (!pivData) pivCarregar();
+}
+
+function fecharPivotModal() {
+  document.getElementById('pivotOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Fechar ao clicar fora
+document.getElementById('pivotOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('pivotOverlay')) fecharPivotModal();
+});
+
+// ─────────────────────────────────────
+// Multi-select dentro do modal
+// ─────────────────────────────────────
+function pivMsAll(panelId) {
+  document.querySelectorAll(`#${panelId} input[type=checkbox]`).forEach(cb => cb.checked = true);
+}
+function pivMsNone(panelId) {
+  document.querySelectorAll(`#${panelId} input[type=checkbox]`).forEach(cb => cb.checked = false);
+}
+
+function pivUpdateLabel() {
+  const cbs = [...document.querySelectorAll('.piv-ano-cb:checked')];
+  const anos = cbs.map(c => c.value);
+  document.getElementById('piv-ano-btn').textContent =
+    anos.length === 0 ? 'Nenhum ano'
+    : anos.length === 1 ? anos[0]
+    : anos.join(', ');
+}
+
+function pivUpdateMunLabel() {
+  const cbs = [...document.querySelectorAll('#piv-mun-panel input:checked')];
+  document.getElementById('piv-mun-btn').textContent =
+    cbs.length === 0
+      ? 'Todas cidades'
+      : cbs.length === 1
+        ? cbs[0].value
+        : `${cbs.length} cidades`;
+}
+
+// ─────────────────────────────────────
+// Carregar dados da API
+// ─────────────────────────────────────
+let pivDebounce = null;
+
+async function pivCarregar() {
+  clearTimeout(pivDebounce);
+  pivDebounce = setTimeout(async () => {
+    const body    = document.getElementById('pivBody');
+    const status  = document.getElementById('piv-status');
+    body.innerHTML = `<div class="piv-loading"><div class="piv-spinner"></div> Carregando…</div>`;
+    status.textContent = '';
+
+    const anos = [...document.querySelectorAll('.piv-ano-cb:checked')].map(c => c.value);
+    const muns = [...document.querySelectorAll('#piv-mun-panel input:checked')].map(c => c.value);
+    const ent  = document.getElementById('piv-entidade').value;
+
+    if (!anos.length) {
+      body.innerHTML = `<div class="piv-loading">Selecione ao menos um ano.</div>`;
+      return;
+    }
+
+    const params = new URLSearchParams();
+    anos.forEach(a => params.append('ano', a));
+    if (ent) params.append('entidade', ent);
+    muns.forEach(m => params.append('municipio', m));
+
+    const ctrl   = new AbortController();
+    const timerId = setTimeout(() => ctrl.abort(), 30000); // 30 s de timeout
+    try {
+      const res = await fetch(`{% url 'relatorio_municipios_pivot' %}?${params}`, {signal: ctrl.signal});
+      clearTimeout(timerId);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      pivData   = await res.json();
+      pivRenderizar(pivData, muns);
+    } catch (err) {
+      clearTimeout(timerId);
+      const msg = err.name === 'AbortError'
+        ? 'Tempo esgotado. Verifique a conexão e tente novamente.'
+        : 'Erro ao carregar dados. Tente novamente.';
+      body.innerHTML = `<div class="piv-loading" style="color:#ef4444">${msg}</div>`;
+      console.error(err);
+    }
+  }, 400);
+}
+
+// ─────────────────────────────────────
+// Helpers pivot (extraem valores do tipo ativo)
+// ─────────────────────────────────────
+function pivVals(row)       { return row[`valores_${pivTipo}`]; }
+function pivRowTotal(row)   { return row[`total_${pivTipo}`]; }
+function pivColTotais(data) { return data[`col_totais_${pivTipo}`]; }
+function pivGrand(data)     { return data[`grand_${pivTipo}`]; }
+
+// ─────────────────────────────────────
+// Renderizar tabela pivot
+// ─────────────────────────────────────
+// ─────────────────────────────────────
+// Renderizar tabela pivot
+// ─────────────────────────────────────
+function pivRenderizar(data, munsAtuais) {
+  const body   = document.getElementById('pivBody');
+  const status = document.getElementById('piv-status');
+
+  // Atualiza opções de cidades no filtro
+  const optDiv = document.getElementById('piv-mun-options');
+  optDiv.innerHTML = '';
+  data.municipios_disponiveis.forEach(m => {
+    const checked = munsAtuais.length === 0 || munsAtuais.includes(m);
+    optDiv.innerHTML += `<label>
+      <input type="checkbox" value="${m}" ${checked ? 'checked' : ''}
+             onchange="pivUpdateMunLabel();pivCarregar()">
+      ${m}
+    </label>`;
+  });
+  pivUpdateMunLabel();
+
+  // ─────────────────────────────────────────────────────────
+  // NOVIDADE: Filtra as linhas com base na aba selecionada.
+  // Só renderiza a cidade se o total dela (emitido, recebido ou pendente) for > 0
+  // ─────────────────────────────────────────────────────────
+  const linhasFiltradas = data.rows.filter(row => pivRowTotal(row) > 0);
+
+  // Agora verificamos se o array filtrado está vazio
+  if (!linhasFiltradas.length) {
+    body.innerHTML = `<div class="piv-loading">Nenhum dado encontrado para os filtros selecionados.</div>`;
+    status.textContent = '0 cidades';
+    return;
+  }
+
+  const meta  = PIV_TIPO_LABELS[pivTipo];
+  const grand = pivGrand(data);
+  const cols  = pivColTotais(data);
+
+  // Agrupar colunas por ano para o cabeçalho de grupo
+  const grupos = {};
+  data.colunas.forEach((col, i) => {
+    if (!grupos[col.ano]) grupos[col.ano] = {inicio: i, count: 0};
+    grupos[col.ano].count++;
+  });
+
+  const anosOrdenados = [...new Set(data.colunas.map(c => c.ano))];
+  const yrClasses = ['yr-header','yr-header-2','yr-header','yr-header-2'];
+  let hdr1 = `<tr><th class="city-col" rowspan="2">Cidade</th>`;
+  anosOrdenados.forEach((ano, idx) => {
+    hdr1 += `<th class="${yrClasses[idx % yrClasses.length]}" colspan="${grupos[ano].count}">${ano}</th>`;
+  });
+  hdr1 += `<th class="total-col" rowspan="2">${meta.label}</th></tr>`;
+
+  let hdr2 = '<tr>';
+  data.colunas.forEach(col => { hdr2 += `<th>${col.mes_nome}</th>`; });
+  hdr2 += '</tr>';
+
+  let rows = '';
+  // NOVIDADE: Iteramos sobre 'linhasFiltradas' em vez de 'data.rows'
+  linhasFiltradas.forEach(row => {
+    rows += `<tr><td class="city-col">${row.municipio}</td>`;
+
+    pivVals(row).forEach(v => {
+      // Se quiser que o mês fique em branco ao invés de "R$ 0,00" ou "-",
+      // você pode colocar um IF aqui também.
+      // Ex: rows += `<td>${v > 0 ? BRL(v) : '-'}</td>`;
+      rows += `<td>${BRL(v)}</td>`;
+    });
+
+    rows += `<td class="total-col">${BRL(pivRowTotal(row))}</td></tr>`;
+  });
+
+  let totRow = `<tr class="total-row"><td class="city-col">TOTAL</td>`;
+  cols.forEach(v => { totRow += `<td>${BRL(v)}</td>`; });
+  totRow += `<td class="total-col">${BRL(grand)}</td></tr>`;
+
+  body.innerHTML = `
+    <div class="piv-table-wrap">
+      <table class="piv-table">
+        <thead>${hdr1}${hdr2}</thead>
+        <tbody>${rows}${totRow}</tbody>
+      </table>
+    </div>`;
+
+  // NOVIDADE: Atualiza o contador de cidades para usar 'linhasFiltradas.length'
+  status.textContent = `${linhasFiltradas.length} cidade(s) · ${meta.label}: R$ ${BRL_plain(grand)}`;
+}
+// ─────────────────────────────────────
+// Exportar PDF — A4 paisagem, sem cortes
+// ─────────────────────────────────────
+
+async function pivExportarPDF() {
+  const anos     = [...document.querySelectorAll('.piv-ano-cb:checked')].map(c => c.value).join(', ');
+  const ent      = document.getElementById('piv-entidade');
+  const entLabel = ent.options[ent.selectedIndex].text;
+  const agora    = new Date().toLocaleDateString('pt-BR');
+  const meta     = PIV_TIPO_LABELS[pivTipo];
+
+  if (!pivData || !pivData.rows.length) { alert('Sem dados para exportar.'); return; }
+
+  const numCols = pivData.colunas.length;
+
+  // A4 paisagem: 297mm − 10mm margens (5+5) = 287mm de largura útil
+  // A 96 dpi: 287mm × (96 / 25.4) ≈ 1085 px — usamos este valor como
+  // largura explícita para que html2canvas e a tabela coincidam exatamente.
+  const PAGE_W = 1085;
+
+  // ── Tipografia adaptativa ─────────────────────────────────────────
+  const fs  = numCols > 20 ? 7   : numCols > 15 ? 8   : numCols > 10 ? 9   : 10;
+  const pad = numCols > 20 ? '2px 3px' : numCols > 15 ? '3px 4px' : numCols > 10 ? '3px 6px' : '4px 8px';
+
+  // ── Larguras em pixels (mais confiável que % no html2canvas) ──────
+  const cityPx  = Math.round(PAGE_W * 0.13);            // ~141 px
+  const totalPx = Math.round(PAGE_W * 0.09);            // ~98  px
+  const dataPx  = Math.floor((PAGE_W - cityPx - totalPx) / numCols);
+
+  const colgroup = [
+    `<col style="width:${cityPx}px">`,
+    ...pivData.colunas.map(() => `<col style="width:${dataPx}px">`),
+    `<col style="width:${totalPx}px">`,
+  ].join('');
+
+  // ── Helper de estilo de célula ────────────────────────────────────
+  const cs = (extra = '') =>
+    `border:1px solid #d1d5db;padding:${pad};font-size:${fs}px;overflow:hidden;${extra}`;
+
+  // ── Paleta de anos no cabeçalho ───────────────────────────────────
+  const grupos = {};
+  pivData.colunas.forEach(col => {
+    if (!grupos[col.ano]) grupos[col.ano] = { count: 0 };
+    grupos[col.ano].count++;
+  });
+  const anosOrdenados = [...new Set(pivData.colunas.map(c => c.ano))];
+  const yrPal = [
+    { bg: '#fef9c3', fg: '#92400e', bgSub: '#fef3a0' },
+    { bg: '#dbeafe', fg: '#1e40af', bgSub: '#bfdbfe' },
+    { bg: '#dcfce7', fg: '#166534', bgSub: '#bbf7d0' },
+    { bg: '#fce7f3', fg: '#9d174d', bgSub: '#fbcfe8' },
+  ];
+
+  // ── Linha de agrupamento por ano ──────────────────────────────────
+  let hdr1 = `<tr>
+    <th style="${cs('text-align:left;background:#f3f4f6;font-weight:700;white-space:nowrap;')}" rowspan="2">Cidade</th>`;
+  anosOrdenados.forEach((ano, idx) => {
+    const p = yrPal[idx % yrPal.length];
+    hdr1 += `<th colspan="${grupos[ano].count}"
+      style="${cs(`background:${p.bg};color:${p.fg};text-align:center;font-weight:700;`)}">${ano}</th>`;
+  });
+  hdr1 += `<th style="${cs('background:#eef2ff;text-align:center;font-weight:700;color:#4338ca;')}"
+    rowspan="2">${meta.label}</th></tr>`;
+
+  // ── Linha de meses — sem filter:brightness (não suportado pelo html2canvas) ──
+  let hdr2 = '<tr>';
+  pivData.colunas.forEach(col => {
+    const p = yrPal[anosOrdenados.indexOf(col.ano) % yrPal.length];
+    hdr2 += `<th style="${cs(`background:${p.bgSub};text-align:center;font-weight:600;`)}">${col.mes_nome}</th>`;
+  });
+  hdr2 += '</tr>';
+
+  const grand = pivGrand(pivData);
+  const cols  = pivColTotais(pivData);
+
+  // ── Linhas de dados ───────────────────────────────────────────────
+  let rows = '';
+  let visibleIdx = 0; // Usado para manter o efeito zebra (cores alternadas) correto
+
+  pivData.rows.forEach(row => {
+    const totalLinha = pivRowTotal(row);
+
+    // Ignora a linha caso a cidade não tenha nenhum valor (total zero)
+    if (totalLinha === 0) return;
+
+    const bg = visibleIdx % 2 === 0 ? '#fff' : '#f9fafb';
+    rows += `<tr style="background:${bg}">
+      <td style="${cs('font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}">${row.municipio}</td>`;
+
+    pivVals(row).forEach(v => {
+      rows += `<td style="${cs(`text-align:right;white-space:nowrap;color:${v===0?'#c4c9d4':'#374151'};`)}">${BRL_plain(v)}</td>`;
+    });
+
+    rows += `<td style="${cs('text-align:right;font-weight:700;white-space:nowrap;background:#f5f3ff;color:#4338ca;')}">${BRL_plain(totalLinha)}</td></tr>`;
+
+    visibleIdx++; // Incrementa o índice apenas para as linhas renderizadas
+  });
+
+  // ── Linha de totais gerais ────────────────────────────────────────
+  let totRow = `<tr style="background:#f3f4f6">
+    <td style="${cs('font-weight:800;')}">TOTAL GERAL</td>`;
+  cols.forEach(v => {
+    totRow += `<td style="${cs('text-align:right;white-space:nowrap;font-weight:600;')}">${BRL_plain(v)}</td>`;
+  });
+  totRow += `<td style="${cs(`text-align:right;font-weight:800;white-space:nowrap;background:${meta.bgTotal};color:${meta.corTotal};font-size:${fs+1}px;`)}">${BRL_plain(grand)}</td></tr>`;
+
+  // ── HTML do documento PDF ─────────────────────────────────────────
+  // Largura explícita em px = área útil exata do A4 paisagem.
+  // Sem padding no wrapper para que a tabela não ultrapasse o PAGE_W.
+  const html = `
+<div style="font-family:Arial,sans-serif;color:#1f2937;width:${PAGE_W}px;">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;
+              margin-bottom:8px;padding-bottom:7px;border-bottom:2px solid #e5e7eb;">
+    <div>
+      <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:2px;">CONMAC — Receitas por Cidade</div>
+      <div style="font-size:9px;color:#6b7280;">${entLabel} · Ano(s): ${anos} · ${meta.label} · ${agora}</div>
+    </div>
+  </div>
+  <table style="width:${PAGE_W}px;border-collapse:collapse;table-layout:fixed;">
+    <colgroup>${colgroup}</colgroup>
+    <thead>${hdr1}${hdr2}</thead>
+    <tbody>${rows}${totRow}</tbody>
+  </table>
+  <div style="margin-top:7px;font-size:8px;color:#9ca3af;text-align:right;
+              border-top:1px solid #e5e7eb;padding-top:5px;">
+    Gerado automaticamente em ${agora} · CONMAC
+  </div>
+</div>`;
+
+  const opt = {
+    margin:      [5, 5, 7, 5],
+    filename:    `relatorio_cidades_${pivTipo}_${anos.replace(/,\s*/g,'_')}.pdf`,
+    image:       { type: 'jpeg', quality: 0.97 },
+    // NÃO passar scrollX/scrollY — html2pdf calcula automaticamente o offset
+    // do container off-screen (-9999px) para o html2canvas capturar corretamente.
+    // Passar scrollX:0 / scrollY:0 fazia o html2canvas capturar a página visível
+    // em vez do HTML gerado, causando PDF cortado e desalinhado.
+    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: PAGE_W },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak:   { mode: ['css', 'legacy'] },
+  };
+
+  await html2pdf().set(opt).from(html).save();
+}
+
+// ─────────────────────────────────────
+// Exportar CSV
+// ─────────────────────────────────────
+function pivExportarCSV() {
+  if (!pivData || !pivData.rows.length) { alert('Sem dados para exportar.'); return; }
+
+  const meta   = PIV_TIPO_LABELS[pivTipo];
+  const header = ['Cidade', ...pivData.colunas.map(c=>`${c.mes_nome}/${c.ano}`), meta.label];
+  const lines  = [header.join(';')];
+
+  pivData.rows.forEach(row => {
+    const cols = [row.municipio, ...pivVals(row).map(v=>BRL_plain(v)), BRL_plain(pivRowTotal(row))];
+    lines.push(cols.join(';'));
+  });
+  // Linha de totais
+  lines.push(['TOTAL GERAL',
+    ...pivColTotais(pivData).map(v=>BRL_plain(v)),
+    BRL_plain(pivGrand(pivData))
+  ].join(';'));
+
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `relatorio_cidades_${pivTipo}_${[...document.querySelectorAll('.piv-ano-cb:checked')].map(c=>c.value).join('_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────
+// Visibilidade de colunas (toggles)
+// ─────────────────────────────────────
+function toggleCol(key) {
+  const btn  = document.getElementById(`btn-col-${key}`);
+  const show = btn.classList.toggle('active');
+
+  // Atualiza todas as células da coluna (th + td)
+  document.querySelectorAll(`.col-${key}`).forEach(el => {
+    el.style.display = show ? '' : 'none';
+  });
+
+  // Ícone: olho aberto ↔ olho riscado
+  const svgPath = btn.querySelector('path');
+  if (show) {
+    svgPath.setAttribute('d', 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z');
+    btn.querySelector('circle')?.setAttribute('r', '3');
+  } else {
+    svgPath.setAttribute('d', 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24');
+    btn.querySelector('circle')?.setAttribute('r', '0');
+  }
+}
+
+// ── Inicializa visibilidade conforme contexto de filtro ─────────
+// Quando status=pendente não há nada em "Recebido", oculta por padrão
+(function initColVisibility() {
+  const statusSel = '{{ status_sel|escapejs }}';
+  if (statusSel === 'pendente') toggleCol('vr');
+})();
+
+// Inicializa label do ano
+pivUpdateLabel();
+</script>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+// ── Construtores de URL ──────────────────────────────────────────────────────
+const _URL_CONFIRMAR = "{% url 'confirmar_recebimento' 0 %}";
+const _URL_INATIVAR  = "{% url 'inativar_nota' 0 %}";
+const urlConfirmar   = id => _URL_CONFIRMAR.replace('/0/', `/${id}/`);
+const urlInativar    = id => _URL_INATIVAR .replace('/0/', `/${id}/`);
+
+// ── Sanitiza o ID da nota: remove tudo que não for dígito ───────────────────
+// Necessário porque USE_L10N=True faz {{ nota.id }} renderizar "2.726" em vez de "2726"
+const parseId = v => String(v).replace(/\D/g, '');
+
+// ── Nova função para formatar BRL para Float do Javascript ──
+function parseValorBR(texto) {
+  let limpo = String(texto).replace(/[R$\s]/g, '').trim();
+  limpo = limpo.replace(/\./g, '').replace(',', '.');
+  return parseFloat(limpo) || 0;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const f = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let gtLiq = 0, gtRec = 0, gtQtd = 0;
+  document.querySelectorAll('.subtotal-row').forEach(stRow => {
+    let rows = [], cur = stRow.previousElementSibling;
+    while (cur && !cur.classList.contains('grp-sep')) {
+      if (
+        cur.tagName === 'TR' &&
+        !cur.classList.contains('subtotal-row') &&
+        !cur.classList.contains('grp-sep') &&
+        !cur.classList.contains('row-inativa')
+      ) rows.push(cur);
+      cur = cur.previousElementSibling;
+    }
+    let liq = 0, rec = 0, qtd = 0;
+    rows.forEach(r => {
+      liq += parseFloat(r.dataset.liq || 0);
+      rec += parseFloat(r.dataset.rec || 0);
+      qtd++;
+    });
+    stRow.querySelector('.st-liq').textContent = 'R$ ' + f(liq);
+    stRow.querySelector('.st-rec').textContent = rec > 0 ? 'R$ ' + f(rec) : '—';
+    stRow.querySelector('.st-qtd').textContent = qtd + ' nota' + (qtd !== 1 ? 's' : '');
+    gtLiq += liq;
+    gtRec += rec;
+    gtQtd += qtd;
+  });
+  const gtPend = Math.max(0, gtLiq - gtRec);
+  const gtPct  = gtLiq > 0 ? Math.round((gtRec / gtLiq) * 100) : 0;
+  const elQtd  = document.getElementById('gt-qtd');
+  const elLiq  = document.getElementById('gt-liq');
+  const elRec  = document.getElementById('gt-rec');
+  const elPend = document.getElementById('gt-pend');
+  const elBar  = document.getElementById('gt-bar');
+  const elPct  = document.getElementById('gt-pct');
+  if (elQtd)  elQtd.textContent  = gtQtd;
+  if (elLiq)  elLiq.textContent  = 'R$ ' + f(gtLiq);
+  if (elRec)  elRec.textContent  = gtRec > 0 ? 'R$ ' + f(gtRec) : '—';
+  if (elPend) elPend.textContent = gtPend > 0 ? 'R$ ' + f(gtPend) : '—';
+  if (elBar)  setTimeout(() => elBar.style.width = gtPct + '%', 100);
+  if (elPct)  elPct.textContent  = gtPct + '%';
+  if (gtQtd === 0) {
+    const wrap = document.getElementById('totais-wrap');
+    if (wrap) wrap.style.display = 'none';
+  }
+});
+
+function abrirModal(btn) {
+  const jaPaga = btn.dataset.paga === '1';
+  // ← parseId: garante ID limpo mesmo se data-nota vier com ponto de milhar
+  document.getElementById('modal-nota-id').value = parseId(btn.dataset.nota);
+  document.getElementById('modal-acao').value    = jaPaga ? 'desfazer' : 'confirmar';
+  document.getElementById('modal-valor').value   = jaPaga ? '' : btn.dataset.valor;
+  document.getElementById('modal-data').value    = jaPaga ? '' : new Date().toISOString().split('T')[0];
+  document.getElementById('modal-obs').value = '';
+  const box = document.getElementById('modal-rec-box');
+  if (jaPaga) {
+    box.className = 'modal-box modal-desfaz';
+    document.getElementById('modal-rec-titulo').style.color = 'var(--red)';
+    document.getElementById('modal-rec-titulo').textContent = 'Desfazer Recebimento';
+    document.getElementById('modal-rec-sub').textContent = 'A nota voltará ao status pendente.';
+    document.getElementById('modal-btn-salvar').style.background = 'linear-gradient(135deg,#c53030,#fc8181)';
+    document.getElementById('modal-btn-salvar').textContent = 'Desfazer';
+  } else {
+    box.className = 'modal-box modal-verde';
+    document.getElementById('modal-rec-titulo').style.color = 'var(--green)';
+    document.getElementById('modal-rec-titulo').textContent = 'Confirmar Recebimento';
+    document.getElementById('modal-rec-sub').textContent = 'Informe os dados do recebimento abaixo.';
+    document.getElementById('modal-btn-salvar').style.background = 'var(--grad)';
+    document.getElementById('modal-btn-salvar').textContent = 'Salvar';
+  }
+  document.getElementById('modal-rec').classList.add('open');
+}
+
+async function salvarRecebimento() {
+  const notaId  = parseId(document.getElementById('modal-nota-id').value); // ← parseId
+  const acao    = document.getElementById('modal-acao').value;
+  const btn     = document.getElementById('modal-btn-salvar');
+  const txtOrig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  const body = {
+    confirmado:       acao !== 'desfazer',
+    valor_recebido:   document.getElementById('modal-valor').value
+                        ? parseFloat(document.getElementById('modal-valor').value) : null,
+    data_recebimento: document.getElementById('modal-data').value || null,
+    observacao:       document.getElementById('modal-obs').value,
+  };
+  try {
+    const res = await fetch(urlConfirmar(notaId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error('HTTP', res.status, await res.text());
+      alert(`Erro no servidor (HTTP ${res.status}). Verifique o console.`);
+      return;
+    }
+    const data = await res.json();
+    if (data.ok) { atualizarLinhaRecebimento(notaId, data); fecharModal('modal-rec'); }
+    else alert('Erro: ' + (data.erro || 'Tente novamente.'));
+  } catch(e) {
+    console.error(e);
+    alert('Erro de rede. Verifique sua conexão.');
+  } finally {
+    btn.disabled = false; btn.textContent = txtOrig;
+  }
+}
+
+function abrirModalInativar(btn) {
+  // ← parseId: garante ID limpo mesmo se data-nota vier com ponto de milhar
+  document.getElementById('inativar-nota-id').value = parseId(btn.dataset.nota);
+  document.getElementById('inativar-motivo').value = '';
+  document.getElementById('modal-inativar').classList.add('open');
+}
+
+async function confirmarInativacao() {
+  const notaId = parseId(document.getElementById('inativar-nota-id').value); // ← parseId
+  const motivo = document.getElementById('inativar-motivo').value;
+  try {
+    const res = await fetch(urlInativar(notaId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ inativar: true, motivo }),
+    });
+    if (!res.ok) {
+      console.error('HTTP', res.status, await res.text());
+      alert(`Erro no servidor (HTTP ${res.status}). Verifique o console.`);
+      return;
+    }
+    const data = await res.json();
+    if (data.ok) {
+      fecharModal('modal-inativar');
+      const row = document.getElementById('row-' + notaId);
+      row.style.transition = 'opacity .4s'; row.style.opacity = '0';
+      setTimeout(() => { row.classList.add('row-inativa'); row.style.opacity = '1'; }, 400);
+      document.getElementById('st-' + notaId).innerHTML = '<span class="pill pill-inativa">🚫 Inativa</span>';
+      const acoes = row.querySelector('td.col-acoes');
+      if (acoes) acoes.innerHTML = `<button class="btn-reativar" data-nota="${notaId}" onclick="reativarNota(this)">↩ Reativar</button>`;
+    } else alert('Erro ao inativar.');
+  } catch(e) {
+    console.error(e);
+    alert('Erro de rede. Verifique sua conexão.');
+  }
+}
+
+async function reativarNota(btn) {
+  const notaId = parseId(btn.dataset.nota); // ← parseId
+  if (!confirm('Reativar esta nota?')) return;
+  try {
+    const res = await fetch(urlInativar(notaId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ inativar: false }),
+    });
+    if (!res.ok) {
+      console.error('HTTP', res.status, await res.text());
+      alert(`Erro no servidor (HTTP ${res.status}). Verifique o console.`);
+      return;
+    }
+    const data = await res.json();
+    if (data.ok) window.location.reload();
+    else alert('Erro ao reativar.');
+  } catch(e) {
+    console.error(e);
+    alert('Erro de rede. Verifique sua conexão.');
+  }
+}
+
+function atualizarLinhaRecebimento(notaId, dados) {
+  const stEl = document.getElementById('st-' + notaId);
+  const vrEl = document.getElementById('vr-' + notaId);
+  const row  = document.getElementById('row-' + notaId);
+  if (dados.confirmado) {
+    stEl.innerHTML = '<span class="pill pill-paga">✓ Recebida</span>';
+    vrEl.innerHTML = `<span style="color:var(--green);font-weight:700">R$ ${fmt(dados.valor_recebido)}</span>`
+      + (dados.data ? `<br><small style="color:var(--muted);font-size:.71rem">${dados.data}</small>` : '');
+    const b = row.querySelector('.btn-confirmar');
+    if (b) { b.textContent = 'Desfazer'; b.className = 'btn-confirmar ja-paga'; b.dataset.paga = '1'; }
+  } else {
+    stEl.innerHTML = '<span class="pill pill-pend">⏳ Pendente</span>';
+    vrEl.innerHTML = '<span style="color:#a0aec0">—</span>';
+    const b = row.querySelector('.btn-confirmar');
+    if (b) { b.textContent = 'Confirmar'; b.className = 'btn-confirmar nao-paga'; b.dataset.paga = '0'; }
+  }
+  row.style.transition = 'background .3s';
+  row.style.background = dados.confirmado ? '#f0fff4' : '#fff5f5';
+  setTimeout(() => { row.style.background = ''; }, 1000);
+}
+
+function fmt(v) { return parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-back').forEach(m => { m.addEventListener('click', e => { if (e.target === m) fecharModal(m.id); }); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-back.open').forEach(m => fecharModal(m.id)); });
+
+// ═══════════════════════════════════════════════════════════
+// PREVISÃO DE PAGAMENTO — painel, modal e histórico
+// ═══════════════════════════════════════════════════════════
+const _URL_PREVISAO_SALVAR = "{% url 'previsao_salvar' %}";
+const _URL_PREVISAO_MARCAR = "{% url 'previsao_marcar' %}";
+
+let previsoesData = JSON.parse(document.getElementById('previsoes-data').textContent || '[]');
+const competenciasSelecionadas = JSON.parse(document.getElementById('competencias-data').textContent || '[]');
+const previsaoMunicipiosDisponiveis = JSON.parse(document.getElementById('previsao-municipios-data').textContent || '[]');
+
+const ENTIDADE_LABEL = { municipio: 'Prefeitura Municipal', camara: 'Câmara Municipal' };
+const STATUS_LABEL_PREV = { pendente: '⏳ Aguardando', cumprida: '✅ Cumprida', nao_cumprida: '❌ Não cumprida' };
+const MESES_PREV = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function fmtDataBR(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function fmtDataHoraBR(iso) {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  if (isNaN(dt)) return '';
+  return dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderPrevisoes() {
+  const grid  = document.getElementById('previsao-grid');
+  const empty = document.getElementById('previsao-empty');
+  if (!previsoesData.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = previsoesData.map(p => {
+    const entBadgeClass = p.tipo_entidade === 'camara' ? 'badge-ent-cam' : 'badge-ent-mun';
+    const entLabel = ENTIDADE_LABEL[p.tipo_entidade] || p.tipo_entidade;
+    const compLabel = `${MESES_PREV[p.competencia_mes] || p.competencia_mes}/${p.competencia_ano}`;
+
+    const hoje = new Date().toISOString().split('T')[0];
+    const atrasado = p.status === 'pendente' && p.data_prevista && p.data_prevista < hoje;
+
+    let acoes = '';
+    if (p.status === 'pendente') {
+      acoes = `
+        <button class="btn-prev-mini ok"   onclick="abrirModalMarcar(${p.id}, 'cumprida')">✓ Cumprida</button>
+        <button class="btn-prev-mini fail" onclick="abrirModalMarcar(${p.id}, 'nao_cumprida')">✗ Não cumprida</button>
+        <button class="btn-prev-mini" onclick="abrirModalPrevisao(${p.id})">✎ Editar</button>`;
+    } else {
+      acoes = `
+        <button class="btn-prev-mini reab" onclick="abrirModalMarcar(${p.id}, 'pendente')">↺ Reabrir</button>
+        <button class="btn-prev-mini" onclick="abrirModalPrevisao(${p.id})">✎ Editar</button>`;
+    }
+
+    const historico = (p.historico || []).map(ev => {
+      const evClass = 'ev-' + ev.tipo_evento;
+      return `
+        <div class="hist-evt ${evClass}">
+          <div class="hist-evt__dot"></div>
+          <div class="hist-evt__body">
+            <div class="hist-evt__head">${ev.tipo_evento_display}</div>
+            <div class="hist-evt__meta">
+              ${ev.usuario ? ev.usuario + ' · ' : ''}${fmtDataHoraBR(ev.criado_em)}
+              ${ev.valor_previsto_snapshot ? ' · R$ ' + fmt(ev.valor_previsto_snapshot) : ''}
+              ${ev.data_prevista_snapshot ? ' · prev. ' + fmtDataBR(ev.data_prevista_snapshot) : ''}
+            </div>
+            ${ev.observacao ? `<div class="hist-evt__obs">"${ev.observacao}"</div>` : ''}
+          </div>
+        </div>`;
+    }).join('') || '<div style="font-size:.75rem;color:var(--muted)">Sem eventos registrados.</div>';
+
+    return `
+      <div class="prev-card status-${p.status}" id="prev-card-${p.id}">
+        <div class="prev-card__top">
+          <div class="prev-card__loc">
+            <span class="badge-mun">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              ${p.municipio}
+            </span>
+            <span class="${entBadgeClass}">${entLabel}</span>
+          </div>
+          <span class="pill pill-prev-${p.status}">${STATUS_LABEL_PREV[p.status] || p.status_display}</span>
+        </div>
+        <div class="prev-card__comp">Competência · ${compLabel}</div>
+        <div class="prev-card__body">
+          <div class="prev-card__field ${atrasado ? 'venc-atrasado' : ''}">
+            <label>Data prevista</label>
+            <span>${fmtDataBR(p.data_prevista)}${atrasado ? ' ⚠' : ''}</span>
+          </div>
+          <div class="prev-card__field">
+            <label>Valor previsto</label>
+            <span>R$ ${fmt(p.valor_previsto)}</span>
+          </div>
+        </div>
+        ${p.observacao ? `<div class="prev-card__obs">${p.observacao}</div>` : ''}
+        <div class="prev-card__actions">${acoes}</div>
+        <button class="prev-card__hist-toggle" onclick="toggleHistorico(${p.id})">
+          <span id="hist-arrow-${p.id}">▸</span> Ver histórico (${(p.historico || []).length})
+        </button>
+        <div class="prev-card__historico" id="hist-${p.id}" style="display:none">${historico}</div>
+      </div>`;
+  }).join('');
+}
+
+function toggleHistorico(id) {
+  const el = document.getElementById('hist-' + id);
+  const arrow = document.getElementById('hist-arrow-' + id);
+  const show = el.style.display === 'none';
+  el.style.display = show ? 'flex' : 'none';
+  if (arrow) arrow.textContent = show ? '▾' : '▸';
+}
+
+function popularDatalistMunicipios() {
+  const dl = document.getElementById('prev-municipios-list');
+  dl.innerHTML = previsaoMunicipiosDisponiveis.map(m => `<option value="${m}">`).join('');
+}
+
+function abrirModalPrevisao(previsaoId) {
+  popularDatalistMunicipios();
+  const editando = !!previsaoId;
+  const titulo = document.getElementById('modal-previsao-titulo');
+  const sub    = document.getElementById('modal-previsao-sub');
+  document.getElementById('prev-editando-id').value = editando ? previsaoId : '';
+
+  if (editando) {
+    const p = previsoesData.find(x => x.id === previsaoId);
+    if (!p) return;
+    titulo.textContent = 'Editar Previsão de Pagamento';
+    sub.textContent = `${p.municipio} — ${ENTIDADE_LABEL[p.tipo_entidade]}`;
+    document.getElementById('prev-municipio').value = p.municipio;
+    document.getElementById('prev-entidade').value  = p.tipo_entidade;
+    document.getElementById('prev-comp-mes').value  = p.competencia_mes;
+    document.getElementById('prev-comp-ano').value  = p.competencia_ano;
+    document.getElementById('prev-data').value  = p.data_prevista || '';
+    document.getElementById('prev-valor').value = p.valor_previsto || '';
+    document.getElementById('prev-obs').value   = p.observacao || '';
+  } else {
+    titulo.textContent = 'Nova Previsão de Pagamento';
+    sub.textContent = 'Informe os dados da previsão abaixo.';
+    document.getElementById('prev-municipio').value = '';
+    document.getElementById('prev-entidade').value  = 'municipio';
+    // padrão: primeira competência selecionada nos filtros da página
+    const comp = competenciasSelecionadas[0];
+    document.getElementById('prev-comp-mes').value = comp ? comp.mes : new Date().getMonth() + 1;
+    document.getElementById('prev-comp-ano').value = comp ? comp.ano : new Date().getFullYear();
+    document.getElementById('prev-data').value  = '';
+    document.getElementById('prev-valor').value = '';
+    document.getElementById('prev-obs').value   = '';
+  }
+  document.getElementById('modal-previsao').classList.add('open');
+}
+
+async function salvarPrevisao() {
+  const btn = document.getElementById('modal-previsao-btn-salvar');
+  const txtOrig = btn.textContent;
+  const body = {
+    municipio:        document.getElementById('prev-municipio').value.trim(),
+    tipo_entidade:     document.getElementById('prev-entidade').value,
+    competencia_mes:   parseInt(document.getElementById('prev-comp-mes').value),
+    competencia_ano:   parseInt(document.getElementById('prev-comp-ano').value),
+    data_prevista:     document.getElementById('prev-data').value || null,
+    valor_previsto:    document.getElementById('prev-valor').value
+                          ? parseFloat(document.getElementById('prev-valor').value) : null,
+    observacao:        document.getElementById('prev-obs').value,
+  };
+  if (!body.municipio || !body.data_prevista || body.valor_previsto === null) {
+    alert('Preencha município, data prevista e valor previsto.');
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    const res = await fetch(_URL_PREVISAO_SALVAR, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error('HTTP', res.status, await res.text());
+      alert(`Erro no servidor (HTTP ${res.status}). Verifique o console.`);
+      return;
+    }
+    const data = await res.json();
+    if (data.ok) {
+      upsertPrevisaoLocal(data.previsao);
+      renderPrevisoes();
+      fecharModal('modal-previsao');
+    } else {
+      alert('Erro: ' + (data.erro || 'Tente novamente.'));
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Erro de rede. Verifique sua conexão.');
+  } finally {
+    btn.disabled = false; btn.textContent = txtOrig;
+  }
+}
+
+function abrirModalMarcar(previsaoId, novoStatus) {
+  document.getElementById('marcar-previsao-id').value = previsaoId;
+  document.getElementById('marcar-novo-status').value = novoStatus;
+  document.getElementById('marcar-obs').value = '';
+
+  const titulos = {
+    cumprida:     { t: 'Marcar como Cumprida', cor: 'var(--green)', classe: 'modal-verde' },
+    nao_cumprida: { t: 'Marcar como Não Cumprida', cor: 'var(--red)', classe: 'modal-desfaz' },
+    pendente:     { t: 'Reabrir Previsão', cor: 'var(--brown)', classe: 'modal-cinza' },
+  };
+  const cfg = titulos[novoStatus] || titulos.cumprida;
+  document.getElementById('modal-previsao-marcar-titulo').textContent = cfg.t;
+  document.getElementById('modal-previsao-marcar-titulo').style.color = cfg.cor;
+  document.getElementById('modal-previsao-marcar-box').className = 'modal-box ' + cfg.classe;
+  document.getElementById('modal-previsao-marcar-btn').style.background =
+    novoStatus === 'nao_cumprida' ? 'linear-gradient(135deg,#c53030,#fc8181)' : 'var(--grad)';
+
+  document.getElementById('modal-previsao-marcar').classList.add('open');
+}
+
+async function confirmarMarcarPrevisao() {
+  const previsaoId = parseInt(document.getElementById('marcar-previsao-id').value);
+  const novoStatus = document.getElementById('marcar-novo-status').value;
+  const observacao = document.getElementById('marcar-obs').value;
+  const btn = document.getElementById('modal-previsao-marcar-btn');
+  const txtOrig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    const res = await fetch(_URL_PREVISAO_MARCAR, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ id: previsaoId, status: novoStatus, observacao }),
+    });
+    if (!res.ok) {
+      console.error('HTTP', res.status, await res.text());
+      alert(`Erro no servidor (HTTP ${res.status}). Verifique o console.`);
+      return;
+    }
+    const data = await res.json();
+    if (data.ok) {
+      upsertPrevisaoLocal(data.previsao);
+      renderPrevisoes();
+      fecharModal('modal-previsao-marcar');
+    } else {
+      alert('Erro: ' + (data.erro || 'Tente novamente.'));
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Erro de rede. Verifique sua conexão.');
+  } finally {
+    btn.disabled = false; btn.textContent = txtOrig;
+  }
+}
+
+function upsertPrevisaoLocal(previsao) {
+  const idx = previsoesData.findIndex(p => p.id === previsao.id);
+  if (idx >= 0) previsoesData[idx] = previsao;
+  else previsoesData.push(previsao);
+}
+
+renderPrevisoes();
+</script>
+
+
+{% endblock %}

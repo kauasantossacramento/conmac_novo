@@ -1,0 +1,723 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Monitor de Cobranças · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --brown:        #945f34;
+  --brown-dark:   #7a4d2a;
+  --teal:         #239FAB;
+  --teal-dark:    #1a7a84;
+  --gold:         #c8922a;
+  --dark:         #1a202c;
+  --gray:         #4a5568;
+  --muted:        #718096;
+  --border:       #e2e8f0;
+  --bg:           #f4f6f9;
+  --card:         #ffffff;
+  --gradient:     linear-gradient(135deg, var(--brown) 0%, var(--teal) 100%);
+
+  /* Cores de Status */
+  --c-red:        #c53030;
+  --c-orange:     #dd6b20;
+  --c-yellow:     #d69e2e;
+  --c-green:      #276749;
+  --c-gray:       #718096;
+}
+
+/* ── HERO ── */
+.rh-hero {
+  margin-top: 10px;
+  background: var(--gradient);
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 16px 40px rgba(148,95,52,0.2);
+  flex-wrap: wrap;
+  position: relative;
+}
+.rh-hero::before {
+  content: ''; position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.05); border-radius: 50%; pointer-events: none;
+}
+.rh-hero::after {
+  content: ''; position: absolute;
+  bottom: -60px; left: 30%;
+  width: 250px; height: 250px;
+  background: rgba(255,255,255,0.04); border-radius: 50%; pointer-events: none;
+}
+.rh-hero__left { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.rh-hero__ico {
+  width: 68px; height: 68px; display: grid; place-items: center;
+  background: rgba(255,255,255,0.2); border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0;
+}
+.rh-hero__txt h2 { margin: 0; font-size: 1.9rem; line-height: 1.1; font-weight: 800; color: #fff; }
+.rh-hero__txt p  { margin: 7px 0 0; opacity: .85; font-size: .95rem; color: #fff; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 12px;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  margin-top: 10px; border: 1px solid rgba(255,255,255,0.2);
+}
+.rh-hero__kpis { display: flex; gap: 14px; flex-wrap: wrap; position: relative; z-index: 1; }
+.kpi-card {
+  background: rgba(255,255,255,0.97); border-radius: 18px; padding: 16px 20px;
+  min-width: 140px; text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--gradient); border-radius: 2px 2px 0 0;
+}
+.kpi-card.kpi--danger::before  { background: var(--c-red); }
+.kpi-card.kpi--warning::before { background: var(--c-orange); }
+.kpi-card.kpi--soon::before    { background: var(--c-yellow); }
+.kpi-card.kpi--green::before   { background: var(--c-green); }
+.kpi-card.kpi--gray::before    { background: var(--c-gray); }
+
+.kpi__value { font-size: 1.6rem; font-weight: 800; margin-bottom: 5px; color: var(--teal); font-variant-numeric: tabular-nums; line-height: 1;}
+.kpi__label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; }
+
+.kpi--danger .kpi__value  { color: var(--c-red); }
+.kpi--warning .kpi__value { color: var(--c-orange); }
+.kpi--soon .kpi__value    { color: var(--c-yellow); }
+.kpi--green .kpi__value   { color: var(--c-green); }
+.kpi--gray .kpi__value    { color: var(--c-gray); }
+
+/* ── BANNER TOTAL ── */
+.colabs-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 22px; margin: 22px 0 0 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.colabs-banner .cb-ico {
+  width: 42px; height: 42px; background: var(--gradient);
+  border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+}
+.colabs-banner .cb-text strong { font-size: 1.3rem; color: var(--dark); font-weight: 800; }
+.colabs-banner .cb-text span   { font-size: 0.8rem; color: var(--muted); display: block; }
+
+/* ── ALERTA ERRO ── */
+.alert-error {
+  background: #fff5f5; border: 1px solid #feb2b2; color: #c53030;
+  padding: 14px 20px; border-radius: 12px; margin-top: 20px;
+  font-size: .9rem; display: flex; align-items: center; gap: .6rem; font-weight: 600;
+}
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 14px; margin-top: 20px; margin-bottom: 15px;
+}
+.toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.search-wrap  { position: relative; }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  padding: 10px 16px 10px 38px; border: 1.5px solid var(--border);
+  border-radius: 10px; width: 280px; background: #fff; font-size: .88rem; transition: .2s;
+}
+.search-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(35,159,171,.1); outline: none; }
+
+.filter-select {
+  padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: #fff; font-size: .88rem; font-weight: 600;
+  color: var(--gray); cursor: pointer; transition: .18s;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 32px;
+}
+.filter-select:focus { border-color: var(--teal); outline: none; }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border: none; border-radius: 10px;
+  font-size: .88rem; font-weight: 700; cursor: pointer; transition: .18s;
+  background: var(--teal); color: #fff; text-decoration: none;
+}
+.btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(35,159,171,.3); }
+
+/* ── TABELA ── */
+.table-wrap {
+  background: #fff; border-radius: 16px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,.04); overflow-x: auto;
+}
+.main-table { width: 100%; border-collapse: collapse; min-width: 860px; }
+.main-table thead tr { background: #f8fafc; }
+.main-table th {
+  padding: 15px 18px; text-align: left; font-size: .72rem;
+  text-transform: uppercase; font-weight: 700; color: var(--gray);
+  border-bottom: 2px solid var(--border); letter-spacing: .4px; white-space: nowrap;
+}
+.main-table td { padding: 15px 18px; border-bottom: 1px solid #f1f5f9; font-size: .88rem; color: var(--dark); vertical-align: middle; }
+.main-table tbody tr { transition: background .15s; }
+.main-table tbody tr:last-child td { border-bottom: none; }
+.main-table tbody tr:hover td { background: #fafbff; }
+
+.mono { font-family: 'Courier New', monospace; font-weight: 600; }
+
+/* ── PILLS DE STATUS ── */
+.pill {
+  display: inline-flex; align-items: center; padding: 4px 10px;
+  border-radius: 20px; font-size: .72rem; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  white-space: nowrap;
+}
+.pill-red    { background: #fff5f5; color: var(--c-red); border: 1px solid #feb2b2; }
+.pill-orange { background: #fffaf0; color: var(--c-orange); border: 1px solid #feebc8; }
+.pill-yellow { background: #fffff0; color: var(--c-yellow); border: 1px solid #fef08a; }
+.pill-green  { background: #f0fff4; color: var(--c-green); border: 1px solid #9ae6b4; }
+.pill-gray   { background: #f7fafc; color: var(--c-gray); border: 1px solid #e2e8f0; }
+
+/* ── BOTÃO DETALHES ── */
+.btn-details {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: .75rem; font-weight: 700; color: var(--gray); background: #fff;
+  cursor: pointer; transition: .15s; white-space: nowrap; text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.btn-details:hover {
+  border-color: var(--teal); color: var(--teal);
+  background: rgba(35,159,171,.06); transform: translateY(-1px);
+}
+
+/* ── ESTADO VAZIO ── */
+.empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+.empty-state svg { color: #cbd5e0; margin-bottom: 15px; }
+.empty-state p { margin: 0; font-size: 1.1rem; color: var(--gray); font-weight: 700; }
+.empty-state span { font-size: .85rem; }
+
+/* ════════════════════════════════════════════
+   MODAL DE DETALHES
+   ════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; visibility: hidden;
+  transition: opacity .22s ease, visibility .22s ease;
+}
+.modal-overlay.is-open {
+  opacity: 1; visibility: visible;
+}
+.modal-box {
+  background: #fff; border-radius: 20px;
+  width: 100%; max-width: 620px; max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.18), 0 4px 16px rgba(0,0,0,.08);
+  transform: translateY(16px) scale(.98);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+.modal-overlay.is-open .modal-box {
+  transform: translateY(0) scale(1);
+}
+
+/* Cabeçalho do modal */
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 24px 26px 18px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+  flex-shrink: 0;
+}
+.modal-header__left { display: flex; align-items: flex-start; gap: 14px; }
+.modal-header__ico {
+  width: 46px; height: 46px; flex-shrink: 0;
+  background: var(--gradient); border-radius: 12px;
+  display: grid; place-items: center;
+}
+.modal-header__meta { display: flex; flex-direction: column; gap: 3px; }
+.modal-header__company {
+  font-size: 1rem; font-weight: 800; color: var(--dark); line-height: 1.2;
+  margin: 0;
+}
+.modal-header__email {
+  font-size: .78rem; color: var(--muted); font-style: normal;
+}
+.modal-header__subject {
+  font-size: .82rem; color: var(--gray); margin-top: 4px;
+  font-style: italic; line-height: 1.4;
+}
+.modal-close {
+  width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0;
+  border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer;
+  background: #fff; color: var(--muted); transition: .15s;
+}
+.modal-close:hover { border-color: var(--c-red); color: var(--c-red); background: #fff5f5; }
+
+/* Corpo do modal */
+.modal-body {
+  overflow-y: auto; padding: 22px 26px 26px; display: flex; flex-direction: column; gap: 22px;
+}
+.modal-body::-webkit-scrollbar { width: 5px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Seção genérica dentro do modal */
+.modal-section__title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .7rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--muted); margin: 0 0 10px;
+}
+.modal-section__title svg { flex-shrink: 0; }
+
+/* Trecho do corpo */
+.excerpt-box {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; font-size: .84rem; color: var(--gray);
+  line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+}
+.excerpt-empty {
+  color: var(--muted); font-style: italic; font-size: .84rem;
+}
+
+/* Lista de PDFs */
+.pdf-list { display: flex; flex-direction: column; gap: 8px; }
+.pdf-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; background: #fff;
+  text-decoration: none; color: var(--dark);
+  transition: .15s; overflow: hidden;
+}
+.pdf-item:hover {
+  border-color: var(--teal); background: rgba(35,159,171,.04);
+  transform: translateY(-1px); box-shadow: 0 4px 12px rgba(35,159,171,.1);
+  color: var(--teal-dark);
+}
+.pdf-item__ico {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+  border-radius: 8px; display: grid; place-items: center;
+}
+.pdf-item__info { flex: 1; min-width: 0; }
+.pdf-item__name {
+  font-size: .83rem; font-weight: 700; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; display: block;
+}
+.pdf-item__url {
+  font-size: .72rem; color: var(--muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; display: block; margin-top: 1px;
+}
+.pdf-item__arrow { flex-shrink: 0; color: var(--muted); transition: .15s; }
+.pdf-item:hover .pdf-item__arrow { color: var(--teal); transform: translateX(2px); }
+
+.pdf-empty {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: 10px;
+  background: #f7fafc; border: 1px dashed var(--border);
+  color: var(--muted); font-size: .83rem; font-style: italic;
+}
+
+/* Rodapé do modal — metadados */
+.modal-footer {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  padding: 14px 26px; border-top: 1px solid var(--border);
+  background: #f8fafc; flex-shrink: 0;
+}
+.meta-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: .72rem; font-weight: 700;
+  background: #fff; border: 1px solid var(--border); color: var(--gray);
+}
+.meta-pill svg { flex-shrink: 0; }
+</style>
+
+<!-- ── HERO ── -->
+<section class="rh-hero">
+  <div class="rh-hero__left">
+    <div class="rh-hero__ico">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    </div>
+    <div class="rh-hero__txt">
+      <h2>Monitor de Cobranças</h2>
+      <p>Boletos e faturas identificados na caixa de entrada</p>
+      <span class="hero-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+        Atualização Automática
+      </span>
+    </div>
+  </div>
+
+  <div class="rh-hero__kpis">
+    <div class="kpi-card">
+      <div class="kpi__value">{{ total }}</div>
+      <div class="kpi__label">Total Lido</div>
+    </div>
+    <div class="kpi-card kpi--danger">
+      <div class="kpi__value">{{ overdue }}</div>
+      <div class="kpi__label">Vencidos</div>
+    </div>
+    <div class="kpi-card kpi--warning">
+      <div class="kpi__value">{{ urgent }}</div>
+      <div class="kpi__label">Urgente ≤3d</div>
+    </div>
+    <div class="kpi-card kpi--soon">
+      <div class="kpi__value">{{ upcoming }}</div>
+      <div class="kpi__label">Próximos ≤7d</div>
+    </div>
+    <div class="kpi-card kpi--green">
+      <div class="kpi__value">{{ ok }}</div>
+      <div class="kpi__label">Em Dia</div>
+    </div>
+    <div class="kpi-card kpi--gray">
+      <div class="kpi__value">{{ unknown }}</div>
+      <div class="kpi__label">Sem Data</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ALERTA DE ERRO ── -->
+{% if error %}
+<div class="alert-error">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  Falha ao conectar: {{ error }}
+</div>
+{% endif %}
+
+<!-- ── BANNER CONTAGEM ── -->
+<div class="colabs-banner">
+  <div class="cb-ico">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
+  </div>
+  <div class="cb-text">
+    <strong id="visibleCount">{{ total }} cobrança{{ total|pluralize:"s" }} exibida{{ total|pluralize:"s" }}</strong>
+    <span>Gestão de documentos financeiros recebidos por e-mail</span>
+  </div>
+</div>
+
+<!-- ── TOOLBAR / FILTROS ── -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="Buscar empresa, assunto…" autocomplete="off">
+    </div>
+
+    <select id="statusFilter" class="filter-select">
+      <option value="all">Exibir Todos os Status</option>
+      <option value="status-overdue">🔴 Vencidos</option>
+      <option value="status-urgent">🟠 Urgentes (≤3d)</option>
+      <option value="status-soon">🟡 Próximos (≤7d)</option>
+      <option value="status-ok">🟢 Em dia</option>
+      <option value="status-unknown">⚪ Sem data</option>
+    </select>
+  </div>
+
+  <a href="{% url 'monitor_boletos' %}" class="btn-primary">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+    Sincronizar E-mails
+  </a>
+</div>
+
+<!-- ── TABELA ── -->
+<div class="table-wrap">
+  {% if boletos %}
+  <table class="main-table" id="boletosTable">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Empresa Remetente</th>
+        <th>Assunto do E-mail</th>
+        <th>Vencimento</th>
+        <th style="text-align: right;">Valor</th>
+        <th>Recebido em</th>
+        <th style="text-align:center;">Detalhes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in boletos %}
+      <tr data-status="{{ b.status_class }}"
+          data-search="{{ b.company|lower }} {{ b.subject|lower }}"
+          data-index="{{ forloop.counter0 }}">
+        <td>
+          {% if b.status_class == 'status-overdue' %}
+            <span class="pill pill-red">Vencido</span>
+          {% elif b.status_class == 'status-urgent' %}
+            <span class="pill pill-orange">Urgente</span>
+          {% elif b.status_class == 'status-soon' %}
+            <span class="pill pill-yellow">Próximo</span>
+          {% elif b.status_class == 'status-ok' %}
+            <span class="pill pill-green">Em dia</span>
+          {% else %}
+            <span class="pill pill-gray">Sem data</span>
+          {% endif %}
+        </td>
+        <td>
+          <strong>{{ b.company }}</strong><br>
+          <small style="color:var(--muted);font-size:.75rem">{{ b.sender_email }}</small>
+        </td>
+        <td style="color:var(--gray);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ b.subject }}">
+          {{ b.subject }}
+        </td>
+        <td class="mono" style="color:var(--gray)">{{ b.due_date }}</td>
+        <td class="mono" style="text-align: right; font-weight: 800; color:var(--dark)">{{ b.value }}</td>
+        <td class="mono" style="color:var(--muted);font-size:.8rem">{{ b.received }}</td>
+        <td style="text-align:center;">
+          <button class="btn-details" onclick="openModal({{ forloop.counter0 }})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Ver
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+      <polyline points="22,6 12,13 2,6"></polyline>
+    </svg>
+    <p>Nenhum boleto encontrado</p>
+    <span>Nenhum e-mail de cobrança foi identificado nos últimos registros da caixa de entrada.</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL DE DETALHES
+     ════════════════════════════════════════════ -->
+<div class="modal-overlay" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-box">
+
+    <!-- Cabeçalho -->
+    <div class="modal-header">
+      <div class="modal-header__left">
+        <div class="modal-header__ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </div>
+        <div class="modal-header__meta">
+          <p class="modal-header__company" id="modalTitle">—</p>
+          <span class="modal-header__email" id="modalEmail">—</span>
+          <span class="modal-header__subject" id="modalSubject">—</span>
+        </div>
+      </div>
+      <button class="modal-close" id="modalCloseBtn" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Corpo -->
+    <div class="modal-body">
+
+      <!-- Trecho do e-mail -->
+      <div>
+        <p class="modal-section__title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Resumo do E-mail
+        </p>
+        <div class="excerpt-box" id="modalExcerpt"></div>
+      </div>
+
+      <!-- Links de PDF -->
+      <div>
+        <p class="modal-section__title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDFs Encontrados no Corpo
+          <span id="pdfCount" style="background:var(--teal);color:#fff;border-radius:20px;padding:1px 7px;font-size:.68rem;margin-left:4px;"></span>
+        </p>
+        <div class="pdf-list" id="modalPdfList"></div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <!-- Rodapé com metadados -->
+    <div class="modal-footer">
+      <span class="meta-pill">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Recebido: <strong id="modalReceived">—</strong>
+      </span>
+      <span class="meta-pill">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Vencimento: <strong id="modalDue">—</strong>
+      </span>
+      <span class="meta-pill">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Valor: <strong id="modalValue">—</strong>
+      </span>
+    </div>
+
+  </div><!-- /modal-box -->
+</div><!-- /modal-overlay -->
+
+
+<!-- ── SCRIPTS ── -->
+<script>
+/* ─── Dados dos boletos (gerados pelo Django) ─── */
+const boletosData = [
+  {% for b in boletos %}
+  {
+    company:      "{{ b.company|escapejs }}",
+    email:        "{{ b.sender_email|escapejs }}",
+    subject:      "{{ b.subject|escapejs }}",
+    received:     "{{ b.received|escapejs }}",
+    due_date:     "{{ b.due_date|escapejs }}",
+    value:        "{{ b.value|escapejs }}",
+    excerpt:      "{{ b.excerpt|escapejs }}",
+    pdf_links: [
+      {% for lnk in b.pdf_links %}
+      { url: "{{ lnk.url|escapejs }}", text: "{{ lnk.text|escapejs }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+
+/* ─── Modal ─── */
+const overlay     = document.getElementById('detailModal');
+const closeBtn    = document.getElementById('modalCloseBtn');
+
+function openModal(idx) {
+  const d = boletosData[idx];
+  if (!d) return;
+
+  document.getElementById('modalTitle').textContent    = d.company;
+  document.getElementById('modalEmail').textContent    = d.email;
+  document.getElementById('modalSubject').textContent  = d.subject;
+  document.getElementById('modalReceived').textContent = d.received;
+  document.getElementById('modalDue').textContent      = d.due_date;
+  document.getElementById('modalValue').textContent    = d.value;
+
+  /* Trecho */
+  const excerptEl = document.getElementById('modalExcerpt');
+  if (d.excerpt && d.excerpt.trim()) {
+    excerptEl.className = 'excerpt-box';
+    excerptEl.textContent = d.excerpt;
+  } else {
+    excerptEl.className = 'excerpt-empty';
+    excerptEl.textContent = 'Nenhum texto extraído do corpo deste e-mail.';
+  }
+
+  /* PDFs */
+  const pdfList  = document.getElementById('modalPdfList');
+  const pdfCount = document.getElementById('pdfCount');
+  pdfList.innerHTML = '';
+
+  if (d.pdf_links && d.pdf_links.length > 0) {
+    pdfCount.textContent = d.pdf_links.length;
+    pdfCount.style.display = 'inline';
+    d.pdf_links.forEach(lnk => {
+      const a = document.createElement('a');
+      a.className  = 'pdf-item';
+      a.href       = lnk.url;
+      a.target     = '_blank';
+      a.rel        = 'noopener noreferrer';
+      a.innerHTML  = `
+        <div class="pdf-item__ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <div class="pdf-item__info">
+          <span class="pdf-item__name">${escHtml(lnk.text)}</span>
+          <span class="pdf-item__url">${escHtml(lnk.url)}</span>
+        </div>
+        <span class="pdf-item__arrow">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </span>
+      `;
+      pdfList.appendChild(a);
+    });
+  } else {
+    pdfCount.textContent = '0';
+    pdfCount.style.display = 'inline';
+    pdfList.innerHTML = `
+      <div class="pdf-empty">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        Nenhum link de PDF encontrado no corpo deste e-mail.
+      </div>`;
+  }
+
+  overlay.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  overlay.classList.remove('is-open');
+  document.body.style.overflow = '';
+}
+
+closeBtn.addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ─── Filtros ─── */
+(function () {
+  const rows         = Array.from(document.querySelectorAll('#boletosTable tbody tr'));
+  const countEl      = document.getElementById('visibleCount');
+  const searchInput  = document.getElementById('searchInput');
+  const statusFilter = document.getElementById('statusFilter');
+
+  let activeFilter = 'all';
+  let searchTerm   = '';
+
+  function applyFilters() {
+    let visible = 0;
+    rows.forEach(row => {
+      const statusMatch = activeFilter === 'all' || row.dataset.status === activeFilter;
+      const searchMatch = !searchTerm || row.dataset.search.includes(searchTerm);
+      if (statusMatch && searchMatch) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    countEl.textContent = `${visible} cobrança${visible !== 1 ? 's' : ''} exibida${visible !== 1 ? 's' : ''}`;
+  }
+
+  if (statusFilter) statusFilter.addEventListener('change', e => { activeFilter = e.target.value; applyFilters(); });
+  if (searchInput)  searchInput.addEventListener('input',  () => { searchTerm = searchInput.value.toLowerCase().trim(); applyFilters(); });
+})();
+</script>
+{% endblock %}

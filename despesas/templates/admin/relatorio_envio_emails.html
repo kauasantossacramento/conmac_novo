@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Relatório de Envios — CONMAC{% endblock %}
+
+{% block content %}
+<style>
+  /* ─── Tela ──────────────────────────────────────────────── */
+  .rel-wrap {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem 4rem;
+  }
+
+  .rel-header {
+    background: linear-gradient(135deg, #1a6b6b 0%, #2d8c7a 60%, #a07840 100%);
+    color: #fff;
+    padding: 1.6rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    box-shadow: 0 6px 24px rgba(26,107,107,.18);
+  }
+  .rel-header-left { display: flex; align-items: center; gap: 1rem; }
+  .rel-header-logo { height: 36px; filter: brightness(0) invert(1); opacity: .92; }
+  .rel-header-divider {
+    width: 1px; height: 36px;
+    background: rgba(255,255,255,.3);
+  }
+  .rel-header h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: .02em;
+  }
+  .rel-header p { font-size: .75rem; opacity: .75; margin: .2rem 0 0; }
+
+  .rel-header-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .btn-rel {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem 1rem;
+    border-radius: 7px;
+    border: none;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+    letter-spacing: .02em;
+  }
+  .btn-csv  { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+  .btn-csv:hover  { background: rgba(255,255,255,.28); color: #fff; }
+  .btn-pdf  { background: #fff; color: #1a6b6b; }
+  .btn-pdf:hover  { background: #e8f5f2; color: #1a6b6b; }
+
+  /* ─── Filtros ───────────────────────────────────────────── */
+  .rel-filtros {
+    background: #fff;
+    border: 1px solid #dde8e8;
+    border-radius: 10px;
+    padding: .9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(26,107,107,.05);
+  }
+  .rel-filtros label { font-size: .78rem; font-weight: 700; color: #2c4a4a; }
+  .rel-filtros select {
+    padding: .35rem .65rem;
+    border: 1px solid #c5dadc;
+    border-radius: 6px;
+    font-size: .8rem;
+    color: #2c4a4a;
+    background: #f8fcfc;
+  }
+  .btn-filtrar { background: #2d8c7a; color: #fff; }
+  .btn-filtrar:hover { background: #1a6b6b; }
+  .btn-limpar { background: #f0f4f4; color: #5a7a7a; border: 1px solid #dde8e8; }
+  .btn-limpar:hover { background: #e4ecec; }
+
+  /* ─── Totalizador ───────────────────────────────────────── */
+  .rel-totalizador {
+    font-size: .78rem;
+    color: #7a9a9a;
+    margin-bottom: .7rem;
+    padding-left: .2rem;
+  }
+  .rel-totalizador strong { color: #1a6b6b; font-size: .85rem; }
+
+  /* ─── Tabela ────────────────────────────────────────────── */
+  .rel-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #dde8e8;
+    box-shadow: 0 2px 12px rgba(26,107,107,.06);
+  }
+  .rel-table { width: 100%; border-collapse: collapse; font-size: .79rem; }
+  .rel-table thead th {
+    background: #1a6b6b;
+    color: #fff;
+    padding: .75rem 1rem;
+    text-align: left;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .rel-table thead th:first-child { border-radius: 0; }
+  .rel-table tbody tr { transition: background .1s; }
+  .rel-table tbody tr:nth-child(even) { background: #f5fbfa; }
+  .rel-table tbody tr:hover { background: #eaf5f3; }
+  .rel-table td {
+    padding: .65rem 1rem;
+    color: #2c4a4a;
+    vertical-align: top;
+    border-bottom: 1px solid #e8f0ef;
+  }
+  .tag-contrato  { font-weight: 800; color: #1a6b6b; font-size: .78rem; }
+  .tag-tomador   { font-weight: 600; color: #2c4a4a; }
+  .tag-municipio { font-size: .7rem; color: #7a9a9a; margin-top: .1rem; }
+  .tag-competencia {
+    background: #e8f5f2; color: #1a6b6b;
+    border-radius: 5px; padding: .18rem .55rem;
+    font-size: .72rem; font-weight: 800;
+    white-space: nowrap; display: inline-block;
+    border: 1px solid #b8ddd8;
+  }
+  .tag-data     { font-size: .78rem; color: #3a6a6a; white-space: nowrap; }
+  .tag-data-sub { font-size: .69rem; color: #9ab5b5; }
+  .email-pill {
+    display: inline-block;
+    background: #f0f9f7;
+    border: 1px solid #b8ddd8;
+    border-radius: 12px;
+    padding: .1rem .55rem;
+    font-size: .69rem;
+    color: #1a6b6b;
+    margin: .12rem .08rem;
+    white-space: nowrap;
+  }
+  .rel-vazio {
+    text-align: center;
+    padding: 3rem;
+    color: #9ab5b5;
+    font-size: .85rem;
+  }
+
+  /* ─── PDF / Impressão ───────────────────────────────────── */
+  @media print {
+    /* Oculta tudo do sistema */
+    .topbar, .logo_home, .app-nav, .app-btmnav,
+    .rel-filtros, .rel-header-actions, .rel-totalizador,
+    .conmac-watermark, footer, #push-prompt,
+    #notification-card, #pwa-alert,
+    .btn-rel, form.rel-filtros { display: none !important; }
+
+    body, main, .container { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+
+    .rel-wrap { max-width: 100%; margin: 0; padding: 0; }
+
+    /* Cabeçalho PDF */
+    .rel-header {
+      background: #1a6b6b !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border-radius: 0 !important;
+      margin-bottom: 1rem !important;
+      padding: 1rem 1.4rem !important;
+    }
+
+    /* Cabeçalho secundário impresso */
+    .pdf-header-print { display: flex !important; }
+
+    /* Tabela */
+    .rel-table-wrap { box-shadow: none !important; border: 1px solid #ccc !important; }
+    .rel-table thead th {
+      background: #1a6b6b !important;
+      color: #fff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .rel-table tbody tr:nth-child(even) {
+      background: #f0f8f6 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .rel-table tbody tr { page-break-inside: avoid; }
+    .email-pill {
+      background: #e8f5f2 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Rodapé impresso */
+    .pdf-footer-print {
+      display: flex !important;
+      justify-content: space-between;
+      font-size: .68rem;
+      color: #7a9a9a;
+      margin-top: 1rem;
+      padding-top: .5rem;
+      border-top: 1px solid #ddd;
+    }
+  }
+
+  /* Esconde elementos exclusivos de impressão na tela */
+  .pdf-header-print, .pdf-footer-print { display: none; }
+</style>
+
+<div class="rel-wrap">
+
+  <!-- ── Cabeçalho ── -->
+  <div class="rel-header">
+    <div class="rel-header-left">
+      <img src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" class="rel-header-logo">
+      <div class="rel-header-divider"></div>
+      <div>
+        <h1>Relatório de Envio de E-mails</h1>
+        <p>Histórico consolidado de dossiês enviados por competência</p>
+      </div>
+    </div>
+
+    <div class="rel-header-actions">
+      <a href="?{% if ano_sel %}ano={{ ano_sel }}&{% endif %}{% if mes_sel %}mes={{ mes_sel }}&{% endif %}export=csv"
+         class="btn-rel btn-csv">
+        ⬇ Exportar CSV
+      </a>
+      <button onclick="imprimirRelatorio()" class="btn-rel btn-pdf">
+        🖨 Imprimir / PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <form method="get" class="rel-filtros">
+    <label for="f-ano">Ano:</label>
+    <select name="ano" id="f-ano">
+      <option value="">Todos</option>
+      {% for a in anos %}
+        {# |stringformat:"d" evita a formatação de milhar (ex: 2.026) #}
+        <option value="{{ a|stringformat:"d" }}"
+                {% if ano_sel == a|stringformat:"d" %}selected{% endif %}>
+          {{ a|stringformat:"d" }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="f-mes">Mês:</label>
+    <select name="mes" id="f-mes">
+      <option value="">Todos</option>
+      {% for num, nome in meses.items %}
+        <option value="{{ num }}"
+                {% if mes_sel == num|stringformat:"s" %}selected{% endif %}>
+          {{ nome }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="btn-rel btn-filtrar">Filtrar</button>
+    <a href="?" class="btn-rel btn-limpar" style="text-decoration:none;">Limpar</a>
+  </form>
+
+  <!-- ── Totalizador ── -->
+  <p class="rel-totalizador">
+    <strong>{{ total }}</strong> envio(s) encontrado(s){% if ano_sel or mes_sel %} com os filtros aplicados{% endif %}
+  </p>
+
+  <!-- ── Cabeçalho visível apenas na impressão ── -->
+  <div class="pdf-header-print" style="align-items:center;gap:1rem;margin-bottom:1rem;">
+    <img src="{% static 'img/logo_conmac.svg' %}" alt="CONMAC" style="height:30px;">
+    <div>
+      <strong style="font-size:.9rem;color:#1a6b6b;">CONMAC — Relatório de Envio de E-mails</strong>
+      <div style="font-size:.72rem;color:#7a9a9a;">
+        Emitido em: <span id="pdf-data-emissao"></span>
+        {% if ano_sel or mes_sel %}
+          &nbsp;·&nbsp; Filtro:
+          {% if mes_sel %}{{ meses|dictsort:"0"|first }}{% endif %}
+          {% if ano_sel %}/ {{ ano_sel }}{% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabela ── -->
+  <div class="rel-table-wrap">
+    <table class="rel-table">
+      <thead>
+        <tr>
+          <th>Contrato</th>
+          <th>Tomador / Município</th>
+          <th>Competência</th>
+          <th>Primeiro Envio</th>
+          <th>Último Envio</th>
+          <th>Enviado Por</th>
+          <th>E-mails Destinatários</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td><span class="tag-contrato">{{ l.contrato }}</span></td>
+          <td>
+            <div class="tag-tomador">{{ l.tomador }}</div>
+            <div class="tag-municipio">{{ l.municipio }}</div>
+          </td>
+          <td><span class="tag-competencia">{{ l.competencia }}</span></td>
+          <td>
+            {% if l.primeiro_envio %}
+              <div class="tag-data">{{ l.primeiro_envio|date:"d/m/Y" }}</div>
+              <div class="tag-data-sub">{{ l.primeiro_envio|date:"H:i" }}</div>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if l.ultimo_envio %}
+              <div class="tag-data">{{ l.ultimo_envio|date:"d/m/Y" }}</div>
+              <div class="tag-data-sub">{{ l.ultimo_envio|date:"H:i" }}</div>
+            {% else %}—{% endif %}
+          </td>
+          <td><span class="tag-data">{{ l.enviado_por }}</span></td>
+          <td>
+            {% for email in l.emails %}
+              <span class="email-pill">{{ email }}</span>
+            {% empty %}
+              <span style="color:#aaa;font-size:.75rem;">sem e-mails</span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="rel-vazio">
+            Nenhum envio encontrado para os filtros selecionados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Rodapé visível apenas na impressão ── -->
+  <div class="pdf-footer-print">
+    <span>CONMAC — Gestão Inteligente</span>
+    <span>Relatório gerado em <span id="pdf-data-rodape"></span></span>
+    <span>Total: {{ total }} envio(s)</span>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Preenche data de emissão nos elementos de impressão
+  (function () {
+    const agora = new Date();
+    const fmt = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const el1 = document.getElementById('pdf-data-emissao');
+    const el2 = document.getElementById('pdf-data-rodape');
+    if (el1) el1.textContent = fmt;
+    if (el2) el2.textContent = fmt;
+  })();
+
+  function imprimirRelatorio() {
+    window.print();
+  }
+</script>
+{% endblock %}

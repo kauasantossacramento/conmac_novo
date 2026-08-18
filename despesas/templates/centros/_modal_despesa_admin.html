@@ -296,7 +296,6 @@
     <input type="hidden" name="mes"    value="{{ request.GET.mes|default_if_none:'' }}">
     <input type="hidden" name="st"     value="{{ request.GET.st|default_if_none:'' }}">
 
-
     <div style="display:flex; gap:.5rem; align-items:center;">
       <button type="submit" name="nav" value="prev" class="btn-outline" {% if not has_prev %}disabled{% endif %}>← anterior</button>
       <button type="submit" name="nav" value="next" class="btn-outline" {% if not has_next %}disabled{% endif %}>próxima →</button>
@@ -304,11 +303,9 @@
   </form>
 </div>
 
-
-
 {% if fora_do_filtro %}
   <div class="msgs alert-primary mini" style="margin:.5rem 0">
-    Esta despesa não atende mais ao filtro atual; navegação desativada.
+    <b>Todas as despesas foram analisadas para este colaborador!</b> Navegação desativada.
   </div>
 {% endif %}
 
@@ -329,7 +326,7 @@
     <dt>Data do Fato:</dt><dd>{{ d.data_fato|date:"d/m/Y" }}</dd>
     <dt>Colaborador:</dt><dd>{{ d.usuario.get_full_name|default:d.usuario.username }}</dd>
     <dt>Data de Pagamento:</dt><dd>{{ d.pago_em|date:"d/m/Y"|default_if_none:"—" }}</dd>
-    <dt>Comprovante da Despesa:</dt>
+    <dt>Comprovante:</dt>
     <dd>
       {% if d.comprovante %}
         <a href="{{ d.comprovante.url }}" target="_blank">abrir</a>
@@ -341,7 +338,6 @@
 
   <hr>
 
-
     <form method="post"
           enctype="multipart/form-data"
           class="js-admin-form"
@@ -350,14 +346,16 @@
           {% if modo_lote %}hidden{% endif %}>
 
       {% csrf_token %}
-      {# Filtros preservados #}
+
+      {# Filtros preservados - Agora renderizará corretamente value="1" e não value="['1']" #}
       {% for key, value in preserved.items %}
-        <input type="hidden" name="{{ key }}" value="{{ value }}">
+         {% if key != 'partial' %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+         {% endif %}
       {% endfor %}
 
       {{ form.non_field_errors }}
 
-      {# Render dos campos comuns #}
       {% for field in form %}
         {% if field.name != 'marcar_analisada' %}
           <p>
@@ -367,7 +365,6 @@
         {% endif %}
       {% endfor %}
 
-      {# Mostrar o checkbox DENTRO do form, somente se status atual for PENDENTE #}
       {% if d.status == "PENDENTE" and form.marcar_analisada %}
         <p>
           <label style="display:inline-flex; gap:.4rem; align-items:center;">
@@ -376,20 +373,8 @@
           {% for e in form.marcar_analisada.errors %}<div class="err">{{ e }}</div>{% endfor %}
         </p>
       {% endif %}
- <!--
-      <div class="modal__footer">
-        {% if has_prev %}
-          <button class="btn-outline" type="submit" name="__go" value="prev" form="form-individual" title="Salvar e ir para anterior">
-            &larr; anterior
-          </button>
-        {% endif %}
-        {% if has_next %}
 
-          <button class="btn-outline" type="submit" name="__go" value="next" form="form-individual" title="Salvar e ir para próxima">
-            próxima &rarr;
-          </button>
-        {% endif %}
--->
+      <div class="modal__footer">
         <button type="button" class="btn-outline" data-close-modal>fechar</button>
         <button type="submit" class="btn js-submit">salvar alterações</button>
       </div>

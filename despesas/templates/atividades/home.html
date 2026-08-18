@@ -1,0 +1,1725 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+{% load custom_filters %}
+<style>
+/* estilos isolados para esta página (prefixo conmac-) */
+.conmac-hero {
+  background: linear-gradient(90deg,#b84f4f 0%, #2aa6b8 100%);
+  color: #fff;
+  border-radius: 18px;
+  padding: 26px;
+  margin-bottom: 24px;
+  position: relative;
+}
+.conmac-hero .conmac-hero-inner {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  flex-wrap:wrap;
+}
+.conmac-hero h1 { font-size:1.6rem; margin:0; }
+.conmac-hero .conmac-competencia { background: rgba(255,255,255,0.12); padding:6px 10px; border-radius:12px; font-weight:600; }
+
+.conmac-container { max-width:1200px; margin:0 auto; padding: 18px; }
+
+/* nivel cards */
+.conmac-niveis { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; justify-content:center; }
+.conmac-nivel-card {
+  background:#fff; border-radius:12px; padding:14px 18px; width:165px; text-align:center; box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  cursor:pointer; transition: transform .18s ease, box-shadow .18s ease; display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.conmac-nivel-card:hover { transform:translateY(-6px); box-shadow:0 12px 30px rgba(0,0,0,0.08); }
+.conmac-nivel-card.active { outline:3px solid rgba(0,128,96,0.12); }
+
+/* clients grid */
+.conmac-clients { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:18px; margin-top:10px; }
+.conmac-client {
+  background:#fff; padding:12px; border-radius:12px; box-shadow:0 6px 14px rgba(0,0,0,0.04); display:flex; gap:12px; align-items:center;
+}
+.conmac-client__brasao { width:64px; height:64px; border-radius:8px; overflow:hidden; background:#f3f3f3; display:flex; align-items:center; justify-content:center; }
+.conmac-client__info { flex:1; }
+.conmac-client__nome { font-weight:700; margin-bottom:6px; }
+.conmac-client__meta { font-size:.9rem; color:#666; margin-bottom:6px; }
+.conmac-client__status { font-weight:700; padding:6px 8px; border-radius:12px; display:inline-block; font-size:.9rem; }
+.conmac-status-concluido { background:#eafaf1; color:#17692a; }
+.conmac-status-pendente { background:#fff6e8; color:#8a5900; }
+.conmac-status-nao { background:#f4f6f7; color:#666; }
+
+/* actions */
+.conmac-client__actions { display:flex; gap:8px; align-items:center; }
+.conmac-btn { padding:8px 10px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; font-weight:600; }
+.conmac-btn.primary { background:#2aa6b8; color:#fff; border-color:transparent; }
+
+/* responsive */
+@media (max-width:800px) {
+  .conmac-hero .conmac-hero-inner { flex-direction:column; align-items:flex-start; }
+  .conmac-niveis { justify-content:center; overflow-x:auto; padding-bottom:6px; }
+}
+
+/* Estilo para o ranking (bolinha azul) */
+.conmac-client {
+    position: relative; /* Necessário para posicionar o badge */
+}
+.conmac-rank-badge {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 32px;
+    height: 32px;
+    background-color: #0056b3; /* Azul Forte */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 10;
+    border: 2px solid #fff;
+}
+
+@media (max-width:460px) {
+    .conmac-nivel-card{
+        width: 130px;
+    }
+
+}
+
+@media (min-width: 1020px){
+
+    .botoes_adm{
+        display: flex;
+        gap: 19px;
+        flex-wrap: wrap;
+        width: 30%;
+        justify-content: end;
+    }
+}
+
+</style>
+
+
+<div class="conmac-container">
+  <section class="conmac-hero">
+    <div class="conmac-hero-inner">
+        <div style="display: flex;justify-content: center;align-items: center;flex-wrap: wrap;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="50" height="50" fill="currentColor" style="margin: 15px;">
+              <path d="M9 2h6a2 2 0 0 1 2 2h1a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1a2 2 0 0 1 2-2zm0 2v2h6V4H9zm2 6h2v8h-2v-8zm-4 4h2v4H7v-4zm8-2h2v6h-2v-6z"></path></svg>
+          <div>
+            <h1>Gerenciamento de Atividades</h1>
+            <div style="margin-top:6px;color:rgba(255,255,255,0.9);">
+                Selecione um nível abaixo para gerenciar
+            </div>
+          </div>
+        </div>
+
+    <!--
+        <form id="conmac-competencia-form" method="get"
+              style="display:flex;align-items:center;gap:12px;
+                     padding:8px;background:transparent;border:none; flex-wrap: wrap">
+
+          {% if nivel_sel %}
+            <input type="hidden" name="nivel" value="{{ nivel_sel }}">
+          {% endif %}
+
+          <label for="conmac-mes"
+                 style="font-weight:600;color:#ffffff;margin-right:6px;">
+            Competência:
+          </label>
+
+          <div>
+
+              <select id="conmac-mes" name="mes" aria-label="Mês"
+                      style="padding:8px 2px;border-radius:6px;border:1px solid #ccc;
+                             font-size:14px;background:#fff;transition:all 0.3s ease;">
+                <option value="1"  {% if sel_mes == 1 %}selected{% endif %}>01</option>
+                <option value="2"  {% if sel_mes == 2 %}selected{% endif %}>02</option>
+                <option value="3"  {% if sel_mes == 3 %}selected{% endif %}>03</option>
+                <option value="4"  {% if sel_mes == 4 %}selected{% endif %}>04</option>
+                <option value="5"  {% if sel_mes == 5 %}selected{% endif %}>05</option>
+                <option value="6"  {% if sel_mes == 6 %}selected{% endif %}>06</option>
+                <option value="7"  {% if sel_mes == 7 %}selected{% endif %}>07</option>
+                <option value="8"  {% if sel_mes == 8 %}selected{% endif %}>08</option>
+                <option value="9"  {% if sel_mes == 9 %}selected{% endif %}>09</option>
+                <option value="10" {% if sel_mes == 10 %}selected{% endif %}>10</option>
+                <option value="11" {% if sel_mes == 11 %}selected{% endif %}>11</option>
+                <option value="12" {% if sel_mes == 12 %}selected{% endif %}>12</option>
+              </select>
+
+              <select id="conmac-ano" name="ano" aria-label="Ano"
+                      style="padding:8px 12px;border-radius:6px;border:1px solid #ccc;
+                             font-size:14px;background:#fff;transition:all 0.3s ease;">
+                {# As opções de ano serão inseridas por JS abaixo usando o valor sel_ano vindo do contexto #}
+              </select>
+
+          </div>
+
+        </form>
+    -->
+
+
+
+
+    <form id="conmac-competencia-form" method="get" autocomplete="off"
+              style="display:flex;align-items:center;gap:12px; padding:8px;background:transparent;border:none; flex-wrap: wrap">
+
+          {% if nivel_sel %}
+            <input type="hidden" name="nivel" value="{{ nivel_sel }}">
+          {% endif %}
+
+          <label for="conmac-mes" style="font-weight:600;color:#ffffff;margin-right:6px;">
+            Competência:
+          </label>
+
+          <div>
+              <select id="conmac-mes" name="mes" aria-label="Mês" required autocomplete="off"
+                      style="padding:8px 2px;border-radius:6px;border:1px solid #ccc; font-size:14px;background:#fff;transition:all 0.3s ease;">
+
+                <option value="" {% if not sel_mes %}selected{% endif %}>Mês</option>
+
+                <option value="1"  {% if sel_mes == 1 %}selected{% endif %}>01</option>
+                <option value="2"  {% if sel_mes == 2 %}selected{% endif %}>02</option>
+                <option value="3"  {% if sel_mes == 3 %}selected{% endif %}>03</option>
+                <option value="4"  {% if sel_mes == 4 %}selected{% endif %}>04</option>
+                <option value="5"  {% if sel_mes == 5 %}selected{% endif %}>05</option>
+                <option value="6"  {% if sel_mes == 6 %}selected{% endif %}>06</option>
+                <option value="7"  {% if sel_mes == 7 %}selected{% endif %}>07</option>
+                <option value="8"  {% if sel_mes == 8 %}selected{% endif %}>08</option>
+                <option value="9"  {% if sel_mes == 9 %}selected{% endif %}>09</option>
+                <option value="10" {% if sel_mes == 10 %}selected{% endif %}>10</option>
+                <option value="11" {% if sel_mes == 11 %}selected{% endif %}>11</option>
+                <option value="12" {% if sel_mes == 12 %}selected{% endif %}>12</option>
+              </select>
+
+              <select id="conmac-ano" name="ano" aria-label="Ano" required autocomplete="off"
+                      style="padding:8px 12px;border-radius:6px;border:1px solid #ccc; font-size:14px;background:#fff;transition:all 0.3s ease;">
+                </select>
+
+          </div>
+    </form>
+
+
+
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+
+        {% if user.is_staff or user.is_superuser %}
+            <div class='botoes_adm' style="position:relative; display:inline-block;">
+                <button type="button" onclick="document.getElementById('modalSolicitacoes').style.display='flex'"
+                        style="background:#e67e22; color:white; border:none; padding:10px 20px; border-radius:30px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+                    Solicitações <strong>Abertura</strong>
+                </button>
+                {% if qtd_solicitacoes > 0 %}
+                    <span style="position:absolute; top:-5px; right:-5px; background:red; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; border:2px solid #fff;">
+                        {{ qtd_solicitacoes }}
+                    </span>
+                {% endif %}
+            </div>
+
+            <button type="button" onclick="abrirModalAnalise()"
+                    style="background:#fff; color:#e67e22; border:none; padding:10px 20px; border-radius:30px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+                Análise <strong>Administrativa</strong>
+            </button>
+
+            <button type="button" onclick="abrirModalEtapas()"
+                    style="background:#2aa6b8; color:white; border:none; padding:10px 20px; border-radius:30px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+                <i class="fa fa-cogs"></i> Gerenciar <strong>Etapas</strong>
+            </button>
+
+            {# ── NOVO: Liberar Competência ── #}
+            <button type="button"
+                    onclick="document.getElementById('modalLiberarCompetencia').style.display='flex'"
+                    style="background:#fff; color:#8e44ad; border:1px solid #d7bde2; padding:10px 20px; border-radius:30px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+                <i class="fa fa-unlock-alt"></i> Liberar <strong>Competência</strong>
+            </button>
+        {% endif %}
+
+    </div>
+
+
+
+
+    </div>
+  </section>
+
+  {# NÍVEIS CARDS (FILTRADOS POR PERMISSÃO NA VIEW) #}
+  <div class="conmac-niveis" role="list">
+
+      {% if niveis %}
+        {% for n in niveis %}
+          <a href="?nivel={{ n.key }}&ano={{ sel_ano }}&mes={{ sel_mes }}"
+             role="listitem"
+             class="conmac-nivel-card {% if n.is_active %}active{% endif %}"
+             title="Abrir {{ n.label }}"
+             style="text-decoration:none; color:inherit;">
+
+            <div style="width:100%; border-radius:8px; display:flex; align-items:center; justify-content:center; background:white;">
+              <img src="{% static 'img/'|add:n.icon %}"
+                   alt="{{ n.label }}"
+                   style="max-width:78px; max-height:78px; width:auto; height:auto;">
+            </div>
+
+            <div style="font-weight:700;">
+              {{ n.label }}
+            </div>
+          </a>
+        {% endfor %}
+      {% endif %}
+
+      {% if acesso_pc %}
+        <a href="{% url 'prestacao_contas_monitor' %}"
+           role="listitem"
+           class="conmac-nivel-card"
+           title="Acompanhamento de Notificações e Prestações de Conta"
+           style="text-decoration:none; color:inherit;">
+
+          <div style="width:100%; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:8px 0;">
+
+          <svg width="78" height="78" viewBox="0 0 78 78" fill="none" xmlns="http://www.w3.org/2000/svg"> <mask id="path-1-inside-1_309_4" fill="white"> <path d="M0 39C0 17.4609 17.4609 0 39 0V0C60.5391 0 78 17.4609 78 39V39C78 60.5391 60.5391 78 39 78V78C17.4609 78 0 60.5391 0 39V39Z"/> </mask> <path d="M0 39C0 17.4609 17.4609 0 39 0V0C60.5391 0 78 17.4609 78 39V39C78 60.5391 60.5391 78 39 78V78C17.4609 78 0 60.5391 0 39V39Z" fill="white"/> <path d="M0 38.2018C0 16.6627 17.4609 -0.798237 39 -0.798237C60.5391 -0.798237 78 16.6627 78 38.2018V39C78 17.9017 60.5391 0.798237 39 0.798237C17.4609 0.798237 0 17.9017 0 39V38.2018ZM78 39.7967C78 61.3358 60.5391 78.7967 39 78.7967C17.4609 78.7967 0 61.3358 0 39.7967V39C0 60.0991 17.4609 77.2033 39 77.2033C60.5391 77.2033 78 60.0991 78 39V39.7967ZM78 39M0 78V0V78M0 78M78 0V78V0" fill="white" mask="url(#path-1-inside-1_309_4)"/> <path d="M0 38.2018C0 16.6627 17.4609 -0.798237 39 -0.798237C60.5391 -0.798237 78 16.6627 78 38.2018V39C78 17.9017 60.5391 0.798237 39 0.798237C17.4609 0.798237 0 17.9017 0 39V38.2018ZM78 39.7967C78 61.3358 60.5391 78.7967 39 78.7967C17.4609 78.7967 0 61.3358 0 39.7967V39C0 60.0991 17.4609 77.2033 39 77.2033C60.5391 77.2033 78 60.0991 78 39V39.7967ZM78 39M0 78V0V78M0 78M78 0V78V0" fill="url(#paint0_linear_309_4)" mask="url(#path-1-inside-1_309_4)"/> <g clip-path="url(#clip0_309_4)"> <path d="M42.75 22.25H29.75C28.888 22.25 28.0614 22.5924 27.4519 23.2019C26.8424 23.8114 26.5 24.638 26.5 25.5V51.5C26.5 52.362 26.8424 53.1886 27.4519 53.7981C28.0614 54.4076 28.888 54.75 29.75 54.75H49.25C50.112 54.75 50.9386 54.4076 51.5481 53.7981C52.1576 53.1886 52.5 52.362 52.5 51.5V32L42.75 22.25Z" stroke="black" stroke-width="2.925" stroke-linecap="round" stroke-linejoin="round"/> <path d="M42.75 22.25V32H52.5" stroke="black" stroke-width="2.925" stroke-linecap="round" stroke-linejoin="round"/> <path d="M46 40.125H33" stroke="black" stroke-width="2.925" stroke-linecap="round" stroke-linejoin="round"/> <path d="M46 46.625H33" stroke="black" stroke-width="2.925" stroke-linecap="round" stroke-linejoin="round"/> <path d="M36.25 33.625H33" stroke="black" stroke-width="2.925" stroke-linecap="round" stroke-linejoin="round"/> </g> <defs> <linearGradient id="paint0_linear_309_4" x1="39" y1="0" x2="39" y2="78" gradientUnits="userSpaceOnUse"> <stop stop-color="#239FAB"/> <stop offset="1" stop-color="#E57A34"/> </linearGradient> <clipPath id="clip0_309_4"> <rect width="46" height="46" fill="white" transform="translate(17 15)"/> </clipPath> </defs> </svg>
+
+          </div>
+
+          <div style="font-weight:700; font-size:.82rem; text-align:center; color:black;">
+            PRESTAÇÃO<br>DE CONTAS
+          </div>
+        </a>
+      {% endif %}
+
+      {% if not niveis and not acesso_pc %}
+        <div style="background:#f8d7da; color:#721c24; padding:12px 16px; border:1px solid #f5c6cb; border-radius:4px; font-family:Arial, sans-serif; font-size:14px;">
+          Você não possui permissões de acesso configuradas.
+        </div>
+      {% endif %}
+
+    </div>
+
+    {# ÁREA DE CONTEÚDO #}
+    <div style="margin-top:18px;">
+
+        {% if not sel_ano or not sel_mes %}
+            <div style="text-align:center; padding: 60px 20px; color:#888; background:#fff; border-radius:12px;">
+                <i class="fa fa-calendar-times-o" style="font-size:32px; margin-bottom:15px; color:#e67e22;"></i>
+                <h3 style="color:#555;">Nenhuma competência selecionada</h3>
+                <p>Por favor, selecione o <strong>Mês</strong> e o <strong>Ano</strong> no topo da página para visualizar os dados.</p>
+            </div>
+
+        {% elif not nivel_sel %}
+            <div style="text-align:center; padding: 60px 20px; color:#888; background:#fff; border-radius:12px;">
+                <i class="fa fa-mouse-pointer" style="font-size:32px; margin-bottom:15px; color:#ccc;"></i>
+                <h3>Selecione um nível acima para começar</h3>
+                <p>Clique em um dos cards (ex: Fechamento, SIGA) para visualizar os clientes.</p>
+            </div>
+
+        {% else %}
+            <h3 style="margin-bottom:12px;">Clientes vinculados — nível: <strong>{{ nivel_sel }}</strong></h3>
+
+            {% if clientes_data %}
+              <div class="conmac-clients">
+                {% for cd in clientes_data %}
+                    <div class="conmac-client">
+                        <div class="conmac-rank-badge">{{ forloop.counter }}</div>
+                        <div class="conmac-client__brasao">
+                          {% if cd.cliente.brasao %}
+                            <img src="{{ cd.cliente.brasao.url }}" alt="brasão" style="width:100%;height:100%;object-fit:cover;">
+                          {% else %}
+                            <div style="font-size:.8rem;color:#888;padding:6px;text-align:center;">SEM BRASÃO</div>
+                          {% endif %}
+                        </div>
+
+                        <div class="conmac-client__info">
+                          <div class="conmac-client__nome">{{ cd.cliente.nome }}</div>
+                          <div class="conmac-client__meta">
+                            Etapas: {{ cd.qtd_etapas }} • Concluídas: {{ cd.qtd_concluidas }}
+                          </div>
+                          {% if cd.ultimo_editor %}
+                            <div style="margin-top: 8px; font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 4px; margin-bottom: 5px;">
+                                <i class="fa fa-user-circle-o" style="font-size: 10px;"></i>
+                                <span>Últ. alteração: <strong>{{ cd.ultimo_editor|truncatechars:15 }}</strong>{% if cd.ultima_data %} em {{ cd.ultima_data|date:"d/m H:i" }}{% endif %}</span>
+                            </div>
+                          {% endif %}
+                          <div>
+                            {% if cd.status_geral == "Concluído" %}
+                               <span class="conmac-client__status conmac-status-concluido">Concluído</span>
+                            {% elif cd.status_geral == "Em andamento" %}
+                               <span class="conmac-client__status conmac-status-pendente">Em andamento</span>
+                            {% elif cd.status_geral == "Sem etapas" %}
+                               <span class="conmac-client__status" style="background:#eee; color:#666;">Sem etapas</span>
+                            {% else %}
+                               <span class="conmac-client__status conmac-status-nao">Não iniciado</span>
+                            {% endif %}
+                          </div>
+                        </div>
+
+                        <div class="conmac-client__actions">
+                          <a class="conmac-btn {% if nivel_sel == 'FECHAMENTO' %}primary{% endif %}"
+                             href="{% url 'fechamento_cliente_detail' cd.cliente.id %}?nivel={{ nivel_sel }}&ano={{ sel_ano }}&mes={{ sel_mes }}">
+                             Abrir
+                          </a>
+                        </div>
+                    </div>
+                {% endfor %}
+              </div>
+
+            {% else %}
+              {# MENSAGEM VAZIA/BLOQUEADA #}
+              <div style="padding:40px; background:#fff; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.04); text-align:center; color:#666;">
+                  {% if nivel_sel == "FECHAMENTO" %}
+                      <i class="fa fa-info-circle" style="font-size: 24px; margin-bottom: 10px; display:block;"></i>
+                      Você não está vinculado a nenhum cliente ou não existem clientes ativos para esta competência.
+                  {% else %}
+                      <i class="fa fa-lock" style="font-size: 24px; margin-bottom: 10px; display:block; color:#ccc;"></i>
+                      <h4 style="margin:0; font-weight:600; color:#555;">Etapa não liberada para nenhum cliente</h4>
+                      <p style="margin-top:8px; font-size:0.9rem;">
+                          É necessário concluir as <strong>etapas obrigatórias</strong> nos outros níveis para liberar o acesso ao {{ nivel_sel }}.
+                      </p>
+                  {% endif %}
+              </div>
+            {% endif %}
+        {% endif %}
+      </div>
+
+
+</div>
+
+
+<!--
+<div class="conmac-container">
+  <section class="conmac-hero">
+    <div class="conmac-hero-inner">
+      <div>
+        <h1>Gerenciamento de Atividades</h1>
+        <div style="margin-top:6px;color:rgba(255,255,255,0.9);">Selecione o nível que deseja acessar (SIGA / Fechamento / E-TCM / SIOPE / SIOPS / SICONF)</div>
+      </div>
+      <div class="conmac-competencia">Competência: <strong style="margin-left:8px;">{{ sel_mes|default:"--" }}/{{ sel_ano|default:"--" }}</strong></div>
+    </div>
+  </section>
+
+  {# NÍVEIS CARDS #}
+  <div class="conmac-niveis" role="list">
+    {% for n in niveis %}
+      <a href="?nivel={{ n.key }}&ano={{ sel_ano }}&mes={{ sel_mes }}"
+         role="listitem"
+         class="conmac-nivel-card {% if n.is_active %}active{% endif %}"
+         title="Abrir {{ n.label }}"
+         style="text-decoration:none; color:inherit;">
+
+        <div style="width: 100%;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f7fbfc;">
+          <img src="{{ n.icon }}" alt="{{ n.label }}" style="width:28px;height:28px;">
+        </div>
+        <div style="font-weight:700;">{{ n.label }}</div>
+      </a>
+    {% endfor %}
+  </div>
+
+  {# LISTA DE CLIENTES #}
+  <div style="margin-top:18px;">
+    <h3 style="margin-bottom:12px;">Clientes vinculados — nível: <strong>{{ nivel_sel }}</strong></h3>
+
+    {% if clientes_data %}
+      <div class="conmac-clients">
+        {% for cd in clientes_data %}
+          <div class="conmac-client">
+            <div class="conmac-client__brasao">
+              {% if cd.cliente.brasao %}
+                <img src="{{ cd.cliente.brasao.url }}" alt="brasão {{ cd.cliente.nome }}" style="width:100%;height:100%;object-fit:cover;">
+              {% else %}
+                <div style="font-size:.8rem;color:#888;padding:6px;text-align:center;">SEM BRASÃO</div>
+              {% endif %}
+            </div>
+
+            <div class="conmac-client__info">
+              <div class="conmac-client__nome">{{ cd.cliente.nome }}</div>
+              <div class="conmac-client__meta">
+                Etapas: {{ cd.qtd_etapas }} • Concluídas: {{ cd.qtd_concluidas }} • Pendentes: {{ cd.qtd_pendente }}
+              </div>
+              <div>
+                {# Lógica de Cores baseada no status #}
+                {% if cd.qtd_etapas > 0 and cd.qtd_concluidas >= cd.qtd_etapas %}
+                   <span class="conmac-client__status conmac-status-concluido">Concluído</span>
+                {% elif cd.qtd_concluidas > 0 %}
+                   <span class="conmac-client__status conmac-status-pendente">Em andamento</span>
+                {% else %}
+                   <span class="conmac-client__status conmac-status-nao">Não iniciado</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="conmac-client__actions">
+              <a class="conmac-btn {% if nivel_sel == 'FECHAMENTO' %}primary{% endif %}"
+                 href="{% url 'fechamento_cliente_detail' cd.cliente.id %}?nivel={{ nivel_sel }}&ano={{ sel_ano }}&mes={{ sel_mes }}">
+                 Abrir
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+
+      {# LÓGICA DE MENSAGEM VAZIA #}
+      <div style="padding:40px; background:#fff; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.04); text-align:center; color:#666;">
+
+          {% if nivel_sel == "FECHAMENTO" %}
+              <i class="fa fa-info-circle" style="font-size: 24px; margin-bottom: 10px; display:block;"></i>
+              Você não está vinculado a nenhum cliente ou não existem clientes ativos para esta competência.
+
+          {% else %}
+              <i class="fa fa-lock" style="font-size: 24px; margin-bottom: 10px; display:block; color:#ccc;"></i>
+              <h4 style="margin:0; font-weight:600; color:#555;">Etapa não liberada para nenhum cliente</h4>
+              <p style="margin-top:8px; font-size:0.9rem;">
+                  É necessário concluir as etapas obrigatórias no nível <strong>Fechamento</strong> para liberar o acesso ao {{ nivel_sel }}.
+              </p>
+          {% endif %}
+
+      </div>
+
+    {% endif %}
+  </div>
+</div>
+-->
+
+
+<div id="modalAnalise" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; width:90%; max-width:500px; border-radius:16px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2); position:relative;">
+
+        <h3 style="margin-top:0; color:#333; text-align:center;">Selecione os clientes que deseja analisar:</h3>
+
+        <form action="{% url 'relatorio_administrativo' %}" method="GET">
+
+            <div style="margin:20px 0; max-height:200px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+                {% for c in todos_clientes_modal %}
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px; background:#f4f6f7; padding:6px 12px; border-radius:20px;">
+                        <input type="checkbox" name="clientes" value="{{ c.id }}">
+                        {{ c.nome }}
+                    </label>
+                {% empty %}
+                    <p style="color:#666;">Nenhum cliente ativo encontrado.</p>
+                {% endfor %}
+            </div>
+
+            <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:24px;">
+                <label style="font-weight:600; color:#555;">Competência:</label>
+                <select name="mes" style="padding:6px; border-radius:6px; border:1px solid #ccc;">
+                    {% for i in meses_numeros %}
+                        <option value="{{ i }}" {% if i == sel_mes %}selected{% endif %}>{{ i|stringformat:"02d" }}</option>
+                    {% endfor %}
+                </select>
+                <select name="ano" id="modal_ano_select" style="padding:6px; border-radius:6px; border:1px solid #ccc;">
+                    </select>
+            </div>
+
+            <div style="display:flex; justify-content:center; gap:12px;">
+                <button type="submit"
+                        style="background:#0f5e6b; color:#fff; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    CONSULTAR
+                </button>
+                <button type="button" onclick="fecharModalAnalise()"
+                        style="background:#fff; color:#666; border:1px solid #ccc; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    CANCELAR
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!--
+antiga
+
+<div id="modalEtapas" class="conmac-modal-overlay" style="display:none;">
+    <div class="conmac-modal-content large-modal">
+
+        <div class="modal-header">
+            <h3>Gerenciamento de <strong>Etapas do Sistema</strong></h3>
+            <button onclick="fecharModalEtapas()" class="btn-close">&times;</button>
+        </div>
+
+        <div class="modal-body-grid">
+
+            <div class="tabs-column">
+                <div class="tab-header">Níveis</div>
+                {% for nivel, label in NivelChoices.choices %}
+                    <div class="tab-item {% if forloop.first %}active{% endif %}"
+                         onclick="abrirTabEtapa(event, 'tab-{{ nivel }}')">
+                        {{ label }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="content-column">
+
+                <div class="add-box">
+                    <h4 style="margin:0 0 10px 0; color:#2aa6b8;">Adicionar / Editar Etapa</h4>
+                    <form action="{% url 'etapa_salvar' %}" method="POST" id="formEtapaPrincipal">
+                        {% csrf_token %}
+                        <input type="hidden" name="etapa_id" id="input_etapa_id">
+
+                        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:10px;">
+                            <div><label>Nível</label>{{ form_etapa.nivel }}</div>
+                            <div><label>Nome</label>{{ form_etapa.nome }}</div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 80px 1fr; gap:10px; margin-top:10px;">
+                            <div><label>Ordem</label>{{ form_etapa.ordem }}</div>
+                            <div><label>Descrição</label>{{ form_etapa.descricao }}</div>
+                        </div>
+
+                        <div class="checkbox-group" style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+                            <div style="background:#fff; padding:8px; border-radius:6px; border:1px solid #ddd; width:fit-content; display: flex; gap: 15px;">
+                                <label class="chk-item" style="font-weight:bold; color:#2aa6b8; margin:0; cursor:pointer;">
+                                    {{ form_etapa.ativa }} Etapa Ativa?
+                                </label>
+                                <label class="chk-item" style="font-weight:bold; color:#e67e22; margin:0; cursor:pointer;">
+                                    {{ form_etapa.exige_anexo }} Exige Anexo?
+                                </label>
+                            </div>
+
+                            <div style="border-top:1px solid #eee; padding-top:8px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:600;">Definir como obrigatória para liberar:</label>
+                                <div style="display:flex; flex-wrap:wrap; gap:15px;">
+                                    <label class="chk-item" id="container_chk_siga">SIGA {{ form_etapa.obrigatoria_para_fila_siga }}</label>
+                                    <label class="chk-item" id="container_chk_siope">SIOPE {{ form_etapa.obrigatoria_para_fila_siope }}</label>
+                                    <label class="chk-item" id="container_chk_siops">SIOPS {{ form_etapa.obrigatoria_para_fila_siops }}</label>
+                                    <label class="chk-item" id="container_chk_etcm">E-TCM {{ form_etapa.obrigatoria_para_fila_etcm }}</label>
+                                    <label class="chk-item" id="container_chk_siconf">SICONF {{ form_etapa.obrigatoria_para_fila_siconf }}</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:15px; text-align:right;">
+                            <button type="button" onclick="limparFormEtapa()" class="btn-ghost">Limpar / Cancelar</button>
+                            <button type="submit" class="btn-save">Salvar Etapa</button>
+                        </div>
+                    </form>
+                </div>
+
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+                {% for nivel, label in NivelChoices.choices %}
+
+                    <div id="tab-{{ nivel }}" class="tab-content {% if forloop.first %}active{% endif %}">
+
+                        {% if label != "FECHAMENTO" %}
+                            <div style="background:#f0f9fa; border:1px solid #c8e9ec; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+
+
+                                    <div style="max-width: 60%;">
+                                        <strong style="color:#0b97a5; display:block; font-size: 1rem;">Configuração do Módulo: {{ label }}</strong>
+                                        <p style="margin:2px 0 0 0; color:#666; font-size:0.8rem;">Habilitar exibição ignorando pré-requisitos.</p>
+                                    </div>
+
+
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #c8e9ec;">
+                                        <input type="checkbox"
+                                               id="chk_liberar_{{ nivel }}"
+                                               style="width:18px; height:18px; cursor:pointer;"
+                                               {% if nivel in niveis_liberados_global %}checked{% endif %}>
+                                        <span style="color: #333; font-size: 0.85rem; font-weight:600;">Liberar?</span>
+                                    </label>
+
+                                    <button type="button"
+                                            onclick="salvarConfigNivelManual('{{ nivel }}')"
+                                            style="background-color: #2aa6b8; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s;"
+                                            onmouseover="this.style.backgroundColor='#238a99'"
+                                            onmouseout="this.style.backgroundColor='#2aa6b8'">
+                                        Salvar
+                                    </button>
+                                </div>
+                            </div>
+
+                        {% endif %}
+
+                        <h4 style="color:#666; margin-bottom: 15px;">Etapas cadastradas em: <strong>{{ label }}</strong></h4>
+
+                        <div class="etapas-list">
+                            {% for key_nivel, lista_etapas in gestao_etapas_dict.items %}
+                                {% if key_nivel == nivel %}
+                                    {% for etapa in lista_etapas %}
+                                        <div class="etapa-item" style="opacity: {% if etapa.ativa %}1{% else %}0.6{% endif %};">
+                                            <div class="etapa-ordem">#{{ etapa.ordem }}</div>
+                                            <div class="etapa-info">
+                                                <div class="etapa-name">{{ etapa.nome }}</div>
+                                                <div class="etapa-desc">{{ etapa.descricao|truncatechars:60 }}</div>
+                                                <div class="etapa-badges">
+                                                    {% if etapa.ativa %}<span class="badge-on">Ativa</span>{% else %}<span class="badge-off">Inativa</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siga %}<span class="badge-req">Req. SIGA</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_etcm %}<span class="badge-req">Req. E-TCM</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siope %}<span class="badge-req">Req. SIOPE</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siops %}<span class="badge-req">Req. SIOPS</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siconf %}<span class="badge-req">Req. SICONF</span>{% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="etapa-actions">
+                                                <button type="button" onclick="editarEtapa('{{ etapa.id }}','{{ etapa.nivel }}','{{ etapa.nome|escapejs }}','{{ etapa.ordem }}','{{ etapa.descricao|escapejs }}','{{ etapa.ativa|yesno:'true,false' }}','{{ etapa.exige_anexo|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siga|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_etcm|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siope|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siops|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siconf|yesno:'true,false' }}')" class="btn-icon edit" title="Editar">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
+                                                </button>
+                                                <a href="{% url 'etapa_excluir' etapa.id %}" onclick="return confirm('Tem certeza?')" class="btn-icon del" title="Desativar">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M11.354 4.646a.5.5 0 0 0-.708 0l-6 6a.5.5 0 0 0 .708.708l6-6a.5.5 0 0 0 0-.708"/></svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% empty %}
+                                <div style="padding:40px; text-align:center; color:#ccc; border:2px dashed #eee; border-radius:8px;">
+                                    <i class="fa fa-folder-open-o" style="font-size:24px; display:block; margin-bottom:10px;"></i>
+                                    Nenhuma etapa cadastrada.
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para Trocar Abas
+function abrirTabEtapa(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+        tabcontent[i].classList.remove("active");
+    }
+    tablinks = document.getElementsByClassName("tab-item");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+    }
+    document.getElementById(tabName).style.display = "block";
+    document.getElementById(tabName).classList.add("active");
+    if(evt) evt.currentTarget.classList.add("active");
+}
+
+// Função para Salvar Configuração (AJAX)
+function salvarConfigNivelManual(nivelKey) {
+    const checkbox = document.getElementById('chk_liberar_' + nivelKey);
+    if (!checkbox) {
+        alert("Erro: Checkbox não encontrado.");
+        return;
+    }
+
+    const isChecked = checkbox.checked;
+
+    // Feedback no botão
+    const btn = event.target || event.currentTarget;
+    const txtOriginal = btn.innerText;
+    btn.innerText = "Salvo!";
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('nivel', nivelKey);
+    formData.append('liberar', isChecked ? "true" : "false");
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch("{% url 'salvar_configuracao_nivel' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        setTimeout(() => { btn.innerText = txtOriginal; btn.disabled = false; }, 1500);
+
+        if (!data.ok) {
+            alert('Erro ao salvar: ' + data.error);
+            checkbox.checked = !isChecked;
+        } else {
+            // Sucesso silencioso ou console.log
+            console.log("Configuração salva: " + nivelKey);
+        }
+    })
+    .catch(e => {
+        btn.innerText = txtOriginal;
+        btn.disabled = false;
+        alert('Erro de conexão.');
+        console.error(e);
+    });
+}
+</script>
+-->
+
+<!-- ============================================================================
+     MODAL DE ETAPAS ATUALIZADO
+     Cole este código substituindo o modal atual
+     ============================================================================ -->
+
+<div id="modalEtapas" class="conmac-modal-overlay" style="display:none;">
+    <div class="conmac-modal-content large-modal">
+
+        <div class="modal-header">
+            <h3>Gerenciamento de <strong>Etapas do Sistema</strong></h3>
+            <button onclick="fecharModalEtapas()" class="btn-close">&times;</button>
+        </div>
+
+        <div class="modal-body-grid">
+
+            <div class="tabs-column">
+                <div class="tab-header">Níveis</div>
+                {% for nivel, label in NivelChoices.choices %}
+                    <div class="tab-item {% if forloop.first %}active{% endif %}"
+                         onclick="abrirTabEtapa(event, 'tab-{{ nivel }}')">
+                        {{ label }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="content-column">
+
+                <div class="add-box">
+                    <h4 style="margin:0 0 10px 0; color:#2aa6b8;">Adicionar / Editar Etapa</h4>
+                    <form action="{% url 'etapa_salvar' %}" method="POST" id="formEtapaPrincipal">
+                        {% csrf_token %}
+                        <input type="hidden" name="etapa_id" id="input_etapa_id">
+
+                        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:10px;">
+                            <div><label>Nível</label>{{ form_etapa.nivel }}</div>
+                            <div><label>Nome</label>{{ form_etapa.nome }}</div>
+                        </div>
+
+                        {# ── NOVO: Módulo (visível apenas para FECHAMENTO) ── #}
+                        <div id="container_modulo" style="margin-top:10px; padding:8px 10px; background:#fffbe6; border:1px solid #ffe58f; border-radius:6px; display:none;">
+                            <label style="font-weight:600; color:#8a6d00; display:block; margin-bottom:4px;">
+                                Módulo <small style="font-weight:400;">(somente FECHAMENTO: Contábil / Financeiro)</small>
+                            </label>
+                            {{ form_etapa.modulo }}
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 80px 1fr; gap:10px; margin-top:10px;">
+                            <div><label>Ordem</label>{{ form_etapa.ordem }}</div>
+                            <div><label>Descrição</label>{{ form_etapa.descricao }}</div>
+                        </div>
+
+                        <div class="checkbox-group" style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+                            <div style="background:#fff; padding:8px; border-radius:6px; border:1px solid #ddd; width:fit-content; display: flex; gap: 15px;">
+                                <label class="chk-item" style="font-weight:bold; color:#2aa6b8; margin:0; cursor:pointer;">
+                                    {{ form_etapa.ativa }} Etapa Ativa?
+                                </label>
+                                <label class="chk-item" style="font-weight:bold; color:#e67e22; margin:0; cursor:pointer;">
+                                    {{ form_etapa.exige_anexo }} Exige Anexo?
+                                </label>
+                            </div>
+
+                            <div style="border-top:1px solid #eee; padding-top:8px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:600;">Definir como obrigatória para liberar:</label>
+                                <div style="display:flex; flex-wrap:wrap; gap:15px;">
+                                    <label class="chk-item" id="container_chk_siga">SIGA {{ form_etapa.obrigatoria_para_fila_siga }}</label>
+                                    <label class="chk-item" id="container_chk_siope">SIOPE {{ form_etapa.obrigatoria_para_fila_siope }}</label>
+                                    <label class="chk-item" id="container_chk_siops">SIOPS {{ form_etapa.obrigatoria_para_fila_siops }}</label>
+                                    <label class="chk-item" id="container_chk_etcm">E-TCM {{ form_etapa.obrigatoria_para_fila_etcm }}</label>
+                                    <label class="chk-item" id="container_chk_siconf">SICONF {{ form_etapa.obrigatoria_para_fila_siconf }}</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:15px; text-align:right;">
+                            <button type="button" onclick="limparFormEtapa()" class="btn-ghost">Limpar / Cancelar</button>
+                            <button type="submit" class="btn-save">Salvar Etapa</button>
+                        </div>
+                    </form>
+                </div>
+
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+                {% for nivel, label in NivelChoices.choices %}
+
+                    <div id="tab-{{ nivel }}" class="tab-content {% if forloop.first %}active{% endif %}">
+
+                        {% if label != "FECHAMENTO" %}
+                            <!-- ======================================================
+                                 SEÇÃO DE CONFIGURAÇÃO ATUALIZADA
+                                 ====================================================== -->
+                            <div style="background:#f0f9fa; border:1px solid #c8e9ec; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                                    <div style="max-width: 60%;">
+                                        <strong style="color:#0b97a5; display:block; font-size: 1rem;">Configuração: {{ label }}</strong>
+                                        <p style="margin:2px 0 0 0; color:#666; font-size:0.8rem;">
+                                            Habilitar exibição ignorando pré-requisitos
+                                        </p>
+                                    </div>
+
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #c8e9ec;">
+                                            <input type="checkbox"
+                                                   id="chk_liberar_{{ nivel }}"
+                                                   onchange="toggleModoLiberacao('{{ nivel }}')"
+                                                   style="width:18px; height:18px; cursor:pointer;"
+                                                   {% if niveis_info|get_item:nivel and niveis_info|get_item:nivel|get_item:'liberado_global' or niveis_info|get_item:nivel|get_item:'tem_restricao' %}checked{% endif %}>
+                                            <span style="color: #333; font-size: 0.85rem; font-weight:600;">Liberar?</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- NOVO: Seletor de Clientes -->
+                                <div id="clientesSelector_{{ nivel }}"
+                                     style="margin-top:15px; padding:15px; background:#fff; border-radius:8px; border:1px solid #e0e0e0; display:{% if niveis_info|get_item:nivel and niveis_info|get_item:nivel|get_item:'liberado_global' or niveis_info|get_item:nivel|get_item:'tem_restricao' %}block{% else %}none{% endif %};">
+
+                                    <div style="margin-bottom:10px;">
+                                        <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#555;">
+                                            <input type="radio"
+                                                   name="modo_{{ nivel }}"
+                                                   value="global"
+                                                   id="radio_global_{{ nivel }}"
+                                                   onchange="alterarModoSelecao('{{ nivel }}', 'global')"
+                                                   {% if niveis_info|get_item:nivel and niveis_info|get_item:nivel|get_item:'liberado_global' %}checked{% endif %}>
+                                            <span>Liberar para TODOS os clientes</span>
+                                        </label>
+                                    </div>
+
+                                    <div style="margin-bottom:10px;">
+                                        <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#555;">
+                                            <input type="radio"
+                                                   name="modo_{{ nivel }}"
+                                                   value="especifico"
+                                                   id="radio_especifico_{{ nivel }}"
+                                                   onchange="alterarModoSelecao('{{ nivel }}', 'especifico')"
+                                                   {% if niveis_info|get_item:nivel and niveis_info|get_item:nivel|get_item:'tem_restricao' %}checked{% endif %}>
+                                            <span>Liberar apenas para clientes específicos</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Lista de Clientes (visível apenas em modo específico) -->
+                                    <div id="listaClientes_{{ nivel }}"
+                                         style="margin-top:15px; max-height:200px; overflow-y:auto; padding:10px; background:#f9f9f9; border-radius:6px; display:{% if niveis_info|get_item:nivel and niveis_info|get_item:nivel|get_item:'tem_restricao' %}block{% else %}none{% endif %};">
+
+                                        <div style="margin-bottom:10px;">
+                                            <input type="text"
+                                                   id="filtroCliente_{{ nivel }}"
+                                                   placeholder="🔍 Buscar cliente..."
+                                                   onkeyup="filtrarClientes('{{ nivel }}')"
+                                                   style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-size:0.85rem;">
+                                        </div>
+
+                                        <div id="checkboxesClientes_{{ nivel }}" style="display:flex; flex-direction:column; gap:8px;">
+                                            {% for cliente in todos_clientes %}
+                                                <label class="cliente-checkbox-item" data-nome="{{ cliente.nome|lower }}" style="display:flex; align-items:center; gap:8px; padding:6px; background:#fff; border-radius:4px; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='#e8f8f9'" onmouseout="this.style.background='#fff'">
+                                                    <input type="checkbox"
+                                                           name="clientes_{{ nivel }}[]"
+                                                           value="{{ cliente.id }}"
+                                                           class="checkbox-cliente"
+                                                           {% if niveis_info|get_item:nivel and niveis_info|get_item:nivel|get_item:'config_obj' and cliente in niveis_info|get_item:nivel|get_item:'config_obj'|get_item:'clientes_liberados'|get_item:'all' %}checked{% endif %}
+                                                           style="width:16px; height:16px; cursor:pointer;">
+                                                    <span style="font-size:0.85rem; color:#333;">{{ cliente.nome }}</span>
+                                                </label>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Botão Salvar -->
+                                <div style="margin-top:15px; text-align:right;">
+                                    <button type="button"
+                                            onclick="salvarConfigNivelComClientes('{{ nivel }}')"
+                                            style="background-color: #2aa6b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;"
+                                            onmouseover="this.style.backgroundColor='#238a99'"
+                                            onmouseout="this.style.backgroundColor='#2aa6b8'">
+                                        💾 Salvar Configuração
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Lista de Etapas (mantém o código original) -->
+                        <h4 style="color:#666; margin-bottom: 15px;">Etapas cadastradas em: <strong>{{ label }}</strong></h4>
+
+                        <div class="etapas-list">
+                            {% for key_nivel, lista_etapas in gestao_etapas_dict.items %}
+                                {% if key_nivel == nivel %}
+                                    {% for etapa in lista_etapas %}
+                                        <div class="etapa-item" style="opacity: {% if etapa.ativa %}1{% else %}0.6{% endif %};">
+                                            <div class="etapa-ordem">#{{ etapa.ordem }}</div>
+                                            <div class="etapa-info">
+                                                <div class="etapa-name">{{ etapa.nome }}</div>
+                                                <div class="etapa-desc">{{ etapa.descricao|truncatechars:60 }}</div>
+                                                <div class="etapa-badges">
+                                                    {% if etapa.ativa %}<span class="badge-on">Ativa</span>{% else %}<span class="badge-off">Inativa</span>{% endif %}
+                                                    {% if etapa.modulo %}<span class="badge-req" style="background:#fff3cd; color:#856404;">{{ etapa.get_modulo_display }}</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siga %}<span class="badge-req">Req. SIGA</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_etcm %}<span class="badge-req">Req. E-TCM</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siope %}<span class="badge-req">Req. SIOPE</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siops %}<span class="badge-req">Req. SIOPS</span>{% endif %}
+                                                    {% if etapa.obrigatoria_para_fila_siconf %}<span class="badge-req">Req. SICONF</span>{% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="etapa-actions">
+                                                <button type="button" onclick="editarEtapa('{{ etapa.id }}','{{ etapa.nivel }}','{{ etapa.nome|escapejs }}','{{ etapa.ordem }}','{{ etapa.descricao|escapejs }}','{{ etapa.ativa|yesno:'true,false' }}','{{ etapa.exige_anexo|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siga|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_etcm|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siope|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siops|yesno:'true,false' }}','{{ etapa.obrigatoria_para_fila_siconf|yesno:'true,false' }}','{{ etapa.modulo }}')" class="btn-icon edit" title="Editar">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
+                                                </button>
+                                                <a href="{% url 'etapa_excluir' etapa.id %}" onclick="return confirm('Tem certeza?')" class="btn-icon del" title="Desativar">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M11.354 4.646a.5.5 0 0 0-.708 0l-6 6a.5.5 0 0 0 .708.708l6-6a.5.5 0 0 0 0-.708"/></svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% empty %}
+                                <div style="padding:40px; text-align:center; color:#ccc; border:2px dashed #eee; border-radius:8px;">
+                                    <i class="fa fa-folder-open-o" style="font-size:24px; display:block; margin-bottom:10px;"></i>
+                                    Nenhuma etapa cadastrada.
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================================
+     JAVASCRIPT ATUALIZADO
+     ============================================================================ -->
+<script>
+// Função para Trocar Abas (mantém)
+function abrirTabEtapa(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+        tabcontent[i].classList.remove("active");
+    }
+    tablinks = document.getElementsByClassName("tab-item");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+    }
+    document.getElementById(tabName).style.display = "block";
+    document.getElementById(tabName).classList.add("active");
+    if(evt) evt.currentTarget.classList.add("active");
+}
+
+// NOVA: Alternar visibilidade do seletor de clientes
+function toggleModoLiberacao(nivelKey) {
+    const checkbox = document.getElementById('chk_liberar_' + nivelKey);
+    const selector = document.getElementById('clientesSelector_' + nivelKey);
+
+    if (checkbox.checked) {
+        selector.style.display = 'block';
+    } else {
+        selector.style.display = 'none';
+    }
+}
+
+// NOVA: Alternar entre modo global e específico
+function alterarModoSelecao(nivelKey, modo) {
+    const listaClientes = document.getElementById('listaClientes_' + nivelKey);
+
+    if (modo === 'especifico') {
+        listaClientes.style.display = 'block';
+    } else {
+        listaClientes.style.display = 'none';
+    }
+}
+
+// NOVA: Filtrar clientes na busca
+function filtrarClientes(nivelKey) {
+    const filtro = document.getElementById('filtroCliente_' + nivelKey).value.toLowerCase();
+    const container = document.getElementById('checkboxesClientes_' + nivelKey);
+    const labels = container.getElementsByClassName('cliente-checkbox-item');
+
+    for (let i = 0; i < labels.length; i++) {
+        const nomeCliente = labels[i].getAttribute('data-nome');
+        if (nomeCliente.includes(filtro)) {
+            labels[i].style.display = 'flex';
+        } else {
+            labels[i].style.display = 'none';
+        }
+    }
+}
+
+// ATUALIZADA: Salvar Configuração com Clientes
+function salvarConfigNivelComClientes(nivelKey) {
+    const checkbox = document.getElementById('chk_liberar_' + nivelKey);
+    if (!checkbox) {
+        alert("Erro: Checkbox não encontrado.");
+        return;
+    }
+
+    const isChecked = checkbox.checked;
+
+    // Se não está marcado para liberar, ignora clientes
+    if (!isChecked) {
+        salvarConfigSimples(nivelKey, false, []);
+        return;
+    }
+
+    // Verifica modo de liberação
+    const radioGlobal = document.getElementById('radio_global_' + nivelKey);
+    const radioEspecifico = document.getElementById('radio_especifico_' + nivelKey);
+
+    let clientesSelecionados = [];
+
+    if (radioEspecifico && radioEspecifico.checked) {
+        // Modo específico: coleta IDs dos clientes marcados
+        const checkboxes = document.querySelectorAll(`input[name="clientes_${nivelKey}[]"]:checked`);
+        clientesSelecionados = Array.from(checkboxes).map(cb => cb.value);
+
+        if (clientesSelecionados.length === 0) {
+            alert('Por favor, selecione pelo menos um cliente para liberação específica.');
+            return;
+        }
+    }
+    // Modo global: array vazio (libera todos)
+
+    salvarConfigSimples(nivelKey, true, clientesSelecionados);
+}
+
+// NOVA: Função auxiliar para fazer o POST
+function salvarConfigSimples(nivelKey, liberar, clientes) {
+    const btn = event.target || event.currentTarget;
+    const txtOriginal = btn.innerHTML;
+    btn.innerHTML = "✅ Salvando...";
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('nivel', nivelKey);
+    formData.append('liberar', liberar ? "true" : "false");
+
+    // Adiciona clientes ao FormData
+    clientes.forEach(clienteId => {
+        formData.append('clientes[]', clienteId);
+    });
+
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch("{% url 'salvar_configuracao_nivel' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.ok) {
+            alert('Erro ao salvar: ' + data.error);
+            btn.innerHTML = txtOriginal;
+            btn.disabled = false;
+        } else {
+            btn.innerHTML = "✅ Salvo!";
+            console.log("Configuração salva:", data.mensagem);
+
+            // Recarrega a página após 1.5s para atualizar interface
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+    })
+    .catch(e => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        alert('Erro de conexão.');
+        console.error(e);
+    });
+}
+</script>
+
+<!-- ADICIONAR AO CSS (se necessário) -->
+<style>
+.cliente-checkbox-item:hover {
+    background: #e8f8f9 !important;
+}
+</style>
+
+{% if user.is_staff or user.is_superuser %}
+<div id="modalSolicitacoes" class="conmac-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:#fff; width:90%; max-width:700px; border-radius:12px; padding:25px; max-height:85vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; color:#333;">Solicitações de Reabertura</h3>
+            <button onclick="document.getElementById('modalSolicitacoes').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+
+        {% if solicitacoes_pendentes %}
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                <thead style="background:#f4f4f4; text-align:left;">
+                    <tr>
+                        <th style="padding:10px;">Cliente / Etapa</th>
+                        <th style="padding:10px;">Solicitante</th>
+                        <th style="padding:10px;">Histórico</th>
+                        <th style="padding:10px; text-align:right;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sol in solicitacoes_pendentes %}
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px;">
+                            <strong>{{ sol.registro.cliente.nome }}</strong><br>
+                            <small>{{ sol.registro.etapa.nome }} ({{ sol.registro.mes }}/{{ sol.registro.ano }})</small>
+                        </td>
+                        <td style="padding:10px;">
+                            {{ sol.solicitante.first_name }}<br>
+                            <small style="color:#888;">{{ sol.data_solicitacao|date:"d/m H:i" }}</small>
+                        </td>
+                        <td style="padding:10px;">
+                            <span style="background:#eee; padding:2px 6px; border-radius:4px; font-size:0.8rem;">
+                                {{ sol.tentativas }}ª vez
+                            </span>
+                        </td>
+                        <td style="padding:10px; text-align:right;">
+                            <div style="display:flex; gap:5px; justify-content:flex-end;">
+                                <form action="{% url 'gerenciar_solicitacao' %}" method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="solicitacao_id" value="{{ sol.id }}">
+                                    <input type="hidden" name="acao" value="APROVAR">
+                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Autorizar</button>
+                                </form>
+                                <button onclick="negarSolicitacao('{{ sol.id }}')" style="background:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Negar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <form id="formNegar" action="{% url 'gerenciar_solicitacao' %}" method="POST" style="display:none;">
+                {% csrf_token %}
+                <input type="hidden" name="solicitacao_id" id="input_solic_negar">
+                <input type="hidden" name="acao" value="NEGAR">
+                <input type="hidden" name="motivo" id="input_motivo_negar">
+            </form>
+
+            <script>
+                function negarSolicitacao(id) {
+                    let motivo = prompt("Motivo da recusa (será exibido ao usuário):");
+                    if (motivo !== null) { // Se não cancelou
+                        document.getElementById('input_solic_negar').value = id;
+                        document.getElementById('input_motivo_negar').value = motivo;
+                        document.getElementById('formNegar').submit();
+                    }
+                }
+            </script>
+
+        {% else %}
+            <div style="text-align:center; padding:30px; color:#666;">
+                Nenhuma solicitação pendente no momento.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+    /* --- CSS DO MODAL DE GESTÃO --- */
+    .conmac-modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); z-index: 10000;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .conmac-modal-content {
+        background: #fff; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        overflow: hidden; display: flex; flex-direction: column;
+    }
+    .large-modal { width: 95%; max-width: 900px; height: 85vh; }
+
+    .modal-header {
+        padding: 15px 25px; border-bottom: 1px solid #eee; background: #f9f9f9;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-close { background:none; border:none; font-size:24px; cursor:pointer; color:#666; }
+
+    .modal-body-grid {
+        display: flex; flex: 1; overflow: hidden;
+    }
+
+    /* Tabs Laterais */
+    .tabs-column {
+        width: 180px; background: #f0f4f5; border-right: 1px solid #eee;
+        display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .tab-header { padding: 15px; font-weight: bold; color: #2aa6b8; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+    .tab-item {
+        padding: 12px 15px; cursor: pointer; color: #555; font-weight: 500; border-left: 4px solid transparent; transition: all 0.2s;
+    }
+    .tab-item:hover { background: #e6ecee; }
+    .tab-item.active { background: #fff; color: #2aa6b8; border-left-color: #2aa6b8; font-weight: 700; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+    /* Conteúdo Principal */
+    .content-column {
+        flex: 1; padding: 25px; overflow-y: auto; background: #fff;
+    }
+
+    /* Formulário */
+    .add-box { background: #f9fbff; padding: 20px; border-radius: 12px; border: 1px solid #eef4ff; }
+    .conmac-input {
+        width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+    }
+    .conmac-input:focus { border-color: #2aa6b8; outline: none; }
+
+    .checkbox-group { margin-top: 10px; font-size: 0.85rem; }
+    .chk-item { margin-right: 15px; color: #555; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+
+    .btn-save { background: #2aa6b8; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    .btn-ghost { background: none; border: 1px solid #ccc; color: #666; padding: 8px 15px; border-radius: 20px; margin-right: 8px; cursor: pointer; }
+
+    /* Lista de Itens */
+    .tab-content { display: none; animation: fadeIn 0.3s; }
+    .tab-content.active { display: block; }
+
+    .etapa-item {
+        display: flex; align-items: center; gap: 15px; padding: 12px;
+        border-bottom: 1px solid #f0f0f0; transition: background 0.2s;
+    }
+    .etapa-item:hover { background: #fafafa; }
+    .etapa-ordem { font-weight: bold; color: #ccc; width: 30px; }
+    .etapa-info { flex: 1; }
+    .etapa-name { font-weight: 700; color: #333; }
+    .etapa-desc { font-size: 0.85rem; color: #888; }
+    .etapa-badges { display: flex; gap: 5px; margin-top: 4px; }
+    .badge-on { background: #d4edda; color: #155724; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; }
+    .badge-off { background: #f8d7da; color: #721c24; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; }
+    .badge-req { background: #e2e3e5; color: #383d41; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; }
+
+    .btn-icon { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+    .btn-icon.edit { background: #e3f2fd; color: #0d47a1; margin-right: 5px; }
+    .btn-icon.del { background: #ffebee; color: #c62828; }
+    .btn-icon:hover { transform: scale(1.1); }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+    @media (max-width: 700px) {
+        .modal-body-grid { flex-direction: column; }
+        .tabs-column { width: 100%; height: 60px; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid #eee; }
+        .tab-item { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
+        .tab-item.active { border-left: none; border-bottom-color: #2aa6b8; }
+    }
+</style>
+
+<script>
+    // JS para controle do Modal de Etapas
+    function abrirModalEtapas() {
+        document.getElementById('modalEtapas').style.display = 'flex';
+    }
+    function fecharModalEtapas() {
+        document.getElementById('modalEtapas').style.display = 'none';
+        limparFormEtapa();
+    }
+
+    // Controle de Tabs
+    function abrirTabEtapa(evt, tabName) {
+        var i, tabcontent, tablinks;
+
+        // Esconde todos os conteúdos
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+            tabcontent[i].classList.remove("active");
+        }
+
+        // Tira active de todas as abas
+        tablinks = document.getElementsByClassName("tab-item");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+
+        // Mostra o atual
+        document.getElementById(tabName).style.display = "block";
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+// Preenche o formulário para edição
+    // Adicionado o parâmetro 'modulo' na assinatura da função
+    function editarEtapa(id, nivel, nome, ordem, desc, ativa, exigeAnexo, siga, etcm, siope, siops, siconf, modulo) {
+        document.getElementById('input_etapa_id').value = id;
+
+        // Busca os campos normais
+        document.querySelector('[name="nivel"]').value = nivel;
+        document.querySelector('[name="nome"]').value = nome;
+        document.querySelector('[name="ordem"]').value = ordem;
+        document.querySelector('[name="descricao"]').value = desc;
+
+        // Checkboxes de Status e Configuração
+        // Converte a string 'True'/'False' ou 'true'/'false' do Django/JS para booleano
+        document.querySelector('[name="ativa"]').checked = (ativa === 'true' || ativa === 'True');
+
+        // --- NOVO: Checkbox Exige Anexo ---
+        document.querySelector('[name="exige_anexo"]').checked = (exigeAnexo === 'true' || exigeAnexo === 'True');
+
+        // Checkboxes de Obrigatoriedade (Filas)
+        document.querySelector('[name="obrigatoria_para_fila_siga"]').checked = (siga === 'true' || siga === 'True');
+        document.querySelector('[name="obrigatoria_para_fila_etcm"]').checked = (etcm === 'true' || etcm === 'True');
+        document.querySelector('[name="obrigatoria_para_fila_siope"]').checked = (siope === 'true' || siope === 'True');
+        document.querySelector('[name="obrigatoria_para_fila_siops"]').checked = (siops === 'true' || siops === 'True');
+        document.querySelector('[name="obrigatoria_para_fila_siconf"]').checked = (siconf === 'true' || siconf === 'True');
+
+        // --- NOVO: campo Módulo ---
+        const moduloSel = document.querySelector('[name="modulo"]');
+        if (moduloSel) moduloSel.value = modulo || '';
+        const containerModulo = document.getElementById('container_modulo');
+        if (containerModulo) containerModulo.style.display = (nivel === 'FECHAMENTO') ? 'block' : 'none';
+
+        // Atualiza exibição dos checkboxes de requisito conforme o nível
+        atualizarExibicaoCheckboxes();
+
+        // Feedback visual de edição
+        document.querySelector('.add-box h4').innerText = "Editando: " + nome;
+        document.querySelector('.add-box').style.backgroundColor = "#fff8e1"; // Amarelo claro
+
+        // Rola suavemente para o topo do formulário para o usuário ver que editou
+        document.querySelector('.add-box').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function limparFormEtapa() {
+        document.getElementById('formEtapaPrincipal').reset();
+        document.getElementById('input_etapa_id').value = '';
+
+        // Reseta textos e estilos
+        document.querySelector('.add-box h4').innerText = "Adicionar / Editar Etapa";
+        document.querySelector('.add-box').style.backgroundColor = "#f9fbff";
+
+        // Oculta o container de módulo ao limpar
+        const containerModulo = document.getElementById('container_modulo');
+        if (containerModulo) containerModulo.style.display = 'none';
+        setTimeout(atualizarExibicaoCheckboxes, 50);
+    }
+
+
+
+
+</script>
+
+
+
+
+
+
+
+<script>
+    function abrirModalAnalise() {
+        document.getElementById('modalAnalise').style.display = 'flex';
+        // Popula o ano do modal igual ao da página
+        const anoAtual = Number({{ sel_ano|default:"0" }}) || new Date().getFullYear();
+        const selectAno = document.getElementById('modal_ano_select');
+        selectAno.innerHTML = '';
+        for(let y = anoAtual - 2; y <= anoAtual + 1; y++){
+            let opt = document.createElement('option');
+            opt.value = y;
+            opt.text = y;
+            if(y === anoAtual) opt.selected = true;
+            selectAno.appendChild(opt);
+        }
+    }
+    function fecharModalAnalise() {
+        document.getElementById('modalAnalise').style.display = 'none';
+    }
+    // Fechar ao clicar fora
+    document.getElementById('modalAnalise').addEventListener('click', function(e){
+        if(e.target === this) fecharModalAnalise();
+    });
+</script>
+
+<script>
+  // JS pequeno para lidar com clique nos cards (redireciona com ?nivel=...)
+  (function(){
+    document.querySelectorAll('.conmac-nivel-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        var nivel = this.dataset.nivel;
+        var url = new URL(window.location.href);
+        url.searchParams.set('nivel', nivel);
+        // mantemos ano/mes se já existentes
+        window.location.href = url.toString();
+      });
+      // accessible via keyboard
+      card.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.click();
+        }
+      });
+    });
+  })();
+</script>
+
+<script>
+    // Script para manter o modal aberto após salvar/excluir
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Verifica se o backend mandou reabrir o modal
+        if (urlParams.has('gerenciar_etapas')) {
+
+            // 1. Abre o Modal
+            abrirModalEtapas();
+
+            // 2. Tenta descobrir qual aba (nível) estava ativa
+            const abaAtiva = urlParams.get('aba_ativa');
+
+            if (abaAtiva) {
+                // Simula o clique na aba correta para exibi-la
+                // Procura a div tab-item que tenha o onclick contendo o nome da aba
+                // Ex: onclick="abrirTabEtapa(event, 'tab-SIGA')"
+
+                // Seletor para encontrar o elemento que chama a função da aba correta
+                const tabSelector = `.tab-item[onclick*="'tab-${abaAtiva}'"]`;
+                const tabButton = document.querySelector(tabSelector);
+
+                if (tabButton) {
+                    // Simula o evento de click passando um objeto fake de evento
+                    // pois sua função abrirTabEtapa espera (event, nome)
+                    const fakeEvent = { currentTarget: tabButton };
+                    abrirTabEtapa(fakeEvent, 'tab-' + abaAtiva);
+                }
+            }
+
+            // Opcional: Limpar a URL para que se o usuário der F5 não reabra o modal à toa
+            // window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
+</script>
+
+
+
+
+<script>
+    // Mapeamento: Valor do Option -> ID do Container do Checkbox
+    // ATENÇÃO: Verifique se os valores (keys) batem exatamente com o 'value' do seu <select name="nivel">
+    const MAPA_NIVEL_CHECKBOX = {
+        'SIGA': 'container_chk_siga',
+        'SIOPE': 'container_chk_siope',
+        'SIOPS': 'container_chk_siops',
+        'E-TCM': 'container_chk_etcm',  // Verifique se no value é 'E-TCM' ou 'E_TCM'
+        'SICONF': 'container_chk_siconf'
+    };
+
+    function atualizarExibicaoCheckboxes() {
+        // Pega o nível selecionado no select (que adicionamos id="id_etapa_nivel" no forms.py)
+        // Se não pegou o ID novo, use querySelector('[name="nivel"]')
+        const nivelSelect = document.querySelector('[name="nivel"]');
+        if(!nivelSelect) return;
+
+        const nivelSelecionado = nivelSelect.value;
+
+        // 1. Resetar: Mostrar todos primeiro
+        Object.values(MAPA_NIVEL_CHECKBOX).forEach(idContainer => {
+            const el = document.getElementById(idContainer);
+            if(el) {
+                el.style.display = 'inline-flex'; // ou 'flex' conforme seu CSS original
+                el.style.opacity = '1';
+            }
+        });
+
+        // 2. Ocultar o conflitante
+        const idParaOcultar = MAPA_NIVEL_CHECKBOX[nivelSelecionado];
+        if (idParaOcultar) {
+            const elProibido = document.getElementById(idParaOcultar);
+            if (elProibido) {
+                // Oculta visualmente
+                elProibido.style.display = 'none';
+
+                // Opcional: Desmarcar o checkbox automaticamente para evitar envio de dados sujos
+                const checkbox = elProibido.querySelector('input[type="checkbox"]');
+                if(checkbox) checkbox.checked = false;
+            }
+        }
+
+        // 3. Mostrar/ocultar campo Módulo conforme nível selecionado
+        const containerModulo = document.getElementById('container_modulo');
+        if (containerModulo) {
+            containerModulo.style.display = (nivelSelecionado === 'FECHAMENTO') ? 'block' : 'none';
+        }
+    }
+
+    // --- INTEGRAR COM SEU CÓDIGO EXISTENTE ---
+
+    // 1. Adicionar Listener no Select de Nível
+    document.addEventListener("DOMContentLoaded", function() {
+        const nivelSelect = document.querySelector('[name="nivel"]');
+        if(nivelSelect) {
+            nivelSelect.addEventListener('change', atualizarExibicaoCheckboxes);
+        }
+    });
+
+    // 2. Modificar sua função 'editarEtapa' existente para chamar a atualização
+    // Procure sua função editarEtapa(...) e adicione a chamada no final:
+
+    /* function editarEtapa(....) {
+           ... código existente ...
+
+           // ADICIONE ISSO NO FINAL DA FUNÇÃO:
+           atualizarExibicaoCheckboxes();
+       }
+    */
+
+    // 3. Modificar sua função 'limparFormEtapa' também
+    /*
+       function limparFormEtapa() {
+           ... código existente ...
+
+           // ADICIONE ISSO:
+           setTimeout(atualizarExibicaoCheckboxes, 50); // Timeout pequeno para garantir que o reset limpou o select
+       }
+    */
+</script>
+
+
+
+    <script>
+        console.log("TESTANDO ESSA VIAGEM!");
+        (function(){
+          // --- DEBUG ---
+          // Vamos ver o que o Django está imprimindo aqui.
+          // Se aparecer 12 no console, o problema é no Backend (views.py/Reload).
+          // Se aparecer 0 ou vazio, o problema é no Frontend (JS).
+          const rawMes = "{{ sel_mes|default:'' }}";
+          const rawAno = "{{ sel_ano|default:'' }}";
+
+          console.log("DEBUG CONMAC:", {
+              "Valor vindo do Django (mes)": rawMes,
+              "Valor vindo do Django (ano)": rawAno,
+              "URL Atual": window.location.href
+          });
+
+          const CTX_SEL_ANO = Number(rawAno);
+          const CTX_SEL_MES = Number(rawMes);
+
+          const currentYear = new Date().getFullYear();
+          const baseYear = CTX_SEL_ANO || currentYear;
+
+          const anoEl = document.getElementById('conmac-ano');
+          const mesEl = document.getElementById('conmac-mes');
+
+          // Montar opções de ano
+          const start = baseYear - 2;
+          const end = baseYear + 1;
+
+          if (anoEl) {
+            // Removemos o 'disabled' do ano também para permitir limpeza total se desejar
+            let htmlOpts = '<option value="" ' + (!CTX_SEL_ANO ? 'selected' : '') + '>Ano</option>';
+
+            for (let y = start; y <= end; y++) {
+              const isSelected = (y === CTX_SEL_ANO) ? 'selected' : '';
+              htmlOpts += `<option value="${y}" ${isSelected}>${y}</option>`;
+            }
+            anoEl.innerHTML = htmlOpts;
+          }
+
+          // LÓGICA DE SELEÇÃO DO MÊS
+          if (mesEl) {
+              if (CTX_SEL_MES > 0) {
+                  // Se o Django mandou um mês, seleciona ele
+                  mesEl.value = String(CTX_SEL_MES);
+              } else {
+                  // Se o Django mandou vazio (0), força o índice 0 ("Mês")
+                  // Isso garante que visualmente fique "Mês" e não a data de hoje
+                  mesEl.selectedIndex = 0;
+              }
+          }
+
+          // Função de submit
+          function submitForm() {
+            const f = document.getElementById('conmac-competencia-form');
+            // Permite submeter mesmo vazio para limpar o filtro
+            if (f) f.submit();
+          }
+
+          if (mesEl) mesEl.addEventListener('change', submitForm);
+          if (anoEl) anoEl.addEventListener('change', submitForm);
+
+          const formEl = document.getElementById('conmac-competencia-form');
+          if (formEl) {
+            formEl.addEventListener('keypress', function(ev){
+              if (ev.key === 'Enter') { ev.preventDefault(); submitForm(); }
+            });
+          }
+        })();
+    </script>
+
+
+{% if user.is_staff or user.is_superuser %}
+{# ── MODAL: Liberar Competência (override pontual por admin) ── #}
+<div id="modalLiberarCompetencia" class="conmac-modal-overlay" style="display:none;">
+  <div style="background:#fff; width:90%; max-width:480px; border-radius:16px; padding:25px; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h4 style="margin:0; color:#8e44ad;"><i class="fa fa-unlock-alt"></i> Liberar Competência</h4>
+      <button onclick="document.getElementById('modalLiberarCompetencia').style.display='none'"
+              style="border:none; background:none; font-size:22px; cursor:pointer; color:#666;">&times;</button>
+    </div>
+    <p style="color:#666; font-size:0.85rem; margin-bottom:16px; line-height:1.4;">
+      Libera um cliente específico para preencher/concluir um nível em uma competência, sobrepondo qualquer bloqueio por periodicidade ou dependência.
+    </p>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-weight:600; display:block; margin-bottom:4px;">Cliente</label>
+      <select id="lc_cliente" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:0.9rem;">
+        {% for c in todos_clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-weight:600; display:block; margin-bottom:4px;">Nível</label>
+      <select id="lc_nivel" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:0.9rem;">
+        {% for val, label in NivelChoices.choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+      <div>
+        <label style="font-weight:600; display:block; margin-bottom:4px;">Mês</label>
+        <select id="lc_mes" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:0.9rem;">
+          {% for n in meses_numeros %}<option value="{{ n }}">{{ n|stringformat:"02d" }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-weight:600; display:block; margin-bottom:4px;">Ano</label>
+        <input id="lc_ano" type="number" value="{{ sel_ano|default:'2025' }}" min="2020" max="2040"
+               style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:0.9rem; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-weight:600; display:block; margin-bottom:4px;">Motivo <small style="font-weight:400; color:#888;">(opcional)</small></label>
+      <textarea id="lc_motivo" rows="2"
+                style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:0.9rem; box-sizing:border-box; resize:vertical;"
+                placeholder="Ex.: Prazo prorrogado pelo TCE"></textarea>
+    </div>
+
+    <div id="lc_feedback" style="display:none; padding:10px; border-radius:6px; margin-bottom:12px; font-size:0.9rem;"></div>
+
+    <div style="text-align:right; display:flex; justify-content:flex-end; gap:8px;">
+      <button onclick="document.getElementById('modalLiberarCompetencia').style.display='none'"
+              style="background:#eee; border:none; padding:8px 18px; border-radius:6px; cursor:pointer;">Cancelar</button>
+      <button onclick="liberarCompetenciaSubmit()"
+              style="background:#8e44ad; color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:bold; cursor:pointer;">
+        <i class="fa fa-unlock-alt"></i> Liberar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function liberarCompetenciaSubmit() {
+  const fb = document.getElementById('lc_feedback');
+  fb.style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('cliente_id', document.getElementById('lc_cliente').value);
+  fd.append('nivel',      document.getElementById('lc_nivel').value);
+  fd.append('mes',        document.getElementById('lc_mes').value);
+  fd.append('ano',        document.getElementById('lc_ano').value);
+  fd.append('motivo',     document.getElementById('lc_motivo').value);
+  fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+  fetch("{% url 'liberar_competencia' %}", { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => {
+      fb.style.display  = 'block';
+      fb.style.background = d.ok ? '#d4edda' : '#f8d7da';
+      fb.style.color      = d.ok ? '#155724' : '#721c24';
+      fb.textContent      = d.ok ? d.mensagem  : (d.error || 'Erro desconhecido.');
+    })
+    .catch(() => {
+      fb.style.display  = 'block';
+      fb.style.background = '#f8d7da';
+      fb.style.color      = '#721c24';
+      fb.textContent      = 'Erro de rede.';
+    });
+}
+</script>
+{% endif %}
+
+{% endblock %}

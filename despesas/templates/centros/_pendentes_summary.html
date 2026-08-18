@@ -1,70 +1,222 @@
-{# templates/centros/_pendentes_summary.html #}
-{% load i18n %}
+<style>
+  .hover-filter:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+    cursor: pointer;
+  }
+  .hover-filter {
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+  .hover-name {
+      text-decoration: none;
+      color: #374151;
+      display: block;
+  }
+  .hover-name:hover {
+      text-decoration: underline;
+      color: #2563eb !important;
+  }
+  
+  /* Estilos específicos para o Modo Detalhe */
+  .item-row {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 12px 10px; /* Mais espaçamento */
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .item-row:last-child { border-bottom: none; }
+  
+  .item-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+  }
+  
+  .item-desc { 
+      font-weight: 600; 
+      color: #374151; 
+      font-size: 0.95rem; 
+  }
+  
+  .item-meta { 
+      font-size: 0.8rem; 
+      color: #6b7280; 
+      text-transform: uppercase;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+  }
+</style>
 
-{% if pendentes_analise or pendentes_pagamento %}
-  <div style="margin:.75rem 0;">
-    <div style="border-radius:24px;padding:25px;background:#FFFFFF;border:1px solid #ececec;">
-      <strong style="display:block;margin-bottom:10px;font-size:1rem;">Despesas pendentes — resumo por colaborador</strong>
-
-      <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-        {# LEFT: PENDENTES DE ANÁLISE #}
-        <div style="flex:1;min-width:260px;">
-          <div style="background:#FFF9F6;border:1px solid #F6E0D0;padding:10px;border-radius:8px;">
-            <div style="font-weight:700;margin-bottom:8px;">PENDENTES DE ANÁLISE</div>
-
-            {% if pendentes_analise %}
-              {% for p in pendentes_analise %}
-                <a href="{% if qs_base %}?{{ qs_base }}&user={{ p.usuario.id }}{% else %}?user={{ p.usuario.id }}{% endif %}"
-                   style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:6px;text-decoration:none;color:inherit;background:#fff;border:1px solid #f2f2f2;margin-bottom:8px;">
-                  <div style="font-weight:600;">{{ p.usuario.get_full_name|default:p.usuario.username }}</div>
-                  <div style="text-align:right;">
-                    <div style="font-weight:700">R$ {{ p.valor_pend_analise|floatformat:2 }}</div>
-                    <div style="font-size:.78rem;opacity:.7;">{{ p.qtd_total }} item(s)</div>
-                  </div>
-                </a>
-              {% endfor %}
-            {% else %}
-              <div style="color:#666;padding:8px;font-size:.95rem;">— Nenhuma pendência de avaliação no momento</div>
-            {% endif %}
-
-            {# total abaixo da coluna #}
-            <div style="border-top:1px dashed #e6e6e6;margin-top:8px;padding-top:8px;font-weight:700;">
-              Total (avaliação): R$ {{ pendentes_analise_total|floatformat:2 }}
-            </div>
-          </div>
+{# === MODO DETALHE: LISTA ITEM A ITEM === #}
+{% if modo_detalhe %}
+  
+  {% if despesas_lista %}
+    <div style="margin:.75rem 0;">
+      <div style="border-radius:12px; padding:15px; background:#FFFFFF; border:1px solid #ececec;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
+            <strong style="font-size:1rem; color:#333;">EXTRATO DE DESPESAS</strong>
+            <span style="font-size:0.8rem; color:#888;">{{ despesas_lista|length }} itens encontrados</span>
         </div>
 
-        {# RIGHT: PENDENTES DE PAGAMENTO #}
-        <div style="flex:1;min-width:260px;">
-          <div style="background:#F7FBFF;border:1px solid #D9EDF7;padding:10px;border-radius:8px;">
-            <div style="font-weight:700;margin-bottom:8px;">PENDENTES DE PAGAMENTO</div>
+        <div style="display:flex; flex-direction:column;">
+          {% for d in despesas_lista %}
+            
+            {% with st=d.status %}
+            {# INJEÇÃO DO NOME AQUI: O JS LÊ ESTE ATRIBUTO DATA-ANALISTA #}
+            <div class="item-despesa item-row" data-analista="{{ d.usuario.get_full_name|default:d.usuario.username|title }}">
+              
+              {# NOME E STATUS #}
+              <div class="item-content" style="flex:1;">
+                <div class="item-desc">
+                   {{ d.data_fato|date:"d/m" }} · {{ d.titulo }}
+                </div>
+                
+                {# AQUI EXIBIMOS O STATUS VISUALMENTE #}
+                <div class="item-meta" style="margin-top:4px;">
+                  {% if d.status == 'PENDENTE' %}
+                    <span style="background:#fffbeb; color:#b45309; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:700; border:1px solid #fcd34d;">
+                      EM ANÁLISE
+                    </span>
+                  {% elif d.status == 'PENDENTE_PAGTO' %}
+                    <span style="background:#f0f9ff; color:#0369a1; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:700; border:1px solid #bae6fd;">
+                      A PAGAR
+                    </span>
+                  {% elif d.status == 'APROVADA' %}
+                    <span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:700; border:1px solid #86efac;">
+                      PAGA
+                    </span>
+                  {% elif d.status == 'REPROVADA' %}
+                    <span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:700; border:1px solid #fca5a5;">
+                      REPROVADA
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
 
-            {% if pendentes_pagamento %}
-              {% for p in pendentes_pagamento %}
-                <a href="{% if qs_base %}?{{ qs_base }}&user={{ p.usuario.id }}{% else %}?user={{ p.usuario.id }}{% endif %}"
-                   style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:6px;text-decoration:none;color:inherit;background:#fff;border:1px solid #f2f2f2;margin-bottom:8px;">
-                  <div style="font-weight:600;">{{ p.usuario.get_full_name|default:p.usuario.username }}</div>
-                  <div style="text-align:right;">
-                    <div style="font-weight:700">R$ {{ p.valor_pend_pagto|floatformat:2 }}</div>
-                    <div style="font-size:.78rem;opacity:.7;">{{ p.qtd_total }} item(s)</div>
-                  </div>
-                </a>
-              {% endfor %}
-            {% else %}
-              <div style="color:#666;padding:8px;font-size:.95rem;">— Nenhuma pendência de pagamento no momento</div>
-            {% endif %}
+              {# VALOR #}
+              <div style="text-align:right;">
+                {% if st == 'PENDENTE' %}
+                  <span class="badge-analise hover-filter" style="background:#FFF9F6; color:#92400e; border:1px solid #F6E0D0;">
+                    R$ {{ d.valor|floatformat:"2g" }}
+                  </span>
+                {% elif st == 'PENDENTE_PAGTO' %}
+                  <span class="badge-pagamento hover-filter" style="background:#F7FBFF; color:#075985; border:1px solid #D9EDF7;">
+                    R$ {{ d.valor|floatformat:"2g" }}
+                  </span>
+                {% elif st == 'APROVADA' %}
+                  <span class="badge-pago hover-filter" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;">
+                    R$ {{ d.valor|floatformat:"2g" }}
+                  </span>
+                {% elif st == 'REPROVADA' %}
+                  <span class="badge-reprovada hover-filter" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca;">
+                    R$ {{ d.valor|floatformat:"2g" }}
+                  </span>
+                {% endif %}
+              </div>
 
-            {# total abaixo da coluna #}
-            <div style="border-top:1px dashed #e6e6e6;margin-top:8px;padding-top:8px;font-weight:700;">
-              Total (pagamento): R$ {{ pendentes_pagamento_total|floatformat:2 }}
             </div>
-          </div>
-        </div>
-      </div>
+            {% endwith %}
 
-      <div style="margin-top:10px;font-size:.85rem;color:#666;">
-        Clique em um colaborador para filtrar as despesas por usuário.
+          {% endfor %}
+        </div>
       </div>
     </div>
-  </div>
+  {% else %}
+    <div style="padding:20px; text-align:center; color:#666;">Nenhuma despesa encontrada neste período.</div>
+  {% endif %}
+
+{% else %}
+
+  {# === MODO GERAL: RESUMO POR COLABORADOR === #}
+  
+  {% if pendentes_analise or pendentes_pagamento or pendentes_pago or pendentes_reprovada %}
+    <div style="margin:.75rem 0;">
+      <div style="border-radius:24px;padding:25px;background:#FFFFFF;border:1px solid #ececec;">
+        <strong style="display:block;margin-bottom:10px;font-size:1rem;">RESUMO POR COLABORADOR</strong>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; align-items:start;">
+          
+          {# ANÁLISE #}
+          <div style="background:#FFF9F6;border:1px solid #F6E0D0;padding:10px;border-radius:8px;">
+              <div style="font-weight:700;margin-bottom:8px;color:#92400e;font-size:0.85rem;">PENDENTES DE ANÁLISE</div>
+              {% for p in pendentes_analise %}
+                <div class="colaborador" style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#fff;border:1px solid #f2f2f2;margin-bottom:4px;border-radius:4px;">
+                  <a href="?user={{ p.usuario.id }}&st=PENDENTE&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}" 
+                     class="colab-nome hover-name" style="font-size:0.9rem;color:#333;flex:1;">
+                     {{ p.usuario.get_full_name|default:p.usuario.username|title }}
+                  </a>
+                  <a href="?user={{ p.usuario.id }}&st=PENDENTE&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}" 
+                     class="badge-analise hover-filter" style="font-weight:700;color:#92400e;">
+                     R$ {{ p.valor_pend_analise|floatformat:"2g" }}
+                  </a>
+                </div>
+              {% endfor %}
+              <div style="margin-top:5px;font-weight:bold;color:#92400e;font-size:0.9rem;">Total: R$ {{ pendentes_analise_total|floatformat:"2g" }}</div>
+          </div>
+
+          {# A PAGAR #}
+          <div style="background:#F7FBFF;border:1px solid #D9EDF7;padding:10px;border-radius:8px;">
+              <div style="font-weight:700;margin-bottom:8px;color:#075985;font-size:0.85rem;">A PAGAR</div>
+              {% for p in pendentes_pagamento %}
+                <div class="colaborador" style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#fff;border:1px solid #f2f2f2;margin-bottom:4px;border-radius:4px;">
+                  <a href="?user={{ p.usuario.id }}&st=PENDENTE_PAGTO&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}"
+                     class="colab-nome hover-name" style="font-size:0.9rem;color:#333;flex:1;">
+                     {{ p.usuario.get_full_name|default:p.usuario.username|title }}
+                  </a>
+                  <a href="?user={{ p.usuario.id }}&st=PENDENTE_PAGTO&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}"
+                     class="badge-pagamento hover-filter" style="font-weight:700;color:#075985;">
+                     R$ {{ p.valor_pend_pagto|floatformat:"2g" }}
+                  </a>
+                </div>
+              {% endfor %}
+              <div style="margin-top:5px;font-weight:bold;color:#075985;font-size:0.9rem;">Total: R$ {{ pendentes_pagamento_total|floatformat:"2g" }}</div>
+          </div>
+
+          {# PAGAS #}
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:10px;border-radius:8px;">
+              <div style="font-weight:700;margin-bottom:8px;color:#166534;font-size:0.85rem;">PAGAS</div>
+              {% for p in pendentes_pago %}
+                <div class="colaborador" style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#fff;border:1px solid #f2f2f2;margin-bottom:4px;border-radius:4px;">
+                  <a href="?user={{ p.usuario.id }}&st=APROVADA&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}"
+                     class="colab-nome hover-name" style="font-size:0.9rem;color:#333;flex:1;">
+                     {{ p.usuario.get_full_name|default:p.usuario.username|title }}
+                  </a>
+                  <a href="?user={{ p.usuario.id }}&st=APROVADA&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}"
+                     class="badge-pago hover-filter" style="font-weight:700;color:#166534;">
+                     R$ {{ p.valor_pago|floatformat:"2g" }}
+                  </a>
+                </div>
+              {% endfor %}
+              <div style="margin-top:5px;font-weight:bold;color:#166534;font-size:0.9rem;">Total: R$ {{ pendentes_pago_total|floatformat:"2g" }}</div>
+          </div>
+
+          {# REPROVADAS #}
+          <div style="background:#fef2f2;border:1px solid #fecaca;padding:10px;border-radius:8px;">
+              <div style="font-weight:700;margin-bottom:8px;color:#991b1b;font-size:0.85rem;">REPROVADAS</div>
+              {% for p in pendentes_reprovada %}
+                <div class="colaborador" style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#fff;border:1px solid #f2f2f2;margin-bottom:4px;border-radius:4px;">
+                  <a href="?user={{ p.usuario.id }}&st=REPROVADA&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}"
+                     class="colab-nome hover-name" style="font-size:0.9rem;color:#333;flex:1;">
+                     {{ p.usuario.get_full_name|default:p.usuario.username|title }}
+                  </a>
+                  <a href="?user={{ p.usuario.id }}&st=REPROVADA&mes={{ sel_mes|default:'' }}&ano={{ sel_ano|default:'' }}&centro={{ sel_centro|default:'' }}"
+                     class="badge-reprovada hover-filter" style="font-weight:700;color:#991b1b;">
+                     R$ {{ p.valor_reprovada|floatformat:"2g" }}
+                  </a>
+                </div>
+              {% endfor %}
+              <div style="margin-top:5px;font-weight:bold;color:#991b1b;font-size:0.9rem;">Total: R$ {{ pendentes_reprovada_total|floatformat:"2g" }}</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
 {% endif %}

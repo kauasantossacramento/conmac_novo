@@ -1,0 +1,1538 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
+{% block title %}Documentação e Envio · {{ contrato.omie_num_ctr }}{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+:root {
+  --brown:   #945f34;
+  --teal:    #239FAB;
+  --green:   #14a05a;
+  --red:     #dc2626;
+  --gold:    #d97706;
+  --purple:  #6b46c1;
+  --cyan:    #0e7490;
+  --muted:   #718096;
+  --dark:    #1a202c;
+  --border:  #e5e7eb;
+  --grad:    linear-gradient(90deg,#945f34 0%,#239FAB 100%);
+  font-family:'Sora',sans-serif;
+}
+
+/* ── HERO ── */
+.doc-hero {
+  background: var(--grad);
+  border-radius:22px; padding:28px 36px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:20px; color:#fff; flex-wrap:wrap;
+  box-shadow:0 16px 40px rgba(148,95,52,.22);
+  margin-bottom:28px; position:relative; overflow:hidden;
+}
+.doc-hero::before {
+  content:''; position:absolute; right:-60px; top:-60px;
+  width:220px; height:220px; background:rgba(255,255,255,.06);
+  border-radius:50%; pointer-events:none;
+}
+.hero-left { display:flex; align-items:center; gap:18px; }
+.hero-ico {
+  width:60px; height:60px; border-radius:50%;
+  background:rgba(255,255,255,.18); display:grid; place-items:center;
+  border:2px solid rgba(255,255,255,.26); flex-shrink:0;
+}
+.hero-txt h2 { margin:0; font-size:1.7rem; font-weight:800; }
+.hero-txt p  { margin:4px 0 0; opacity:.8; font-size:.85rem; }
+.hero-right  { text-align:right; }
+.hero-right .ctr-num { font-family:'JetBrains Mono',monospace; font-size:1.05rem; font-weight:700; }
+.hero-right .ctr-sub { opacity:.8; font-size:.82rem; margin-top:3px; }
+
+/* ── ALERTA DOCS ── */
+.alerta-docs {
+  display:flex; align-items:center; gap:12px;
+  background:#fff7ed; border:1.5px solid #fed7aa; border-radius:12px;
+  padding:12px 18px; margin-bottom:20px; font-size:.86rem; color:#92400e;
+}
+.alerta-docs.critico { background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+.alerta-docs svg { flex-shrink:0; }
+.alerta-docs a { color:inherit; font-weight:700; text-decoration:underline; }
+
+/* ── SEÇÕES LATERAIS ── */
+.doc-layout { display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
+@media(max-width:900px){ .doc-layout { grid-template-columns:1fr; } }
+
+/* ── EMAILS SIDEBAR ── */
+.sidebar-card {
+  background:#fff; border:1.5px solid var(--border); border-radius:16px;
+  padding:20px; position:sticky; top:20px;
+}
+.sidebar-card h4 {
+  margin:0 0 14px; font-size:.88rem; font-weight:700;
+  color:var(--dark); display:flex; align-items:center; gap:8px;
+}
+.email-tag {
+  display:flex; align-items:center; justify-content:space-between;
+  background:#f8fafc; border:1px solid var(--border); border-radius:8px;
+  padding:8px 12px; margin-bottom:7px; font-size:.8rem;
+}
+.email-tag .et-name { font-weight:600; color:var(--dark); }
+.email-tag .et-addr { color:var(--muted); margin-top:1px; font-size:.76rem; }
+.email-tag .et-del  { color:#dc2626; cursor:pointer; background:none; border:none; font-size:1rem; }
+.et-principal { background:#f0fdf4; border-color:#bbf7d0; }
+.btn-add-email {
+  width:100%; margin-top:10px; padding:9px 0; border-radius:9px;
+  border:1.5px dashed #cbd5e0; background:transparent; color:var(--muted);
+  font-family:'Sora',sans-serif; font-size:.82rem; cursor:pointer;
+  transition:all .2s;
+}
+.btn-add-email:hover { border-color:var(--teal); color:var(--teal); background:#f0fdfe; }
+
+/* ── MESES ── */
+.meses-wrap { display:flex; flex-direction:column; gap:10px; }
+
+.mes-card {
+  background:#fff; border:1.5px solid var(--border); border-radius:16px;
+  overflow:hidden; transition:box-shadow .2s;
+}
+.mes-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.07); }
+
+.mes-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; cursor:pointer; user-select:none; gap:12px;
+}
+.mes-header:hover { background:#fafafa; }
+.mes-nome { font-size:1rem; font-weight:700; color:var(--dark); }
+
+.mes-badges { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+.badge-st {
+  font-size:.71rem; font-weight:700; border-radius:99px;
+  padding:3px 11px; white-space:nowrap;
+}
+.st-pendente { background:#fef9c3; color:#854d0e; border:1px solid #fef08a; }
+.st-enviado  { background:#dcfce7; color:#14532d; border:1px solid #bbf7d0; }
+.st-externo  { background:#f3e8ff; color:#6b21a8; border:1px solid #e9d5ff; }
+
+.mes-arrow {
+  color:var(--muted); transition:transform .25s; font-size:1.1rem; flex-shrink:0;
+}
+.mes-card.aberto .mes-arrow { transform:rotate(180deg); }
+
+/* ── CONTEÚDO DO MÊS ── */
+.mes-corpo {
+  display:none; padding:0 20px 20px; border-top:1px solid var(--border);
+}
+.mes-card.aberto .mes-corpo { display:block; }
+
+.doc-secao { margin-top:16px; }
+.doc-secao-titulo {
+  font-size:.75rem; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted);
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.doc-secao-titulo::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+
+.doc-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 0; border-bottom:1px solid #f1f5f9; gap:10px;
+  font-size:.82rem;
+}
+.doc-item:last-child { border-bottom:none; }
+.doc-item-nome { color:var(--dark); }
+
+.val-ok      { color:#16a34a; font-weight:700; font-size:.75rem; }
+.val-vencido { color:#dc2626; font-weight:700; font-size:.75rem; }
+.val-alerta  { color:#d97706; font-weight:700; font-size:.75rem; }
+
+.doc-item-acoes { display:flex; align-items:center; gap:6px; }
+
+.btn-mini {
+  font-size:.72rem; font-family:'Sora',sans-serif; font-weight:600;
+  border:1.5px solid var(--border); background:#fff; border-radius:7px;
+  padding:3px 10px; cursor:pointer; color:var(--muted); transition:all .18s;
+  white-space:nowrap;
+}
+.btn-mini:hover { border-color:var(--teal); color:var(--teal); }
+.btn-mini.gerar { border-color:#6b46c1; color:#6b46c1; }
+.btn-mini.gerar:hover { background:#f3e8ff; }
+.btn-mini.ver   { border-color:#0e7490; color:#0e7490; }
+.btn-mini.ver:hover { background:#ecfeff; }
+.btn-mini.baixar { border-color:#d97706; color:#d97706; }
+.btn-mini.baixar:hover { background:#fffbeb; }
+.btn-mini.gerado { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
+
+.nota-row {
+  background:#fafafa; border:1px solid var(--border); border-radius:10px;
+  padding:10px 14px; display:flex; align-items:center; gap:12px;
+  font-size:.82rem;
+}
+.nota-num { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.9rem; color:var(--dark); }
+.nota-val { color:var(--muted); margin-left:auto; font-family:'JetBrains Mono',monospace; }
+.nota-pdf-ok  { color:#16a34a; font-size:.75rem; font-weight:700; }
+.nota-pdf-no  { color:#9ca3af; font-size:.75rem; }
+
+/* ── BOTÃO ENVIAR ── */
+.btn-enviar {
+  margin-top:16px; width:100%; padding:12px 0; border-radius:11px;
+  background:var(--grad); border:none; color:#fff;
+  font-family:'Sora',sans-serif; font-size:.88rem; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:opacity .2s; box-shadow:0 4px 14px rgba(35,159,171,.3);
+}
+.btn-enviar:hover { opacity:.88; }
+.btn-enviar:disabled { opacity:.5; cursor:not-allowed; }
+.btn-enviar.enviado {
+  background:linear-gradient(90deg,#14a05a,#16a34a); box-shadow:none;
+}
+
+/* ── MODAL DATA ── */
+.modal-back {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+  z-index:9000; align-items:center; justify-content:center;
+}
+.modal-back.ativo { display:flex; }
+.modal-box {
+  background:#fff; border-radius:20px; padding:28px 30px; width:480px;
+  max-width:95vw; box-shadow:0 24px 60px rgba(0,0,0,.18); position:relative;
+}
+.modal-box h3 { margin:0 0 18px; font-size:1rem; font-weight:700; }
+.modal-close {
+  position:absolute; top:14px; right:16px; background:none; border:none;
+  font-size:1.5rem; color:var(--muted); cursor:pointer;
+}
+.field-group { margin-bottom:14px; }
+.field-group label { display:block; font-size:.78rem; font-weight:600;
+  color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em; }
+.field-group input, .field-group select, .field-group textarea {
+  width:100%; box-sizing:border-box; padding:9px 12px;
+  border:1.5px solid var(--border); border-radius:9px;
+  font-family:'Sora',sans-serif; font-size:.86rem;
+  outline:none; transition:border .15s;
+}
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus {
+  border-color:var(--teal);
+}
+.btn-salvar {
+  width:100%; padding:11px; border-radius:10px; border:none;
+  background:var(--grad); color:#fff; font-family:'Sora',sans-serif;
+  font-size:.88rem; font-weight:700; cursor:pointer; margin-top:4px;
+}
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:24px; right:24px; background:#1a202c; color:#fff;
+  padding:12px 20px; border-radius:12px; font-size:.84rem; font-weight:600;
+  z-index:99999; opacity:0; transform:translateY(12px);
+  transition:all .3s; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.ok   { background:#14532d; border:1.5px solid #bbf7d0; }
+.toast.err  { background:#991b1b; border:1.5px solid #fca5a5; }
+
+/* ── PRINT ── */
+@media print { .sidebar-card, .btn-enviar, .btn-mini { display:none !important; } }
+
+/* ─── Overlay ─── */
+.me-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 40, 45, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: meFadeIn .18s ease;
+}
+.me-overlay[hidden] { display: none !important; }
+
+@keyframes meFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Caixa principal ─── */
+.me-box {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(10, 40, 50, 0.22);
+  overflow: hidden;
+  animation: meSlideUp .2s cubic-bezier(.34,1.36,.64,1);
+}
+
+@keyframes meSlideUp {
+  from { opacity: 0; transform: translateY(24px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);   }
+}
+
+/* ─── Cabeçalho ─── */
+.me-header {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  padding: 1.2rem 1.4rem;
+  background: linear-gradient(135deg, #1a6b6b 0%, #2d8c7a 100%);
+  color: #fff;
+}
+.me-header-icon {
+  width: 38px; height: 38px;
+  background: rgba(255,255,255,.15);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.me-title {
+  font-size: .95rem;
+  font-weight: 700;
+  margin: 0; letter-spacing: .01em;
+}
+.me-subtitle {
+  font-size: .75rem;
+  opacity: .8;
+  margin: .1rem 0 0;
+}
+.me-close {
+  margin-left: auto;
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.me-close:hover { background: rgba(255,255,255,.28); }
+
+/* ─── Contexto ─── */
+.me-context {
+  background: #f0f9f7;
+  border-left: 3px solid #2d8c7a;
+  margin: 1rem 1.2rem 0;
+  padding: .6rem .85rem;
+  border-radius: 0 6px 6px 0;
+  font-size: .78rem;
+  color: #1a6b6b;
+  font-weight: 500;
+}
+.me-context:empty { display: none; }
+
+/* ─── Selecionar todos ─── */
+.me-select-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .9rem 1.2rem .5rem;
+  border-bottom: 1px solid #e8eef0;
+}
+.me-counter {
+  font-size: .73rem;
+  color: #7a9a9a;
+  font-weight: 500;
+}
+
+/* ─── Lista de e-mails ─── */
+.me-lista {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: .4rem .8rem .8rem;
+}
+.me-lista::-webkit-scrollbar { width: 5px; }
+.me-lista::-webkit-scrollbar-track { background: transparent; }
+.me-lista::-webkit-scrollbar-thumb { background: #c5dadc; border-radius: 10px; }
+
+/* ─── Item de e-mail ─── */
+.me-email-item {
+  border-radius: 8px;
+  transition: background .12s;
+}
+.me-email-item:hover { background: #f5fbfa; }
+
+.me-check-label {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .6rem .5rem;
+  cursor: pointer;
+  user-select: none;
+}
+.me-check-label input[type="checkbox"] { display: none; }
+
+.me-checkmark {
+  width: 17px; height: 17px;
+  border: 2px solid #b0ccc9;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  background: #fff;
+}
+.me-check-label input:checked + .me-checkmark {
+  background: #2d8c7a;
+  border-color: #2d8c7a;
+}
+.me-check-label input:checked + .me-checkmark::after {
+  content: '';
+  width: 9px; height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
+.me-check-all .me-checkmark { border-radius: 5px; }
+
+.me-label-text {
+  font-size: .82rem;
+  font-weight: 600;
+  color: #2c4a4a;
+}
+.me-label-email {
+  font-size: .74rem;
+  color: #7a9a9a;
+  font-weight: 400;
+  margin-top: .05rem;
+}
+.me-email-info { display: flex; flex-direction: column; }
+
+/* ─── Rodapé ─── */
+.me-footer {
+  display: flex;
+  gap: .7rem;
+  justify-content: flex-end;
+  padding: .9rem 1.2rem;
+  border-top: 1px solid #e8eef0;
+  background: #fafcfc;
+}
+
+.me-btn {
+  display: flex; align-items: center; gap: .45rem;
+  padding: .55rem 1.1rem;
+  border-radius: 7px;
+  font-size: .82rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all .15s;
+}
+.me-btn-cancel {
+  background: #f0f4f4;
+  color: #5a7a7a;
+}
+.me-btn-cancel:hover { background: #e4ecec; }
+
+.me-btn-confirm {
+  background: linear-gradient(135deg, #1a6b6b, #2d8c7a);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(29, 110, 100, .3);
+}
+.me-btn-confirm:hover {
+  box-shadow: 0 5px 15px rgba(29, 110, 100, .4);
+  transform: translateY(-1px);
+}
+.me-btn-confirm:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+/* ── Seleção de NFS-e no modal de envio ── */
+.me-secao-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted, #64748b);
+  padding: .75rem 1.25rem .4rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.me-notas-lista {
+  padding: .25rem 1.25rem .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.me-nota-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.me-nota-item:hover {
+  border-color: #6b46c1;
+  background: #faf5ff;
+}
+
+.me-nota-item input[type="radio"] {
+  accent-color: #6b46c1;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.me-nota-item input[type="radio"]:checked ~ .me-nota-info {
+  color: #6b46c1;
+}
+
+.me-nota-item:has(input:checked) {
+  border-color: #6b46c1;
+  background: #faf5ff;
+}
+
+.me-nota-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.me-nota-num {
+  font-size: .82rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.me-nota-meta {
+  font-size: .73rem;
+  color: var(--muted, #64748b);
+}
+
+.me-nota-val {
+  font-size: .82rem;
+  font-weight: 700;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
+</style>
+
+<!-- ── HERO ── -->
+<div class="doc-hero">
+  <div class="hero-left">
+    <div class="hero-ico">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/>
+        <path d="M12 21a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2z" fill="#fff" stroke="none"/>
+      </svg>
+    </div>
+    <div class="hero-txt">
+      <h2>Documentação e Envio</h2>
+      <p>Módulo de gestão de documentos e envio mensal.</p>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="ctr-num">Contrato {{ contrato.omie_num_ctr }}</div>
+    <div class="ctr-sub">
+      {% if contrato.tipo_entidade == 'municipio' %}Prefeitura{% elif contrato.tipo_entidade == 'camara' %}Câmara{% endif %}
+      {% if contrato.municipio %} · {{ contrato.municipio }}{% endif %}
+    </div>
+    <div class="ctr-sub" style="margin-top:4px;font-weight:600;opacity:.95">{{ contrato.cliente_nome }}</div>
+  </div>
+</div>
+
+<!-- ── ALERTA DOCS PADRÃO ── -->
+{% if alerta_docs.critico %}
+<div class="alerta-docs critico">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+  <span>
+    {% if alerta_docs.ausentes %}{{ alerta_docs.ausentes }} documento(s) padrão não cadastrado(s). {% endif %}
+    {% if alerta_docs.vencidos %}{{ alerta_docs.vencidos }} certidão(ões) vencida(s). {% endif %}
+    <a href="{% url 'gestao_documentos' %}">Gerenciar documentos padrão →</a>
+  </span>
+</div>
+{% elif alerta_docs.aviso %}
+<div class="alerta-docs">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  <span>
+    {{ alerta_docs.alertas }} certidão(ões) vencem em menos de 30 dias.
+    <a href="{% url 'gestao_documentos' %}">Ver →</a>
+  </span>
+</div>
+{% endif %}
+
+<!-- ── LAYOUT PRINCIPAL ── -->
+<div class="doc-layout">
+
+  <!-- ─── COLUNA MESES ─── -->
+  <div>
+
+    <!-- ── LOTE: gerar documentos modelo para todos os meses ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <span style="font-size:.82rem;color:var(--muted);">{{ meses_lista|length }} competência(s) registrada(s)</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-mini gerar" onclick="abrirModalDataLote()" title="Atualizar data em todos os documentos modelo">
+          ✦ Gerar modelos em lote
+        </button>
+        <a href="{% url 'receitas_dashboard' %}">
+          <button class="btn-mini gerar" style='padding: 5px;' title="Retornar para a tela de contratos">
+          Contratos
+          </button>
+        </a>
+      </div>
+    </div>
+
+    <div class="meses-wrap">
+      {% for m in meses_lista %}
+      <div class="mes-card {% if forloop.first %}aberto{% endif %}" id="mes-{{ m.envio.id }}" data-mes="{{ m.mes }}" data-ano="{{ m.ano|stringformat:"d"}}">
+
+        <!-- Header clicável -->
+        <div class="mes-header" onclick="toggleMes('mes-{{ m.envio.id }}')">
+          <span class="mes-nome">{{ m.mes_nome }}</span>
+          <div class="mes-badges">
+            {% if m.envio.status == 'enviado' %}
+              <span class="badge-st st-enviado">✓ Enviado</span>
+            {% elif m.envio.status == 'externo' %}
+              <span class="badge-st st-externo">Envio Externo</span>
+            {% else %}
+              <span class="badge-st st-pendente">Pendente de Envio</span>
+            {% endif %}
+            <span style="font-size:.75rem;color:var(--muted)">{{ m.ano|stringformat:"d" }}</span>
+          </div>
+          <span class="mes-arrow">↓</span>
+        </div>
+
+        <!-- Conteúdo expandido -->
+        <div class="mes-corpo">
+
+          <!-- ── Documentos Padrões ── -->
+          <div class="doc-secao">
+            <div class="doc-secao-titulo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Documentos Padrões
+            </div>
+            {% for dp in m.docs_padrao %}
+            <div class="doc-item">
+              <span class="doc-item-nome">{{ dp.get_tipo_display }}</span>
+              <div class="doc-item-acoes">
+                {% if dp.status_validade == 'ok' %}
+                  <span class="val-ok">válida</span>
+                {% elif dp.status_validade == 'alerta' %}
+                  <span class="val-alerta">⚠ {{ dp.data_validade|date:"d/m/Y" }}</span>
+                {% else %}
+                  <span class="val-vencido">✗ vencida {{ dp.data_validade|date:"d/m/Y" }}</span>
+                {% endif %}
+                {% if dp.arquivo %}
+                  <a href="{{ dp.arquivo.url }}" target="_blank" class="btn-mini ver">↗ ver</a>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <p style="color:var(--muted);font-size:.8rem;margin:4px 0;">Nenhum documento padrão cadastrado.</p>
+            {% endfor %}
+          </div>
+
+          <!-- ── Documentos Modelo ── -->
+          <div class="doc-secao">
+            <div class="doc-secao-titulo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Documentos Modelo
+            </div>
+            {% for dm in m.docs_modelo %}
+            {% with g=m.gerados_map|get_item:dm.id %}
+            <div class="doc-item" data-modelo-id="{{ dm.id }}"
+                 data-abrir-modal="abrirModalData({{ dm.id }}, {{ contrato.id }}, {{ m.mes }}, {{ m.ano }}, '{{ dm.texto_data_original|escapejs }}')">
+              <span class="doc-item-nome">{{ dm.label }}</span>
+              <div class="doc-item-acoes">
+                {% if g %}
+                  {% if g.mes == m.mes and g.ano == m.ano %}
+                    <span style="font-size:.72rem;color:#16a34a;font-weight:700;"
+                          title="Gerado para {{ m.mes_nome }}/{{ m.ano }}">✓ {{ m.mes_nome|slice:":3"|upper }}</span>
+                  {% else %}
+                    <span style="font-size:.68rem;color:#d97706;font-weight:700;
+                                 background:#fffbeb;border:1px solid #fde68a;border-radius:5px;
+                                 padding:1px 6px;white-space:nowrap;"
+                          title="Último gerado: {{ g.mes }}/{{ g.ano }} — clique em atualizar para gerar desta competência">
+                      ↻ {{ g.mes }}/{{ g.ano }}</span>
+                  {% endif %}
+                  <a href="{{ g.arquivo.url }}?t={{ g.gerado_em|date:"U" }}"
+                     data-gerado-modelo="{{ dm.id }}"
+                     target="_blank" class="btn-mini ver btn-ver-gerado">↗ ver</a>
+                  <button class="btn-mini gerar"
+                    onclick="abrirModalData({{ dm.id }}, {{ contrato.id }}, {{ m.mes }}, {{ m.ano }}, '{{ dm.texto_data_original|escapejs }}')">
+                    ↺ atualizar
+                  </button>
+                {% else %}
+                  <button class="btn-mini gerar"
+                    onclick="abrirModalData({{ dm.id }}, {{ contrato.id }}, {{ m.mes }}, {{ m.ano }}, '{{ dm.texto_data_original|escapejs }}')">
+                    ✦ gerar
+                  </button>
+                {% endif %}
+              </div>
+            </div>
+            {% endwith %}
+            {% empty %}
+            <p style="color:var(--muted);font-size:.8rem;margin:4px 0;">
+              Nenhum modelo cadastrado para este contrato.
+              <button onclick="abrirModal('modal-novo-modelo')" style="background:none;border:none;color:var(--teal);font-size:.8rem;cursor:pointer;padding:0;font-family:'Sora',sans-serif;">+ Adicionar →</button>
+            </p>
+            {% endfor %}
+          </div>
+
+          <!-- ── Documento Fiscal (NFS-e) ── -->
+          <div class="doc-secao">
+            <div class="doc-secao-titulo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+              Documento Fiscal
+            </div>
+            {% for nota in m.notas %}
+            <div class="nota-row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b46c1" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <div>
+                <div class="nota-num">NF {{ nota.numero_nfse }}</div>
+                <div style="font-size:.74rem;color:var(--muted);">
+                  {{ nota.data_emissao|date:"d/m/Y"|default:"—" }}
+                </div>
+              </div>
+              {% if nota.pdf_local %}
+                <span class="nota-pdf-ok">✓ PDF salvo</span>
+                <a href="{{ nota.pdf_local.arquivo.url }}?t={{ nota.pdf_local.baixado_em|date:"U" }}" target="_blank" class="btn-mini ver">↗ ver</a>
+              {% else %}
+                <span class="nota-pdf-no">sem PDF</span>
+                <button class="btn-mini baixar"
+                  onclick="baixarNfsePdf({{ nota.id|stringformat:"d" }}, this)">
+                  ↓ baixar Omie
+                </button>
+              {% endif %}
+              <span class="nota-val">R$ {{ nota.valor_liquido|floatformat:2|intcomma }}</span>
+            </div>
+            {% empty %}
+            <p style="color:var(--muted);font-size:.8rem;margin:4px 0;">Nenhuma NFS-e emitida para esta competência.</p>
+            {% endfor %}
+          </div>
+
+            <!-- ── Botão Enviar ── -->
+            <button
+              class="btn-enviar {% if m.envio.status == 'enviado' %}enviado{% endif %}"
+              data-envio-id="{{ m.envio.id }}"
+              data-emails='{{ m.envio.emails_destino_json }}'
+              data-contexto="{{ m.envio.mes }}/{{ m.envio.ano }} — {{ contrato.omie_num_ctr }}"
+              data-notas='{{ m.notas_json|safe }}'
+              onclick="abrirModalEnvio(this)"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              {% if m.envio.status == 'enviado' %}Reenviar Dossiê
+              {% elif m.envio.status == 'externo' %}Enviar Dossiê (Externo)
+              {% else %}Enviar Dossiê{% endif %}
+            </button>
+
+            {% if m.envio.primeiro_envio_em %}
+            <p style="font-size:.75rem;color:var(--muted);margin:6px 0 0;text-align:center;">
+              Primeiro envio: {{ m.envio.primeiro_envio_em|date:"d/m/Y H:i" }}
+              {% if m.envio.enviado_em != m.envio.primeiro_envio_em %}
+              · Último: {{ m.envio.enviado_em|date:"d/m/Y H:i" }}
+              {% endif %}
+            </p>
+            {% endif %}
+        </div><!-- /mes-corpo -->
+      </div><!-- /mes-card -->
+      {% empty %}
+      <div style="text-align:center;padding:48px;color:var(--muted);font-size:.88rem;">
+        Nenhum mês registrado. Sincronize as notas fiscais para gerar os meses.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ─── SIDEBAR E-MAILS ─── -->
+  <div>
+    <div class="sidebar-card">
+      <h4>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        E-mails de Envio
+      </h4>
+
+      {% for em in emails %}
+      <div class="email-tag {% if em.principal %}et-principal{% endif %}">
+        <div>
+          <div class="et-name">{{ em.nome_contato|default:em.email }}</div>
+          {% if em.nome_contato %}<div class="et-addr">{{ em.email }}</div>{% endif %}
+          {% if em.principal %}<div style="font-size:.7rem;color:#16a34a;margin-top:2px;">★ Principal</div>{% endif %}
+        </div>
+        <form method="post" action="{% url 'excluir_email' contrato.id em.id %}" onsubmit="return confirm('Remover?')">
+          {% csrf_token %}
+          <button type="submit" class="et-del">×</button>
+        </form>
+      </div>
+      {% empty %}
+      <p style="color:var(--muted);font-size:.8rem;text-align:center;padding:10px 0;">
+        Nenhum e-mail cadastrado.
+      </p>
+      {% endfor %}
+
+      <button class="btn-add-email" onclick="abrirModalEmail()">+ Adicionar e-mail</button>
+    </div>
+
+    <!-- Botão gestão de docs padrão -->
+    <div style="margin-top:14px;">
+      <a href="{% url 'gestao_documentos' %}"
+         style="display:flex;align-items:center;gap:8px;padding:11px 16px;
+                background:#fff;border:1.5px solid var(--border);border-radius:12px;
+                font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;
+                transition:all .2s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Gerenciar Docs Padrão
+      </a>
+    </div>
+
+    <!-- Botão gerenciar docs modelo do contrato -->
+    <div style="margin-top:10px;">
+      <button onclick="abrirModal('modal-novo-modelo')"
+         style="width:100%;display:flex;align-items:center;gap:8px;padding:11px 16px;
+                background:#f3e8ff;border:1.5px solid #c4b5fd;border-radius:12px;
+                font-size:.82rem;font-weight:600;color:#6b21a8;cursor:pointer;
+                font-family:'Sora',sans-serif;transition:all .2s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        + Novo Documento Modelo
+      </button>
+    </div>
+
+    <!-- Lista de modelos existentes deste contrato -->
+    {% if docs_modelo %}
+    <div style="margin-top:14px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px;">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">
+        Modelos deste contrato
+      </div>
+      {% for dm in docs_modelo %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.8rem;font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ dm.label }}</div>
+          <div style="font-size:.72rem;color:var(--muted);">{{ dm.get_tipo_display }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          {% if dm.arquivo_base %}
+          <a href="{{ dm.arquivo_base.url }}" target="_blank"
+             style="font-size:.72rem;font-weight:600;color:#0e7490;border:1.5px solid #0e7490;
+                    border-radius:7px;padding:2px 9px;text-decoration:none;white-space:nowrap;
+                    transition:background .15s;"
+             onmouseover="this.style.background='#ecfeff'" onmouseout="this.style.background=''"
+             title="Ver PDF base do modelo">↗ base</a>
+          {% endif %}
+          <form method="post" action="{% url 'excluir_documento_modelo' contrato.id dm.id %}" onsubmit="return confirm('Excluir modelo e todos os PDFs gerados?')">
+            {% csrf_token %}
+            <button type="submit" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;" title="Excluir">×</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div><!-- /sidebar -->
+
+</div><!-- /doc-layout -->
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: NOVO DOCUMENTO MODELO (específico deste contrato)
+══════════════════════════════════════════════════════ -->
+<div id="modal-novo-modelo" class="modal-back" onclick="if(event.target===this)fecharModal('modal-novo-modelo')">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="fecharModal('modal-novo-modelo')">×</button>
+    <h3>Novo Documento Modelo</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 18px;">
+      Documento específico deste contrato. Apenas a data será substituída mensalmente — todo o restante do PDF permanece igual.
+    </p>
+    <form method="post" action="{% url 'salvar_documento_modelo' contrato.id %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="field-group">
+        <label>Tipo *</label>
+        <select name="tipo" required>
+          {% for val, lbl in TIPO_CHOICES %}
+          <option value="{{ val }}">{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Nome personalizado</label>
+        <input type="text" name="nome_personalizado" placeholder='Ex: "Planilha de Custos — CM Aporá"'>
+        <small style="color:var(--muted);font-size:.72rem;">Opcional. Substitui o tipo na exibição.</small>
+      </div>
+      <div class="field-group">
+        <label>Arquivo base (PDF original) *</label>
+        <input type="file" name="arquivo_base" accept="application/pdf" required>
+      </div>
+      <div class="field-group">
+        <label>Texto de data no PDF base *</label>
+        <input type="text" name="texto_data_original" required
+               placeholder='Ex: "Oliveira dos Brejinhos - BA, 20 de janeiro de 2026"'>
+        <small style="color:var(--muted);font-size:.72rem;">Texto exato que será substituído mensalmente.</small>
+      </div>
+      <!-- Campo exclusivo para Relatório de Atividades -->
+      <div class="field-group" id="campo-mes-original" style="display:none;">
+        <label>Texto do mês na capa (ex: JANEIRO) *</label>
+        <input type="text" name="texto_mes_original" id="txt-mes-original"
+               placeholder='Ex: "JANEIRO"' maxlength="20">
+        <small style="color:var(--muted);font-size:.72rem;">
+          Texto exato do mês em maiúsculo na capa da declaração — será substituído junto com a data.
+        </small>
+      </div>
+      <div class="field-group">
+        <label>Observações</label>
+        <textarea name="descricao" rows="2" placeholder="Opcional..."></textarea>
+      </div>
+      <button type="submit" class="btn-salvar">Salvar Documento Modelo</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: DEFINIR DATA DO DOCUMENTO MODELO
+══════════════════════════════════════════════════════ -->
+<div id="modal-data" class="modal-back" onclick="if(event.target===this)fecharModal('modal-data')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="fecharModal('modal-data')">×</button>
+    <h3>Gerar Documento Modelo</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 18px;">
+      Selecione a data para substituição. O município do contrato é aplicado automaticamente.
+    </p>
+    <div style="display:grid;grid-template-columns:64px 1fr 88px;gap:10px;margin-bottom:14px;">
+      <div class="field-group" style="margin:0">
+        <label>Dia</label>
+        <input type="number" id="md-dia" value="1" min="1" max="31"
+               style="padding:9px 8px;text-align:center;" oninput="atualizarPreviewData()">
+      </div>
+      <div class="field-group" style="margin:0">
+        <label>Mês</label>
+        <select id="md-mes-sel" onchange="atualizarPreviewData()">
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+          <option value="3">Março</option><option value="4">Abril</option>
+          <option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option>
+          <option value="9">Setembro</option><option value="10">Outubro</option>
+          <option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+      <div class="field-group" style="margin:0">
+        <label>Ano</label>
+        <input type="number" id="md-ano-input" value="2026" min="2024" max="2030"
+               style="padding:9px 8px;text-align:center;" oninput="atualizarPreviewData()">
+      </div>
+    </div>
+    <div id="md-preview"
+         style="background:#f3e8ff;border:1.5px solid #c4b5fd;border-radius:9px;
+                padding:9px 14px;font-size:.84rem;color:#6b21a8;font-weight:600;
+                margin-bottom:16px;word-break:break-all;">
+      Oliveira dos Brejinhos - BA, 1 de janeiro de 2026
+    </div>
+    <small style="color:var(--muted);font-size:.72rem;display:block;margin-bottom:14px;">
+      💡 O município (Oliveira dos Brejinhos - BA) é padrão. Apenas a data muda.
+    </small>
+    <input type="hidden" id="md-modelo-id">
+    <input type="hidden" id="md-contrato-id">
+    <button class="btn-salvar" onclick="gerarModelo()">Gerar PDF</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: GERAR EM LOTE (todos os modelos, mês/ano escolhido)
+══════════════════════════════════════════════════════ -->
+<div id="modal-lote" class="modal-back" onclick="if(event.target===this)fecharModal('modal-lote')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="fecharModal('modal-lote')">×</button>
+    <h3>Gerar Modelos — Mês/Ano</h3>
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 18px;">
+      Gera todos os documentos modelo deste contrato para o mês selecionado.
+    </p>
+    <div style="display:grid;grid-template-columns:64px 1fr 88px;gap:10px;margin-bottom:14px;">
+      <div class="field-group" style="margin:0">
+        <label>Dia</label>
+        <input type="number" id="lote-dia" value="1" min="1" max="31"
+               style="padding:9px 8px;text-align:center;" oninput="atualizarPreviewLote()">
+      </div>
+      <div class="field-group" style="margin:0">
+        <label>Mês</label>
+        <select id="lote-mes-nome" onchange="atualizarPreviewLote()">
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+          <option value="3" selected>Março</option><option value="4">Abril</option>
+          <option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option>
+          <option value="9">Setembro</option><option value="10">Outubro</option>
+          <option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+      <div class="field-group" style="margin:0">
+        <label>Ano</label>
+        <input type="number" id="lote-ano" value="2026" min="2024" max="2030"
+               style="padding:9px 8px;text-align:center;" oninput="atualizarPreviewLote()">
+      </div>
+    </div>
+    <div id="lote-preview"
+         style="background:#f3e8ff;border:1.5px solid #c4b5fd;border-radius:9px;
+                padding:9px 14px;font-size:.84rem;color:#6b21a8;font-weight:600;
+                margin-bottom:16px;">
+      Oliveira dos Brejinhos - BA, 1 de março de 2026
+    </div>
+    <button class="btn-salvar" onclick="gerarLote()">Gerar para Este Mês</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: ADICIONAR E-MAIL
+══════════════════════════════════════════════════════ -->
+<div id="modal-email" class="modal-back" onclick="if(event.target===this)fecharModal('modal-email')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="fecharModal('modal-email')">×</button>
+    <h3>Adicionar E-mail</h3>
+    <form method="post" action="{% url 'gerenciar_emails' contrato.id %}">
+      {% csrf_token %}
+      <div class="field-group">
+        <label>Nome do Contato</label>
+        <input type="text" name="nome_contato" placeholder="Secretaria de Finanças">
+      </div>
+      <div class="field-group">
+        <label>E-mail *</label>
+        <input type="email" name="email" required placeholder="email@municipio.ba.gov.br">
+      </div>
+      <div class="field-group" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
+        <input type="checkbox" name="principal" id="chk-principal" style="width:auto;margin:0;">
+        <label for="chk-principal" style="text-transform:none;letter-spacing:0;font-size:.84rem;cursor:pointer;">
+          Marcar como e-mail principal
+        </label>
+      </div>
+      <button type="submit" class="btn-salvar">Salvar E-mail</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — Seleção de Destinatários do Dossiê e NFSe
+     ══════════════════════════════════════════ -->
+
+<div id="modalEnvio" class="me-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="modalEnvioTitulo" hidden>
+  <div class="me-box">
+
+    <!-- Cabeçalho -->
+    <div class="me-header">
+      <div class="me-header-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </div>
+      <div>
+        <h2 id="modalEnvioTitulo" class="me-title">Enviar Dossiê</h2>
+        <p class="me-subtitle">Selecione os destinatários para este envio</p>
+      </div>
+      <button class="me-close" onclick="fecharModalEnvio()" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Aviso de contexto -->
+    <div class="me-context" id="meContexto"></div>
+
+    <!-- ══ SELEÇÃO DE NFS-e (visível apenas quando há mais de uma) ══ -->
+    <div id="meNotasSection" style="display:none;">
+      <div class="me-secao-titulo">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <rect x="2" y="5" width="20" height="14" rx="2"/>
+          <line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+        Nota Fiscal a Anexar
+      </div>
+      <div id="meNotasLista" class="me-notas-lista"></div>
+    </div>
+    <!-- ════════════════════════════════════════════════════════════ -->
+
+    <!-- Selecionar todos -->
+    <div class="me-select-all">
+      <label class="me-check-label me-check-all">
+        <input type="checkbox" id="meCheckAll" onchange="toggleTodosEmails(this)">
+        <span class="me-checkmark"></span>
+        <span class="me-label-text">Selecionar todos</span>
+      </label>
+      <span class="me-counter" id="meContador">0 selecionado(s)</span>
+    </div>
+
+    <!-- Lista de e-mails -->
+    <div class="me-lista" id="meListaEmails"></div>
+
+    <!-- Rodapé -->
+    <div class="me-footer">
+      <button class="me-btn me-btn-cancel" onclick="fecharModalEnvio()">Cancelar</button>
+      <button class="me-btn me-btn-confirm" id="meBtnConfirmar"
+              onclick="confirmarEnvioModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Confirmar Envio
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast" class="toast"></div>
+
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const MESES_MIN = ['','janeiro','fevereiro','março','abril','maio','junho',
+                   'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+// ── Accordion dos meses ──
+function toggleMes(id) {
+  document.getElementById(id).classList.toggle('aberto');
+}
+
+// ── Modal helpers ──
+function abrirModal(id) { document.getElementById(id).classList.add('ativo'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
+function abrirModalEmail() { abrirModal('modal-email'); }
+
+// ── Preview da data (modal individual) ──
+function atualizarPreviewData() {
+  const dia    = document.getElementById('md-dia').value || '1';
+  const mesIdx = parseInt(document.getElementById('md-mes-sel').value);
+  const ano    = document.getElementById('md-ano-input').value;
+  document.getElementById('md-preview').textContent =
+    `Oliveira dos Brejinhos - BA, ${dia} de ${MESES_MIN[mesIdx]} de ${ano}`;
+}
+
+// ── Preview da data (modal lote) ──
+function atualizarPreviewLote() {
+  const dia    = document.getElementById('lote-dia').value || '1';
+  const mesIdx = parseInt(document.getElementById('lote-mes-nome').value);
+  const ano    = document.getElementById('lote-ano').value;
+  document.getElementById('lote-preview').textContent =
+    `Oliveira dos Brejinhos - BA, ${dia} de ${MESES_MIN[mesIdx]} de ${ano}`;
+}
+
+// ── Modal de data do modelo ──
+function abrirModalData(modeloId, contratoId, mes, ano, textoOrig) {
+  document.getElementById('md-modelo-id').value   = modeloId;
+  document.getElementById('md-contrato-id').value = contratoId;
+  document.getElementById('md-mes-sel').value     = mes;
+  document.getElementById('md-ano-input').value   = ano;
+  document.getElementById('md-dia').value         = '1';
+  atualizarPreviewData();
+  abrirModal('modal-data');
+}
+function abrirModalDataLote() { abrirModal('modal-lote'); }
+
+// ── Mostrar/ocultar campo mês (Relatório de Atividades) ──
+document.addEventListener('DOMContentLoaded', () => {
+  const selTipo  = document.querySelector('#modal-novo-modelo select[name="tipo"]');
+  const campoMes = document.getElementById('campo-mes-original');
+  const inputMes = document.getElementById('txt-mes-original');
+  if (selTipo && campoMes) {
+    selTipo.addEventListener('change', () => {
+      const isRel = selTipo.value === 'relatorio_atividades';
+      campoMes.style.display = isRel ? 'block' : 'none';
+      if (inputMes) inputMes.required = isRel;
+    });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape')
+      document.querySelectorAll('.modal-back.ativo').forEach(m => m.classList.remove('ativo'));
+  });
+});
+
+// ── Toast ──
+function toast(msg, tipo = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `toast ${tipo} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── Atualizar card de modelo gerado ──
+function _atualizarCardModelo(modeloId, url, mes, ano) {
+  const MESES_ABR = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  document.querySelectorAll(`.doc-item[data-modelo-id="${modeloId}"]`).forEach(function (card) {
+    const bloco    = card.closest('[data-mes]');
+    const cardMes  = bloco ? parseInt(bloco.dataset.mes) : mes;
+    const cardAno  = bloco ? parseInt(bloco.dataset.ano) : ano;
+    const mesMatch = (cardMes === mes && cardAno === ano);
+    const acoes    = card.querySelector('.doc-item-acoes');
+    if (!acoes) return;
+
+    const badgeHtml = mesMatch
+      ? `<span style="font-size:.72rem;color:#16a34a;font-weight:700;"
+               title="Gerado para ${MESES_ABR[mes]}/${ano}">✓ ${MESES_ABR[mes]}</span>`
+      : `<span style="font-size:.68rem;color:#d97706;font-weight:700;
+                      background:#fffbeb;border:1px solid #fde68a;border-radius:5px;
+                      padding:1px 6px;white-space:nowrap;"
+               title="Último gerado: ${mes}/${ano} — clique em atualizar para gerar desta competência">
+           ↻ ${mes}/${ano}</span>`;
+
+    let btnVer = acoes.querySelector('.btn-ver-gerado');
+    if (btnVer) {
+      btnVer.href = url;
+    } else {
+      btnVer = document.createElement('a');
+      btnVer.className   = 'btn-mini ver btn-ver-gerado';
+      btnVer.target      = '_blank';
+      btnVer.setAttribute('data-gerado-modelo', modeloId);
+      btnVer.textContent = '↗ ver';
+      acoes.innerHTML    = '';
+      acoes.insertAdjacentHTML('beforeend', badgeHtml);
+      acoes.appendChild(btnVer);
+      const btnAt = document.createElement('button');
+      btnAt.className   = 'btn-mini gerar';
+      const onc = card.dataset.abrirModal || '';
+      if (onc) btnAt.setAttribute('onclick', onc);
+      btnAt.textContent = '↺ atualizar';
+      acoes.appendChild(btnAt);
+    }
+    btnVer.href = url;
+    const badgeAntigo = acoes.querySelector('span[title]');
+    if (badgeAntigo) badgeAntigo.outerHTML = badgeHtml;
+  });
+}
+
+// ── Gerar modelo individual ──
+async function gerarModelo() {
+  const modeloId   = document.getElementById('md-modelo-id').value;
+  const contratoId = document.getElementById('md-contrato-id').value;
+  const mes        = parseInt(document.getElementById('md-mes-sel').value);
+  const ano        = parseInt(document.getElementById('md-ano-input').value);
+  const novoTexto  = document.getElementById('md-preview').textContent.trim();
+  if (!novoTexto) { toast('Erro ao montar texto de data.', 'err'); return; }
+  try {
+    const r = await fetch("{% url 'gerar_documento_modelo' %}", {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ modelo_id: modeloId, contrato_id: contratoId, mes, ano, novo_texto_data: novoTexto }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('PDF gerado com sucesso!', 'ok');
+      fecharModal('modal-data');
+      _atualizarCardModelo(modeloId, d.arquivo, mes, ano);
+    } else {
+      toast(d.erro || 'Erro ao gerar PDF.', 'err');
+    }
+  } catch (e) {
+    toast('Erro de conexão.', 'err');
+  }
+}
+
+// ── Gerar em lote ──
+async function gerarLote() {
+  const mes       = parseInt(document.getElementById('lote-mes-nome').value);
+  const ano       = parseInt(document.getElementById('lote-ano').value);
+  const novoTexto = document.getElementById('lote-preview').textContent.trim();
+  try {
+    const r = await fetch("{% url 'gerar_modelos_lote' contrato.id %}", {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ mes, ano, novo_texto_data: novoTexto }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(`${d.sucessos} PDF(s) gerado(s).${d.erros ? ' ' + d.erros + ' erro(s).' : ''}`,
+            d.erros ? 'err' : 'ok');
+      fecharModal('modal-lote');
+      if (d.gerados && d.gerados.length)
+        d.gerados.forEach(g => _atualizarCardModelo(g.modelo_id, g.arquivo, mes, ano));
+    } else {
+      toast(d.erro || 'Erro.', 'err');
+    }
+  } catch (e) {
+    toast('Erro de conexão.', 'err');
+  }
+}
+
+// ── Baixar PDF da NFS-e ──
+async function baixarNfsePdf(notaId, btn) {
+  const originalText = btn.textContent;
+  btn.disabled    = true;
+  btn.textContent = '↓ baixando…';
+  try {
+    const r = await fetch(`/receitas/notas/${notaId}/baixar-pdf/`, {
+      method:  'POST',
+      headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!r.ok) {
+      const errorData = await r.json().catch(() => ({}));
+      throw new Error(errorData.erro || `Erro no servidor: ${r.status}`);
+    }
+    const d = await r.json();
+    if (d.ok) {
+      toast('PDF baixado com sucesso!', 'ok');
+      setTimeout(() => location.reload(), 900);
+    } else {
+      throw new Error(d.erro || 'Erro ao processar PDF.');
+    }
+  } catch (e) {
+    console.error('Erro no download:', e);
+    toast(e.message || 'Erro de conexão.', 'err');
+    btn.disabled    = false;
+    btn.textContent = originalText;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL DE SELEÇÃO DE DESTINATÁRIOS
+   ════════════════════════════════════════════════════════════ */
+let _envioIdAtual   = null;
+let _btnOrigemAtual = null;
+let _notasAtual     = [];   // ← estado das notas do envio aberto
+
+function abrirModalEnvio(btn) {
+  _envioIdAtual   = btn.dataset.envioId;
+  _btnOrigemAtual = btn;
+
+  // ── Contatos ──────────────────────────────────────────────
+  let contatos = [];
+  try { contatos = JSON.parse(btn.dataset.emails || '[]'); }
+  catch (e) { toast('Erro ao ler lista de destinatários.', 'err'); return; }
+
+  // ── Contexto ──────────────────────────────────────────────
+  const contexto = btn.dataset.contexto || '';
+  document.getElementById('meContexto').textContent =
+    contexto ? `Competência: ${contexto}` : '';
+
+  // ── Notas — guarda em estado global para uso no confirmar ──
+  try { _notasAtual = JSON.parse(btn.dataset.notas || '[]'); }
+  catch (e) { _notasAtual = []; }
+  _popularNotasModal(_notasAtual);
+
+  // ── Lista de e-mails ──────────────────────────────────────
+  const lista = document.getElementById('meListaEmails');
+  lista.innerHTML = contatos.length
+    ? contatos.map(c => {
+        const addr = typeof c === 'object' ? (c.email || '') : c;
+        const nome = typeof c === 'object' ? (c.nome  || '') : '';
+        return `
+          <div class="me-email-item">
+            <label class="me-check-label">
+              <input type="checkbox" class="me-email-chk"
+                     value="${escHtml(addr)}" checked
+                     onchange="atualizarContador()">
+              <span class="me-checkmark"></span>
+              <span class="me-email-info">
+                ${nome ? `<span class="me-label-text">${escHtml(nome)}</span>` : ''}
+                <span class="me-label-email">${escHtml(addr)}</span>
+              </span>
+            </label>
+          </div>`;
+      }).join('')
+    : `<p style="text-align:center;color:#aaa;padding:1.5rem;font-size:.83rem;">
+         Nenhum e-mail cadastrado neste contrato.
+       </p>`;
+
+  atualizarContador();
+  sincronizarCheckAll();
+  document.getElementById('modalEnvio').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Popula a seção de NFS-e.
+ * ≤1 nota → oculta (backend recebe o ID direto, sem escolha visual).
+ * ≥2 notas → exibe radio buttons.
+ */
+function _popularNotasModal(notas) {
+  const section = document.getElementById('meNotasSection');
+  const lista   = document.getElementById('meNotasLista');
+
+  // Sempre limpa antes
+  lista.innerHTML = '';
+
+  if (!notas || notas.length <= 1) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  lista.innerHTML = notas.map((n, idx) => {
+    const num   = escHtml(String(n.numero  || n.id));
+    const emiss = escHtml(n.data_emissao  || '');
+    const val   = escHtml(n.valor         || '');
+    return `
+      <label class="me-nota-item">
+        <input type="radio" name="meNotaSelecionada"
+               value="${escHtml(String(n.id))}"
+               ${idx === 0 ? 'checked' : ''}>
+        <div class="me-nota-info">
+          <span class="me-nota-num">NF ${num}</span>
+          ${emiss ? `<span class="me-nota-meta">${emiss}</span>` : ''}
+        </div>
+        ${val ? `<span class="me-nota-val">R$ ${val}</span>` : ''}
+      </label>`;
+  }).join('');
+}
+
+
+function fecharModalEnvio() {
+  document.getElementById('modalEnvio').hidden = true;
+  document.body.style.overflow = '';
+  _envioIdAtual   = null;
+  _btnOrigemAtual = null;
+  _notasAtual     = [];
+}
+
+function toggleTodosEmails(checkAll) {
+  document.querySelectorAll('.me-email-chk')
+    .forEach(c => { c.checked = checkAll.checked; });
+  atualizarContador();
+}
+
+function atualizarContador() {
+  const total    = document.querySelectorAll('.me-email-chk').length;
+  const marcados = document.querySelectorAll('.me-email-chk:checked').length;
+  document.getElementById('meContador').textContent =
+    `${marcados} de ${total} selecionado(s)`;
+  document.getElementById('meBtnConfirmar').disabled = marcados === 0;
+  sincronizarCheckAll();
+}
+
+function sincronizarCheckAll() {
+  const total    = document.querySelectorAll('.me-email-chk').length;
+  const marcados = document.querySelectorAll('.me-email-chk:checked').length;
+  const chkAll   = document.getElementById('meCheckAll');
+  chkAll.checked       = total > 0 && marcados === total;
+  chkAll.indeterminate = marcados > 0 && marcados < total;
+}
+
+async function confirmarEnvioModal() {
+  const selecionados = [...document.querySelectorAll('.me-email-chk:checked')]
+    .map(c => c.value);
+  if (!selecionados.length) {
+    toast('Selecione ao menos um destinatário.', 'err');
+    return;
+  }
+
+  // ── Resolve o ID da nota a enviar ────────────────────────
+  // Sempre envia o ID quando há ao menos uma nota disponível:
+  // • ≥2 notas → lê o radio marcado pelo usuário
+  // •  1 nota  → usa o único ID disponível em _notasAtual
+  // •  0 notas → não envia (nota_id_selecionada ausente no payload)
+  let notaId = null;
+  const radioMarcado = document.querySelector('input[name="meNotaSelecionada"]:checked');
+  if (radioMarcado) {
+    // Caso ≥2 notas — usuário escolheu
+    notaId = radioMarcado.value;
+  } else if (_notasAtual.length === 1) {
+    // Caso 1 nota — automático
+    notaId = String(_notasAtual[0].id);
+  }
+  // Caso 0 notas → notaId permanece null
+
+  const envioId = _envioIdAtual;
+  const btn     = _btnOrigemAtual;
+  fecharModalEnvio();
+  await enviarDossie(envioId, btn, selecionados, notaId);
+}
+
+
+
+/**
+ * @param {string|number} envioId
+ * @param {HTMLElement}   btn
+ * @param {string[]}      emailsSelecionados
+ * @param {string|null}   notaIdSelecionada   — id da NFS-e a anexar
+ */
+async function enviarDossie(envioId, btn, emailsSelecionados, notaIdSelecionada = null) {
+  const labelOriginal = btn.innerHTML;
+  btn.disabled  = true;
+  btn.innerHTML = '<span>Enviando…</span>';
+
+  try {
+    const payload = { emails_selecionados: emailsSelecionados };
+    if (notaIdSelecionada) payload.nota_id_selecionada = notaIdSelecionada;
+
+    const envioIdFormatado = String(envioId).replace(/\D/g, '');
+
+    const r = await fetch(`/receitas/envio/${envioIdFormatado}/enviar/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': CSRF,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const d = await r.json();
+    if (d.ok) {
+      toast(
+        `Dossiê enviado para ${d.enviado_para.join(', ')} (${d.qtd_anexos} anexo(s))`,
+        'ok'
+      );
+      setTimeout(() => location.reload(), 1400);
+    } else {
+      toast(d.erro || 'Erro ao enviar.', 'err');
+      btn.disabled  = false;
+      btn.innerHTML = labelOriginal;
+    }
+  } catch (e) {
+    toast('Erro de conexão.', 'err');
+    btn.disabled  = false;
+    btn.innerHTML = labelOriginal;
+  }
+}
+
+/* Fecha ao clicar fora da caixa */
+document.getElementById('modalEnvio').addEventListener('click', function (e) {
+  if (e.target === this) fecharModalEnvio();
+});
+
+/* Fecha com Esc (apenas quando o modal de envio está aberto) */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('modalEnvio').hidden)
+    fecharModalEnvio();
+});
+
+/* Utilitário de escape HTML */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
+
+
+{% endblock %}

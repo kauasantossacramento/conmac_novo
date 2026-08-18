@@ -20,3 +20,5 @@ def mes_label_pt(ano: int, mes: int) -> str:
 class MesRef:
     ano: int
     mes: int
+
+

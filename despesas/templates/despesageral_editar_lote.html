@@ -1,0 +1,46 @@
+{% load i18n admin_urls static %}
+
+{% block content %}
+<div id="content-main">
+    <p>Selecione os novos valores para aplicar a <strong>todas</strong> as despesas listadas abaixo. Deixe em branco o que não desejar alterar.</p>
+    
+    <form action="" method="post">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <h2>Novos Valores</h2>
+            {% for field in form %}
+                {% if not field.is_hidden %}
+                <div class="form-row">
+                    <div>
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="help">{{ field.help_text }}</div>
+                        {% endif %}
+                        {{ field.errors }}
+                    </div>
+                </div>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        <fieldset class="module">
+            <h2>Despesas que serão afetadas ({{ items|length }} itens):</h2>
+            <ul>
+                {% for item in items %}
+                    <li>{{ item.descricao }} - Valor atual: {{ item.valor }} ({{ item.municipio|default:"Sem município" }})</li>
+                {% endfor %}
+            </ul>
+        </fieldset>
+
+        <div class="submit-row">
+            <input type="hidden" name="action" value="editar_em_lote" />
+            <input type="submit" name="apply" value="Aplicar Alterações em Lote" class="default" />
+            <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

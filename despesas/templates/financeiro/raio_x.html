@@ -1,0 +1,2550 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Raio X Financeiro · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --brown:#945f34; --teal:#239FAB; --teal-dk:#1a7a84;
+  --green:#276749; --green-lt:#f0fff4;
+  --red:#c53030;   --red-lt:#fff5f5;
+  --gold:#c8922a;
+  --purple:#6b46c1; --purple-lt:#ede9fe; --purple-bd:#c4b5fd;
+  --cyan:#0e7490;   --cyan-lt:#ecfeff;   --cyan-bd:#a5f3fc;
+  --amber:#a16207;  --amber-lt:#fef9c3;  --amber-bd:#fde047;
+  --dark:#1a202c; --gray:#4a5568; --muted:#718096;
+  --border:#e2e8f0;
+  --grad:linear-gradient(135deg,#945f34 0%,#239FAB 100%);
+  font-family:'Sora',sans-serif;
+}
+
+/* ── HERO ─────────────────────────────────────────────────────── */
+.rx-hero {
+  margin-top:8px; background:var(--grad); border-radius:20px;
+  color:#fff; padding:18px 24px; display:flex; align-items:center;
+  justify-content:space-between; gap:14px;
+  box-shadow:0 12px 32px rgba(148,95,52,.2); flex-wrap:wrap;
+  position:relative; overflow:hidden;
+}
+.rx-hero::before { content:''; position:absolute; top:-40px; right:-40px;
+  width:200px; height:200px; background:rgba(255,255,255,.05); border-radius:50%; }
+.rx-hero::after  { content:''; position:absolute; bottom:-60px; left:25%;
+  width:220px; height:220px; background:rgba(255,255,255,.04); border-radius:50%; pointer-events:none; }
+.hero-left  { display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
+.hero-ico   { width:50px; height:50px; display:grid; place-items:center;
+  background:rgba(255,255,255,.18); border-radius:50%; border:2px solid rgba(255,255,255,.28); flex-shrink:0; }
+.hero-txt h2 { margin:0; font-size:1.55rem; font-weight:800; color:#fff; letter-spacing:-.4px; }
+.hero-txt p  { margin:3px 0 0; opacity:.85; font-size:.82rem; }
+.hero-badge  { display:inline-flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.25);
+  border-radius:20px; padding:3px 11px; font-size:.68rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; margin-top:6px; }
+.hero-kpis  { display:flex; gap:8px; flex-wrap:wrap; position:relative; z-index:1; }
+
+.kpi-card { background:rgba(255,255,255,.97); border-radius:12px; padding:10px 14px;
+  min-width:118px; text-align:center; box-shadow:0 6px 18px rgba(0,0,0,.1);
+  position:relative; overflow:hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--grad); }
+.kpi--green::before  { background:linear-gradient(90deg,#276749,#48bb78); }
+.kpi--red::before    { background:linear-gradient(90deg,#c53030,#fc8181); }
+.kpi--gold::before   { background:linear-gradient(90deg,#945f34,#d69e2e); }
+.kpi--gray::before   { background:linear-gradient(90deg,#718096,#a0aec0); }
+.kpi--purple::before { background:linear-gradient(90deg,#6b46c1,#9f7aea); }
+.kpi__val { font-size:1rem; font-weight:800; color:var(--teal); font-family:'JetBrains Mono',monospace; }
+.kpi--green  .kpi__val { color:var(--green); }
+.kpi--red    .kpi__val { color:var(--red);   }
+.kpi--gold   .kpi__val { color:var(--brown); }
+.kpi--gray   .kpi__val { color:var(--muted); }
+.kpi--purple .kpi__val { color:var(--purple); }
+.kpi__lbl { font-size:.59rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.5px; margin-top:2px; }
+.kpi__sub { font-size:.59rem; color:#a0aec0; margin-top:1px; }
+
+/* ── SALDO CARD ───────────────────────────────────────────────── */
+.saldo-card {
+  margin-top:8px; background:#fff; border-radius:12px; border:1px solid var(--border);
+  padding:10px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.saldo-label { font-size:.62rem; text-transform:uppercase; font-weight:700;
+  letter-spacing:.5px; color:var(--muted); white-space:nowrap; }
+.saldo-val   { font-family:'JetBrains Mono',monospace; font-size:1.25rem; font-weight:800; white-space:nowrap; }
+.saldo-pos   { color:var(--green); }
+.saldo-neg   { color:var(--red);   }
+.saldo-divider { width:1px; height:32px; background:var(--border); flex-shrink:0; }
+
+/* ── TOOLBAR ──────────────────────────────────────────────────── */
+.rx-toolbar { display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:8px; margin:10px 0 8px; }
+.toolbar-left  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.toolbar-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+.fsel {
+  padding:8px 28px 8px 11px; border:1.5px solid var(--border); border-radius:9px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center;
+  font-size:.81rem; color:var(--gray); cursor:pointer; appearance:none; -webkit-appearance:none;
+  font-family:'Sora',sans-serif; transition:.18s; outline:none;
+}
+.fsel:focus { border-color:var(--teal); }
+
+.rx-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 13px;
+  border-radius:9px; font-size:.8rem; font-weight:700; cursor:pointer;
+  font-family:'Sora',sans-serif; transition:.18s; white-space:nowrap; }
+.rx-btn-teal   { background:var(--teal);   color:#fff; border:none; }
+.rx-btn-teal:hover   { background:var(--teal-dk); }
+.rx-btn-outline { background:#fff; color:var(--gray); border:1.5px solid var(--border); }
+.rx-btn-outline:hover { border-color:var(--gray); }
+.rx-btn-brown  { background:#fff; color:var(--brown); border:1.5px solid var(--brown); }
+.rx-btn-brown:hover  { background:var(--brown); color:#fff; }
+.rx-btn-purple { background:#fff; color:var(--purple); border:1.5px solid var(--purple-bd); }
+.rx-btn-purple:hover { background:var(--purple-lt); }
+.rx-btn-purple.unlocked { background:var(--green-lt); color:var(--green); border-color:#9ae6b4; }
+
+/* ── TREE TABLE ───────────────────────────────────────────────── */
+.table-wrap { background:#fff; border-radius:12px; border:1px solid var(--border);
+  box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; margin-bottom:8px; }
+
+.rx-table { width:100%; border-collapse:collapse; }
+.rx-table th {
+  padding:7px 11px; text-align:left; font-size:.62rem; text-transform:uppercase;
+  font-weight:700; color:var(--gray); border-bottom:2px solid var(--border);
+  letter-spacing:.4px; background:#f8fafc; white-space:nowrap;
+}
+.rx-table th.th-r { text-align:right; }
+.rx-table td { vertical-align:middle; }
+
+/* ─── Nível 0: Seção (PAI) ─── */
+.tr-section { cursor:pointer; user-select:none; transition:background .15s; }
+.tr-section td {
+  padding:8px 11px; font-size:.72rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:.7px;
+  border-top:2px solid transparent; border-bottom:1px solid var(--border);
+}
+.tr-section:hover td { filter:brightness(.97); }
+
+.sec-receitas    td { background:linear-gradient(90deg,#f0fff4,#f8fafc); color:var(--green); border-top-color:var(--green); }
+.sec-analistas   td { background:linear-gradient(90deg,#ecfeff,#f8fafc); color:var(--cyan); border-top-color:var(--cyan); }
+.sec-folha       td { background:linear-gradient(90deg,#ede9fe,#f8fafc); color:var(--purple); border-top-color:var(--purple); }
+.sec-desp-gerais td { background:linear-gradient(90deg,#fef9c3,#f8fafc); color:var(--amber); border-top-color:var(--amber); }
+
+/* ─── Nível 1: Filho (grupo/subtotal) ─── */
+.tr-child { cursor:pointer; user-select:none; transition:background .15s; }
+.tr-child td {
+  padding:6px 11px 6px 24px; font-size:.8rem; font-weight:700;
+  background:#fafbff; border-bottom:1px solid #eef0f6; color:var(--dark);
+}
+.tr-child:hover td { background:#f3f4ff; }
+.tr-child .td-indent { padding-left:26px; }
+
+/* ─── Nível 2: Neto (itens individuais) ─── */
+.tr-item td {
+  padding:5px 11px 5px 40px; font-size:.82rem;
+  border-bottom:1px solid #f1f5f9; color:var(--dark); background:#fff;
+}
+.tr-item:hover td { background:#fafbff; }
+.tr-item .td-indent { padding-left:42px; }
+
+/* ─── Nível 2: item disponível/pendente ─── */
+.tr-item.row-disponivel td { opacity:.65; }
+.tr-item.row-disponivel td:first-child::before { content:'⏳ '; font-size:.74rem; }
+
+/* ─── Chevron ─── */
+.chevron {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; margin-right:6px; flex-shrink:0;
+  transition:transform .2s ease;
+}
+.chevron svg { color:inherit; opacity:.6; }
+.tree-open .chevron { transform:rotate(90deg); }
+
+/* ─── Total de seção ─── */
+.tr-section-total td {
+  padding:6px 11px; font-size:.76rem; font-weight:800;
+  font-family:'JetBrains Mono',monospace;
+  border-top:1.5px solid var(--border); border-bottom:2px solid var(--border);
+  background:#f8fafc;
+}
+.tr-section-total .sec-total-lbl { font-family:'Sora',sans-serif; font-size:.68rem;
+  font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+
+/* ─── Total global ─── */
+.tr-grand-total td {
+  padding:9px 11px; background:linear-gradient(90deg,#1a202c,#2d3748);
+  color:#fff; font-weight:800; font-family:'JetBrains Mono',monospace; font-size:.88rem;
+}
+.tr-grand-total .lbl-gt { font-family:'Sora',sans-serif; font-size:.76rem;
+  text-transform:uppercase; letter-spacing:.7px; color:rgba(255,255,255,.8); }
+
+/* ─── Resultado ─── */
+.tr-resultado td { padding:9px 11px; border-top:2px solid var(--border); }
+.resultado-pos { color:var(--green); }
+.resultado-neg { color:var(--red);   }
+
+/* ─── Badges e pills ─── */
+.mono { font-family:'JetBrains Mono',monospace; font-weight:600; }
+.pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px;
+  border-radius:20px; font-size:.67rem; font-weight:700; }
+.pill-green { background:var(--green-lt); color:var(--green); border:1px solid #9ae6b4; }
+.pill-pend  { background:#fff8f1; color:var(--gold); border:1px solid #fbd38d; }
+.pill-disp  { background:#f7fafc; color:var(--muted); border:1px solid #e2e8f0; }
+.pill-repr  { background:var(--red-lt); color:var(--red); border:1px solid #feb2b2; }
+
+/* ─── Lock de Gastos Diversos ─── */
+.tr-gd-blocked td {
+  background:repeating-linear-gradient(
+    -45deg, #faf5ff, #faf5ff 8px, #f3eeff 8px, #f3eeff 16px
+  );
+  text-align:center; padding:18px 15px;
+  color:var(--purple); font-size:.85rem; font-weight:700;
+}
+
+/* ─── Disponível aviso ─── */
+.aviso-disponivel {
+  display:inline-flex; align-items:center; gap:5px; padding:2px 9px;
+  background:#fff8f1; border:1px solid #fbd38d; border-radius:20px;
+  font-size:.68rem; font-weight:700; color:var(--gold); font-family:'Sora',sans-serif;
+}
+
+/* ── SYNC PAGAMENTO ───────────────────────────────────────────── */
+.btn-sync-pag {
+  display:inline-flex; align-items:center; gap:6px; padding:7px 12px;
+  border-radius:9px; font-size:.78rem; font-weight:700; cursor:pointer;
+  font-family:'Sora',sans-serif; transition:.2s; white-space:nowrap; border:1.5px solid;
+}
+.btn-sync-pag.off {
+  background:#fff; color:var(--muted); border-color:var(--border);
+}
+.btn-sync-pag.off:hover { border-color:var(--teal); color:var(--teal-dk); background:#f0fdff; }
+.btn-sync-pag.on {
+  background:linear-gradient(135deg,#239FAB,#1a7a84); color:#fff;
+  border-color:var(--teal-dk); box-shadow:0 2px 8px rgba(35,159,171,.3);
+}
+.btn-sync-pag.on:hover { filter:brightness(1.08); }
+
+/* Pulsating dot when ON */
+.sync-dot {
+  width:7px; height:7px; border-radius:50%; background:#fff; flex-shrink:0;
+  animation:syncPulse 1.6s ease-in-out infinite;
+}
+@keyframes syncPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:.5; transform:scale(.7); }
+}
+
+/* Badge no saldo-card quando sync ativo */
+.sync-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  background:linear-gradient(90deg,#ecfeff,#f0fdff); border:1px solid var(--cyan-bd);
+  border-radius:20px; font-size:.67rem; font-weight:700; color:var(--cyan);
+  margin-left:8px; vertical-align:middle;
+}
+
+/* ── EMPTY STATE ─── */
+.empty-state { text-align:center; padding:44px 20px; color:var(--muted); }
+.empty-state h3 { font-size:.95rem; color:var(--gray); margin:0 0 6px; }
+
+/* ── MODALS ───────────────────────────────────────────────────── */
+.modal-back { position:fixed; inset:0; background:rgba(0,0,0,.52); z-index:2000;
+  display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-back.open { display:flex; }
+@keyframes slideUp {
+  from { transform:translateY(14px) scale(.97); opacity:0; }
+  to   { transform:none; opacity:1; }
+}
+.modal-box { background:#fff; width:94%; max-width:400px; border-radius:20px;
+  padding:28px; position:relative; box-shadow:0 24px 60px rgba(0,0,0,.22);
+  animation:slideUp .25s ease-out; font-family:'Sora',sans-serif; }
+.modal-box.modal-purple { border-top:4px solid var(--purple); }
+.modal-close { position:absolute; top:13px; right:13px; width:30px; height:30px;
+  background:#f1f5f9; border:none; border-radius:50%; cursor:pointer;
+  font-size:1rem; color:var(--muted); display:grid; place-items:center; }
+.modal-close:hover { background:#e2e8f0; }
+
+.fgroup { display:flex; flex-direction:column; gap:5px; }
+.fgroup label { font-size:.69rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--gray); }
+.fgroup input {
+  padding:10px 12px; border:1.5px solid #cbd5e0; border-radius:9px;
+  font-size:.95rem; font-family:'JetBrains Mono',monospace; outline:none; transition:.18s;
+  letter-spacing:4px; text-align:center;
+}
+.fgroup input:focus { border-color:var(--purple); box-shadow:0 0 0 3px rgba(107,70,193,.1); }
+.pin-error { color:var(--red); font-size:.82rem; font-weight:600; margin-top:4px; text-align:center; display:none; }
+
+.btn-modal-primary { width:100%; padding:12px; border:none; border-radius:10px;
+  font-size:.9rem; font-weight:700; cursor:pointer; font-family:'Sora',sans-serif;
+  margin-top:14px; background:var(--purple); color:#fff; transition:.18s; }
+.btn-modal-cancel  { width:100%; padding:10px; background:#fff; color:var(--gray);
+  border:1.5px solid var(--border); border-radius:10px; font-size:.88rem;
+  font-weight:600; cursor:pointer; font-family:'Sora',sans-serif; margin-top:8px; }
+
+/* ── PRINT ────────────────────────────────────────────────────── */
+@media print {
+  .rx-hero, .rx-toolbar, .modal-back, nav, header, footer { display:none !important; }
+  .print-header { display:block !important; }
+  body { font-size:8.5px; color:#000; background:#fff; margin:0; }
+  .saldo-card { box-shadow:none !important; border:1px solid #bbb !important;
+    border-radius:0 !important; padding:6px 10px !important; margin:0 0 4px !important; }
+  .saldo-val  { font-size:1rem !important; }
+  .saldo-label{ font-size:.58rem !important; }
+  .saldo-divider { display:block; width:1px; height:24px; background:#ccc; }
+  div[id^="saldo-"] { font-size:.78rem !important; }
+  .table-wrap { box-shadow:none; border:1px solid #bbb; border-radius:0; margin-bottom:4px; }
+  .rx-table { font-size:7.5px; }
+  .rx-table th { padding:4px 7px; font-size:6.5px; background:#e8e8e8 !important;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .tr-section td   { padding:5px 7px; font-size:.62rem;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .tr-child td     { padding:3px 7px 3px 18px; font-size:.7rem;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .tr-item td      { padding:2px 7px 2px 28px; font-size:.7rem; }
+  .tr-section-total td { padding:4px 7px; font-size:.68rem;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .tr-grand-total td   { padding:5px 7px; font-size:.76rem;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .tr-resultado td     { padding:5px 7px; font-size:.76rem; }
+  .chevron { display:none !important; }
+  /* Modo sem detalhes: oculta neto, mantém pai+filho */
+  body.print-no-detail .tr-item { display:none !important; }
+  /* Gastos Diversos bloqueados: ocultar na impressão */
+  .tr-gd-blocked { display:none !important; }
+  .pill { border:1px solid #aaa !important; background:none !important;
+    color:#000 !important; font-size:.6rem !important; }
+  @page { margin:0.8cm 1cm; size:A4 landscape; }
+}
+.print-header { display:none; margin-bottom:6px; padding-bottom:6px; border-bottom:2px solid #333; }
+.print-header h2  { font-size:12px; margin:0 0 1px; font-weight:800; }
+.print-header .pm { font-size:8px; color:#555; margin-top:1px; }
+.print-header .pl { font-size:16px; font-weight:900; color:#945f34; letter-spacing:-1px; }
+
+/* ── MODAIS FULLSCREEN ────────────────────────────────────────── */
+.modal-full-back {
+  position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:2000;
+  display:none; overflow-y:auto; backdrop-filter:blur(4px);
+}
+.modal-full-back.open { display:block; }
+.modal-full-wrap {
+  min-height:100vh; display:flex; align-items:flex-start;
+  justify-content:center; padding:20px 16px;
+}
+.modal-full-box {
+  background:#fff; width:100%; max-width:1240px; border-radius:16px;
+  padding:28px 32px; position:relative; margin:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.22);
+  animation:slideUp .25s ease-out; font-family:'Sora',sans-serif;
+}
+.modal-full-box.modal-prev-box { border-top:4px solid var(--teal); }
+.modal-full-box.modal-det-box  { border-top:4px solid var(--purple); }
+.modal-full-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px; padding-bottom:14px; border-bottom:2px solid var(--border);
+}
+.modal-full-title {
+  font-size:1.15rem; font-weight:800; color:var(--dark);
+  display:flex; align-items:center; gap:10px;
+}
+.modal-full-actions { display:flex; gap:8px; align-items:center; }
+.modal-full-close {
+  width:32px; height:32px; background:#f1f5f9; border:none; border-radius:50%;
+  cursor:pointer; font-size:1.1rem; color:var(--muted);
+  display:grid; place-items:center;
+}
+.modal-full-close:hover { background:#e2e8f0; }
+
+/* ── SEÇÕES INTERNAS ──────────────────────────────────────────── */
+.prev-section { margin-bottom:28px; }
+.prev-section-title {
+  font-size:.72rem; font-weight:800; text-transform:uppercase;
+  letter-spacing:.6px; color:var(--gray); margin:0 0 12px;
+  display:flex; align-items:center; gap:10px;
+}
+.prev-section-title::after { content:''; flex:1; height:1.5px; background:var(--border); }
+
+/* ── TABELA PREVISÃO MENSAL ───────────────────────────────────── */
+.prev-table { width:100%; border-collapse:collapse; margin-top:4px; }
+.prev-table th {
+  padding:7px 12px; text-align:right; font-size:.62rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.4px; color:var(--gray);
+  background:#f8fafc; border-bottom:2px solid var(--border); white-space:nowrap;
+}
+.prev-table th:first-child { text-align:left; min-width:120px; }
+.prev-table td {
+  padding:6px 12px; border-bottom:1px solid #f1f5f9;
+  font-family:'JetBrains Mono',monospace; font-size:.81rem; text-align:right; color:var(--dark);
+}
+.prev-table td:first-child { font-family:'Sora',sans-serif; font-weight:700; text-align:left; font-size:.84rem; }
+.prev-table tr:hover td { background:#fafbff; }
+.prev-table tr.row-positivo td:last-child { color:var(--green); font-weight:800; }
+.prev-table tr.row-negativo td:last-child { color:var(--red);   font-weight:800; }
+.prev-table tfoot tr td { background:#f8fafc; font-weight:700; border-top:2px solid var(--border); font-size:.82rem; }
+.prev-table .nota-sub { font-size:.67rem; color:var(--muted); font-family:'Sora',sans-serif; font-weight:400; }
+
+/* ── TABELA MUNICÍPIO LADO A LADO ─────────────────────────────── */
+.mun-table { width:100%; border-collapse:collapse; }
+.mun-table th {
+  padding:7px 10px; font-size:.62rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--gray); background:#f8fafc;
+  border-bottom:2px solid var(--border); white-space:nowrap;
+}
+.mun-table th:first-child { text-align:left; }
+.mun-table th.th-r { text-align:right; }
+.mun-table td {
+  padding:6px 10px; border-bottom:1px solid #f1f5f9;
+  font-family:'JetBrains Mono',monospace; font-size:.81rem; text-align:right;
+}
+.mun-table tr.mun-parent td:first-child {
+  font-family:'Sora',sans-serif; font-weight:800; font-size:.85rem;
+  text-align:left; color:var(--dark); cursor:pointer;
+}
+.mun-table tr.mun-parent:hover td { background:#fafbff; }
+.mun-table tr.mun-sub-row { display:none; }
+.mun-table tr.mun-sub-row td {
+  padding:4px 10px 4px 28px; background:#fafbff;
+  font-size:.76rem; color:var(--muted); font-family:'Sora',sans-serif; text-align:left;
+}
+.mun-table tr.mun-sub-row td.td-num { font-family:'JetBrains Mono',monospace; text-align:right; color:var(--muted); }
+.mun-table .td-rec  { color:var(--green); }
+.mun-table .td-desp { color:var(--red);   }
+.mun-table .td-saldo-pos { color:var(--green); font-weight:800; }
+.mun-table .td-saldo-neg { color:var(--red);   font-weight:800; }
+.mun-table tfoot td { background:#f8fafc; font-weight:800; border-top:2px solid var(--border); }
+
+/* ── TABELA HISTÓRICO ANALISTAS ───────────────────────────────── */
+.hist-table { width:100%; border-collapse:collapse; font-size:.81rem; }
+.hist-table th {
+  padding:6px 10px; font-size:.62rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--gray); background:#f8fafc;
+  border-bottom:2px solid var(--border); text-align:right; white-space:nowrap;
+}
+.hist-table th:first-child, .hist-table th:nth-child(2) { text-align:left; }
+.hist-table td { padding:5px 10px; border-bottom:1px solid #f1f5f9; font-family:'JetBrains Mono',monospace; text-align:right; }
+.hist-table td:first-child { font-family:'Sora',sans-serif; font-weight:700; text-align:left; color:var(--dark); }
+.hist-table td:nth-child(2) { font-family:'Sora',sans-serif; font-size:.74rem; color:var(--muted); text-align:left; }
+.hist-table tr:hover td { background:#fafbff; }
+.hist-table tfoot td { background:#f8fafc; font-weight:800; border-top:2px solid var(--border); }
+.hist-table .td-media { color:var(--teal); font-weight:800; }
+
+/* ── KPI ROW (modal detalhe) ──────────────────────────────────── */
+.det-kpi-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+.det-kpi { flex:1; min-width:130px; background:#f8fafc; border-radius:10px; padding:10px 14px; border:1.5px solid var(--border); }
+.det-kpi .dk-label { font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+.det-kpi .dk-val { font-family:'JetBrains Mono',monospace; font-size:1rem; font-weight:800; margin-top:4px; }
+.dk-receita  .dk-val { color:var(--green);  }
+.dk-imposto  .dk-val { color:var(--amber);  }
+.dk-despesa  .dk-val { color:var(--red);    }
+
+/* ── TABELA DETALHE ───────────────────────────────────────────── */
+.det-table { width:100%; border-collapse:collapse; font-size:.81rem; margin-top:4px; }
+.det-table th {
+  padding:6px 10px; font-size:.62rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--gray); background:#f8fafc;
+  border-bottom:2px solid var(--border); text-align:left; white-space:nowrap;
+}
+.det-table th.th-r { text-align:right; }
+.det-table td { padding:6px 10px; border-bottom:1px solid #f1f5f9; }
+.det-table td.td-r { text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600; }
+.det-table tr:hover td { background:#fafbff; }
+.det-table .group-row td { background:#fafbff; font-weight:800; font-size:.82rem; }
+.det-table .sub-row td { padding-left:28px; color:var(--muted); font-size:.78rem; }
+.det-table tfoot td { background:#f8fafc; font-weight:800; border-top:2px solid var(--border); font-family:'JetBrains Mono',monospace; text-align:right; }
+.det-table tfoot td:first-child { font-family:'Sora',sans-serif; text-align:left; }
+
+/* ── LOADING ──────────────────────────────────────────────────── */
+.det-loading { text-align:center; padding:50px 20px; color:var(--muted); }
+.det-loading svg { animation:spin 1s linear infinite; margin-bottom:10px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── SELECT DO MODAL ──────────────────────────────────────────── */
+.modal-fsel {
+  padding:9px 32px 9px 12px; border:1.5px solid var(--border); border-radius:9px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center;
+  font-size:.82rem; color:var(--gray); cursor:pointer; appearance:none;
+  font-family:'Sora',sans-serif; outline:none; min-width:200px;
+}
+.modal-fsel:focus { border-color:var(--teal); }
+
+/* ── PRINT: MODAIS ────────────────────────────────────────────── */
+@media print {
+  body.printing-prev .modal-full-back#modal-previsao { display:block !important; }
+  body.printing-prev .modal-full-back#modal-previsao .modal-full-wrap { padding:0; }
+  body.printing-prev .modal-full-box.modal-prev-box {
+    box-shadow:none; border-radius:0; padding:10px; border-top:none; margin:0;
+  }
+  body.printing-prev .modal-full-actions { display:none !important; }
+  body.printing-det .modal-full-back#modal-detalhe { display:block !important; }
+  body.printing-det .modal-full-back#modal-detalhe .modal-full-wrap { padding:0; }
+  body.printing-det .modal-full-box.modal-det-box {
+    box-shadow:none; border-radius:0; padding:10px; border-top:none; margin:0;
+  }
+  body.printing-det .modal-full-actions { display:none !important; }
+  body.printing-prev .modal-print-header,
+  body.printing-det  .modal-print-header { display:flex !important; }
+  body.printing-prev .det-controls-bar,
+  body.printing-det  .det-controls-bar  { display:none !important; }
+  /* Previsão — ocultar seções selecionadas */
+  body.printing-prev.print-hide-mun  .prev-section-municipios  { display:none !important; }
+  body.printing-prev.print-hide-hist .prev-section-historico   { display:none !important; }
+  body.printing-prev.print-hide-rec  .prev-section-recorrentes { display:none !important; }
+  body.printing-prev.print-hide-proj .prev-section-projecao    { display:none !important; }
+  /* Município — ocultar seções selecionadas */
+  body.printing-det.print-hide-notas .det-section-notas { display:none !important; }
+  body.printing-det.print-hide-dg    .det-section-dg    { display:none !important; }
+  body.printing-det.print-hide-anal  .det-section-anal  { display:none !important; }
+  body.printing-det.print-hide-folha .det-section-folha { display:none !important; }
+  .prev-table td, .mun-table td, .hist-table td, .det-table td { font-size:7px; }
+  .prev-table th, .mun-table th, .hist-table th, .det-table th { font-size:6.5px; }
+  .det-kpi .dk-val { font-size:.82rem; }
+  .prev-kpi-row .kpi-card { box-shadow:none !important; border:1px solid #ccc !important; break-inside:avoid; }
+  @page { size:A4 portrait; margin:.6cm .9cm; }
+}
+
+/* ── CABEÇALHO DE IMPRESSÃO NOS MODAIS ──────────────────────────── */
+.modal-print-header {
+  display:none; padding-bottom:8px; margin-bottom:14px;
+  border-bottom:2px solid #333;
+  align-items:center; justify-content:space-between;
+}
+.modal-print-header .mph-logo {
+  font-size:20px; font-weight:900; color:#945f34; letter-spacing:-1.5px;
+}
+.modal-print-header h3 { font-size:11px; font-weight:800; margin:2px 0 0; color:#1a202c; }
+.modal-print-header .mph-sub { font-size:8px; color:#555; margin-top:1px; }
+.modal-print-header .mph-right { text-align:right; font-size:8px; color:#666; }
+
+/* ── POPOVER DE OPÇÕES DE IMPRESSÃO ──────────────────────────────── */
+.print-opts-wrap { position:relative; display:inline-block; }
+.print-opts-pop {
+  display:none; position:absolute; right:0; top:calc(100% + 6px);
+  background:#fff; border:1.5px solid var(--border); border-radius:12px;
+  padding:14px 16px; z-index:3000; min-width:240px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18); font-family:'Sora',sans-serif;
+}
+.print-opts-pop.open { display:block; }
+.print-opts-pop .pop-title {
+  font-size:.62rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--muted); margin-bottom:8px;
+}
+.print-opts-pop label {
+  display:flex; align-items:center; gap:8px; padding:5px 0;
+  font-size:.82rem; color:var(--gray); cursor:pointer; user-select:none;
+}
+.print-opts-pop label input[type=checkbox] {
+  accent-color:var(--teal); width:15px; height:15px; flex-shrink:0;
+}
+.print-opts-pop .pop-footer {
+  margin-top:10px; padding-top:10px; border-top:1px solid var(--border);
+}
+
+.det-tab {
+  padding: 7px 16px;
+  font-size: .78rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+  border-radius: 6px 6px 0 0;
+}
+.det-tab:hover   { color: var(--dark); }
+.det-tab-active  { color: var(--purple); border-bottom-color: var(--purple); background: rgba(109,40,217,.06); }
+
+</style>
+
+<!-- ─── CABEÇALHO DE IMPRESSÃO ─────────────────────────────────── -->
+<div class="print-header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="pl">CONMAC</div>
+      <h2>Raio X Financeiro — {{ mes_label|default:"—" }}/{{ ano_sel|stringformat:"d"|default:"—" }}</h2>
+      <div class="pm">
+        Emitido em: <strong id="ph-data"></strong> ·
+        Usuário: {{ request.user.get_full_name }} ·
+        Resultado:
+        <strong id="ph-resultado">—</strong>
+      </div>
+    </div>
+    <div style="text-align:right;font-size:9px;color:#666">
+      Sistema Financeiro CONMAC<br>
+      Receitas: <strong id="ph-rec">—</strong> · Despesas: <strong id="ph-desp">—</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HERO ───────────────────────────────────────────────────── -->
+<section class="rx-hero">
+  <div class="hero-left">
+    <div class="hero-ico">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    </div>
+    <div class="hero-txt">
+      <h2>Raio X Financeiro</h2>
+      <p>Visão completa de receitas, despesas e resultado do período</p>
+      <span class="hero-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+        Acesso Restrito · Staff
+      </span>
+    </div>
+  </div>
+
+  <div class="hero-kpis">
+    <div class="kpi-card kpi--green">
+      <div class="kpi__val" id="kpi-rec">{{ total_receitas|floatformat:2|intcomma|default:"—" }}</div>
+      <div class="kpi__lbl">Receitas</div>
+      <div class="kpi__sub">{{ qtd_notas|default:"0" }} notas recebidas</div>
+    </div>
+    <div class="kpi-card kpi--red">
+      <div class="kpi__val" id="kpi-desp">{{ total_despesas|floatformat:2|intcomma|default:"—" }}</div>
+      <div class="kpi__lbl">Total Despesas</div>
+    </div>
+    <div class="kpi-card kpi--gold">
+      <div class="kpi__val" id="kpi-folha">{{ total_folha|floatformat:2|intcomma|default:"—" }}</div>
+      <div class="kpi__lbl">Folha de Pagamento</div>
+      <div class="kpi__sub">{{ qtd_colaboradores|default:"0" }} colaboradores</div>
+    </div>
+    <div class="kpi-card {% if resultado >= 0 %}kpi--teal{% else %}kpi--red{% endif %}">
+      <div class="kpi__val" id="kpi-resultado" style="color:{% if resultado >= 0 %}var(--teal){% else %}var(--red){% endif %}">
+        {{ resultado|floatformat:2|intcomma|default:"—" }}
+      </div>
+      <div class="kpi__lbl">Resultado</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── BARRA DE SALDO ─────────────────────────────────────────── -->
+<div class="saldo-card">
+  <div>
+    <div class="saldo-label">
+      Resultado do Mês
+      {% if sync_pagamento %}
+        <span class="sync-badge">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          por pagamento
+        </span>
+      {% endif %}
+    </div>
+    <div class="saldo-val {% if resultado >= 0 %}saldo-pos{% else %}saldo-neg{% endif %}" id="saldo-val">
+      {% if resultado >= 0 %}▲{% else %}▼{% endif %} R$ {{ resultado|floatformat:2|intcomma|default:"0,00" }}
+    </div>
+  </div>
+  <div class="saldo-divider"></div>
+  <div>
+    <div class="saldo-label">Receitas</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:700;color:var(--green)" id="saldo-rec">
+      R$ {{ total_receitas|floatformat:2|intcomma|default:"0,00" }}
+    </div>
+  </div>
+  <div class="saldo-divider"></div>
+  <div>
+    <div class="saldo-label">(-) Despesas c/ Analistas</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:700;color:var(--red)" id="saldo-analistas">
+      R$ {{ total_analistas|floatformat:2|intcomma|default:"0,00" }}
+    </div>
+  </div>
+  <div class="saldo-divider"></div>
+  <div>
+    <div class="saldo-label">(-) Folha</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:700;color:var(--red)" id="saldo-folha">
+      R$ {{ total_folha|floatformat:2|intcomma|default:"0,00" }}
+    </div>
+  </div>
+  <div class="saldo-divider"></div>
+  <div>
+    <div class="saldo-label">(-) Desp. Gerais</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:700;color:var(--red)" id="saldo-gerais">
+      R$ {{ total_desp_gerais|floatformat:2|intcomma|default:"0,00" }}
+    </div>
+  </div>
+</div>
+
+<!-- ─── TOOLBAR ────────────────────────────────────────────────── -->
+<div class="rx-toolbar">
+  <div class="toolbar-left">
+    <form method="get" style="display:flex;gap:8px;align-items:center">
+      <select name="mes" class="fsel" onchange="this.form.submit()">
+        {% for m in meses_lista %}
+        <option value="{{ m.num }}" {% if m.num == mes_sel %}selected{% endif %}>{{ m.label }}</option>
+        {% endfor %}
+      </select>
+      <select name="ano" class="fsel" onchange="this.form.submit()">
+        {% for a in anos_lista %}
+        <option value="{{ a|stringformat:"d" }}" {% if a == ano_sel %}selected{% endif %}>{{ a|stringformat:"d" }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <button class="rx-btn rx-btn-outline" onclick="expandAll()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+      Expandir Tudo
+    </button>
+    <button class="rx-btn rx-btn-outline" onclick="collapseAll()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+      Recolher Tudo
+    </button>
+
+    <!-- ── Sincronizar Pagamentos ── -->
+    <button class="btn-sync-pag {% if sync_pagamento %}on{% else %}off{% endif %}"
+            id="btnSyncPag"
+            onclick="toggleSyncPag()"
+            title="{% if sync_pagamento %}Sincronização ativa: despesas exibidas pelo mês do pagamento efetivo. Clique para desativar.{% else %}Ativar: move despesas de analistas para o mês em que foram efetivamente pagas.{% endif %}">
+      {% if sync_pagamento %}
+        <span class="sync-dot"></span>
+      {% else %}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      {% endif %}
+      <span>{% if sync_pagamento %}Sincronizado por Pgto.{% else %}Sincronizar Pgto.{% endif %}</span>
+    </button>
+  </div>
+
+  <div class="toolbar-right">
+    <a href="{% url 'despesas_gerais' %}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;
+              border-radius:9px;font-size:.79rem;font-weight:600;color:var(--muted);
+              border:1.5px solid var(--border);background:#fff;text-decoration:none;
+              transition:.18s;font-family:'Sora',sans-serif;"
+       onmouseover="this.style.color='var(--brown)';this.style.borderColor='var(--brown)';this.style.background='#fdf6ef'"
+       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)';this.style.background='#fff'"
+       title="Ir para Despesas Gerais">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+      Despesas Gerais
+    </a>
+    <button class="rx-btn rx-btn-teal" onclick="abrirModalFull('modal-previsao')"
+            title="Projeção financeira para os próximos meses">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      Previsão
+    </button>
+    <button class="rx-btn rx-btn-outline" onclick="abrirModalDetalhe()"
+            title="Análise de custos e receitas por município">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+      Por Município
+    </button>
+    <button class="rx-btn rx-btn-purple" id="btnLockGD" onclick="toggleLockGD()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span id="btnLockTxt">Gastos Sensíveis: Ocultos</span>
+    </button>
+    <button class="rx-btn rx-btn-brown" onclick="imprimirComDetalhes()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Com Detalhes
+    </button>
+    <button class="rx-btn rx-btn-outline" onclick="imprimirSemDetalhes()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Sem Detalhes
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TABELA RAIO X
+════════════════════════════════════════════════════════════ -->
+<div class="table-wrap">
+  <table class="rx-table" id="rxTable">
+    <thead>
+      <tr>
+        <th style="width:38%">Descrição</th>
+        <th style="width:14%">Referência / Detalhe</th>
+        <th style="width:9%;text-align:right">Qtd.</th>
+        <th style="width:13%;text-align:right">Valor Unit.</th>
+        <th style="width:13%;text-align:right">Total</th>
+        <th style="width:13%;text-align:center">Status / Obs.</th>
+      </tr>
+    </thead>
+    <tbody id="rxTbody">
+
+      <!-- ╔══════════════════════════════════════════════════════
+           ║  SEÇÃO 1: RECEITAS
+           ╚══════════════════════════════════════════════════ -->
+      <tr class="tr-section sec-receitas tree-open" data-id="sec-rec" data-level="0" onclick="toggleSection('sec-rec')">
+        <td colspan="6">
+          <span class="chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+          Receitas Recebidas no Mês
+          <small style="font-weight:600;margin-left:10px;font-size:.7rem;opacity:.7">
+            vinculadas por data de recebimento
+          </small>
+        </td>
+      </tr>
+
+      {% if receitas_por_cliente %}
+        {% for grp in receitas_por_cliente %}
+        <tr class="tr-child tree-open" data-id="rc-{{ forloop.counter }}" data-parent="sec-rec" data-level="1" onclick="toggleSection('rc-{{ forloop.counter }}')">
+          <td class="td-indent">
+            <span class="chevron">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+            </span>
+            <strong>{{ grp.cliente }}</strong>
+            {% if grp.municipio %}<span style="color:var(--muted);font-size:.77rem;margin-left:6px">· {{ grp.municipio }}</span>{% endif %}
+          </td>
+          <td style="color:var(--muted);font-size:.78rem">{{ grp.notas|length }} nota{{ grp.notas|pluralize }}</td>
+          <td></td><td></td>
+          <td style="text-align:right;font-weight:800" class="mono">R$ {{ grp.total|floatformat:2|intcomma }}</td>
+          <td></td>
+        </tr>
+          {% for nota in grp.notas %}
+          <tr class="tr-item" data-parent="rc-{{ forloop.parentloop.counter }}" data-level="2">
+            <td class="td-indent">
+              <span style="font-size:.8rem;color:var(--muted)">NFS-e&nbsp;</span>
+              <span class="mono" style="font-size:.82rem">{{ nota.numero_nfse|default:nota.omie_nfse_id }}</span>
+              <!--<span style="color:var(--muted);font-size:.76rem;margin-left:6px">{{ nota.descricao|truncatechars:45 }}</span>-->
+            </td>
+            <td style="font-size:.78rem;color:var(--muted)" class="mono">
+              Emissão: {{ nota.data_emissao|date:"d/m/Y"|default:"—" }}<br>
+              <span style="color:var(--green);font-weight:700">Recebida: {{ nota.confirmacao.data_recebimento|date:"d/m/Y"|default:"—" }}</span>
+            </td>
+            <td></td>
+            <td style="text-align:right;color:var(--muted)" class="mono">R$ {{ nota.valor_liquido|floatformat:2|intcomma }}</td>
+            <td style="text-align:right;color:var(--green);font-weight:700" class="mono">R$ {{ nota.confirmacao.valor_recebido|default:nota.valor_liquido|floatformat:2|intcomma }}</td>
+            <td style="text-align:center"><span class="pill pill-green">✓ Recebida</span></td>
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      {% else %}
+      <tr class="tr-item" data-parent="sec-rec" data-level="2">
+        <td colspan="6"><div class="empty-state"><h3>Nenhuma receita recebida neste mês</h3><p>Notas são exibidas pela data de recebimento registrada.</p></div></td>
+      </tr>
+      {% endif %}
+
+      <!-- Total da seção Receitas -->
+      <tr class="tr-section-total">
+        <td colspan="4"><span class="sec-total-lbl">Total Receitas Recebidas</span></td>
+        <td style="text-align:right;color:var(--green)" class="mono">R$ {{ total_receitas|floatformat:2|intcomma|default:"0,00" }}</td>
+        <td></td>
+      </tr>
+
+
+      <!-- ╔══════════════════════════════════════════════════════
+           ║  SEÇÃO 2: DESPESAS DOS ANALISTAS
+           ╚══════════════════════════════════════════════════ -->
+      <tr class="tr-section sec-analistas tree-open" data-id="sec-anal" data-level="0" onclick="toggleSection('sec-anal')">
+        <td colspan="6">
+          <span class="chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+          Despesas dos Analistas
+          <small style="font-weight:600;margin-left:10px;font-size:.7rem;opacity:.7">aprovadas + pendentes de pagamento</small>
+        </td>
+      </tr>
+
+      {% if despesas_por_analista %}
+        {% for analista in despesas_por_analista %}
+        <tr class="tr-child tree-open" data-id="anal-{{ forloop.counter }}" data-parent="sec-anal" data-level="1" onclick="toggleSection('anal-{{ forloop.counter }}')">
+          <td class="td-indent">
+            <span class="chevron">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+            </span>
+            <strong>{{ analista.nome }}</strong>
+            <span style="color:var(--muted);font-size:.77rem;margin-left:6px">· {{ analista.cargo|default:"Analista" }}</span>
+          </td>
+          <td style="color:var(--muted);font-size:.78rem">{{ analista.despesas|length }} despesa{{ analista.despesas|pluralize }}</td>
+          <td></td><td></td>
+          <td style="text-align:right;font-weight:800" class="mono">R$ {{ analista.total|floatformat:2|intcomma }}</td>
+          <td></td>
+        </tr>
+          {% for desp in analista.despesas %}
+          <tr class="tr-item {% if desp.status == 'PENDENTE_PAGTO' %}row-disponivel{% endif %}"
+              data-parent="anal-{{ forloop.parentloop.counter }}" data-level="2">
+            <td class="td-indent">
+              {{ desp.titulo }}
+              <span style="color:var(--muted);font-size:.75rem;margin-left:4px">· {{ desp.centro }}</span>
+            </td>
+            <td style="font-size:.78rem;color:var(--muted)" class="mono">{{ desp.data_fato|date:"d/m/Y" }}</td>
+            <td></td><td></td>
+            <td style="text-align:right;font-weight:700" class="mono">R$ {{ desp.valor|floatformat:2|intcomma }}</td>
+            <td style="text-align:center">
+              {% if desp.status == 'APROVADA' %}
+                <span class="pill pill-green">✓ Pago</span>
+              {% elif desp.status == 'PENDENTE_PAGTO' %}
+                <span class="aviso-disponivel">⏳ A Pagar</span>
+              {% elif desp.status == 'REPROVADA' %}
+                <span class="pill pill-repr">✕ Reprovada</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      {% else %}
+      <tr class="tr-item" data-parent="sec-anal" data-level="2">
+        <td colspan="6"><div class="empty-state"><h3>Nenhuma despesa de analistas neste mês</h3></div></td>
+      </tr>
+      {% endif %}
+
+      <tr class="tr-section-total">
+        <td colspan="4"><span class="sec-total-lbl">Total Despesas Analistas</span></td>
+        <td style="text-align:right;color:var(--red)" class="mono">R$ {{ total_analistas|floatformat:2|intcomma|default:"0,00" }}</td>
+        <td></td>
+      </tr>
+
+
+      <!-- ╔══════════════════════════════════════════════════════
+           ║  SEÇÃO 3: FOLHA DE PAGAMENTO
+           ╚══════════════════════════════════════════════════ -->
+      <tr class="tr-section sec-folha tree-open" data-id="sec-folha" data-level="0" onclick="toggleSection('sec-folha')">
+        <td colspan="6">
+          <span class="chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Folha de Pagamento
+          <small style="font-weight:600;margin-left:10px;font-size:.7rem;opacity:.7">{{ qtd_colaboradores|default:"—" }} colaboradores ativos</small>
+        </td>
+      </tr>
+
+      {% if perfis %}
+        {% for p in perfis %}
+        <tr class="tr-item tree-open" data-parent="sec-folha" data-level="1">
+          <td style="padding-left:30px">
+            <strong>{{ p.user.get_full_name }}</strong>
+            {% if p.cargo %}<span style="color:var(--muted);font-size:.77rem;margin-left:5px">· {{ p.cargo }}</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:var(--muted)">
+            Adm: {{ p.data_admissao|date:"d/m/Y"|default:"—" }}
+          </td>
+          <td></td>
+          <td style="text-align:right;color:var(--muted);font-size:.8rem" class="mono">
+            <span title="Salário Bruto">R$ {{ p.salario_base|floatformat:2|intcomma }}</span>
+          </td>
+          <td style="text-align:right;font-weight:700;color:var(--green)" class="mono">
+            R$ {{ p.salario_liquido|floatformat:2|intcomma }}
+          </td>
+          <td style="text-align:center;font-size:.75rem;color:var(--muted)">
+            INSS: <span class="mono" style="color:var(--red)">{{ p.inss_estimado|floatformat:2|intcomma }}</span>
+            &nbsp;|&nbsp; IRRF: <span class="mono" style="color:var(--red)">{{ p.irrf_estimado|floatformat:2|intcomma }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr class="tr-item" data-parent="sec-folha" data-level="1">
+        <td colspan="6"><div class="empty-state"><h3>Nenhum colaborador ativo cadastrado</h3></div></td>
+      </tr>
+      {% endif %}
+
+      <tr class="tr-section-total">
+        <td colspan="3"><span class="sec-total-lbl">Total Folha (Líquido)</span></td>
+        <td style="text-align:right;color:var(--muted);font-size:.78rem" class="mono">
+          Encargos: R$ {{ total_encargos|floatformat:2|intcomma|default:"0,00" }}
+        </td>
+        <td style="text-align:right;color:var(--red)" class="mono">R$ {{ total_folha|floatformat:2|intcomma|default:"0,00" }}</td>
+        <td></td>
+      </tr>
+
+
+      <!-- ╔══════════════════════════════════════════════════════
+           ║  SEÇÃO 4: DESPESAS GERAIS
+           ╚══════════════════════════════════════════════════ -->
+      <tr class="tr-section sec-desp-gerais tree-open" data-id="sec-dg" data-level="0" onclick="toggleSection('sec-dg')">
+        <td colspan="6">
+          <span class="chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Despesas Gerais
+        </td>
+      </tr>
+
+      {% if desp_gerais_por_class %}
+        {% for grp in desp_gerais_por_class %}
+
+          {% if grp.classificacao == 'gastos_diversos' %}
+            <!-- ─── Gastos Diversos (bloqueável) ─── -->
+            <tr class="tr-child" data-id="dg-gd" data-parent="sec-dg" data-level="1" onclick="toggleSectionGD(this)">
+              <td class="td-indent">
+                <span class="chevron">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:middle"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <strong>Gastos Diversos</strong>
+                <span id="gd-lock-icon" style="margin-left:6px;font-size:.8rem">🔒</span>
+              </td>
+              <td style="color:var(--muted);font-size:.78rem" id="gd-child-count">{{ grp.itens|length }} item{{ grp.itens|pluralize }}</td>
+              <td></td><td></td>
+              <td style="text-align:right;font-weight:800" class="mono" id="gd-total-cell">
+                <span id="gd-total-val">R$ {{ grp.total|floatformat:2|intcomma }}</span>
+              </td>
+              <td></td>
+            </tr>
+
+            <!-- Placeholder de bloqueio (visível quando travado) -->
+            <tr class="tr-gd-blocked" id="tr-gd-blocked" data-parent="dg-gd" data-level="2" style="display:table-row">
+              <td colspan="6">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Conteúdo protegido. Clique em
+                <button onclick="event.stopPropagation();abrirModalSenha()" style="padding:3px 10px;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;border:1.5px solid var(--purple-bd);background:#fff;color:var(--purple);font-family:'Sora',sans-serif;margin:0 4px">
+                  🔓 Desbloquear
+                </button>
+                para visualizar.
+              </td>
+            </tr>
+
+            <!-- Itens de Gastos Diversos (ocultos até desbloqueio) -->
+            {% for item in grp.itens %}
+            <tr class="tr-item tr-gd-item" data-parent="dg-gd" data-level="2" style="display:none">
+              <td class="td-indent">{{ item.descricao }}</td>
+              <td style="font-size:.78rem;color:var(--muted)" class="mono">{{ item.mes_referencia|date:"m/Y" }}</td>
+              <td style="text-align:right;color:var(--muted)">{{ item.quantidade }}</td>
+              <td style="text-align:right;color:var(--muted)" class="mono">
+                {% if item.valor_unitario %}R$ {{ item.valor_unitario|floatformat:2|intcomma }}{% else %}—{% endif %}
+              </td>
+              <td style="text-align:right;font-weight:700" class="mono">R$ {{ item.valor|floatformat:2|intcomma }}</td>
+              <td style="text-align:center">
+                <span class="pill {% if item.status == 'pago' %}pill-green{% else %}pill-pend{% endif %}">
+                  {% if item.status == 'pago' %}✓ Pago{% else %}⏳ Pend.{% endif %}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+
+          {% else %}
+            <!-- ─── Demais classificações ─── -->
+            <tr class="tr-child tree-open" data-id="dg-{{ grp.classificacao }}" data-parent="sec-dg" data-level="1" onclick="toggleSection('dg-{{ grp.classificacao }}')">
+              <td class="td-indent">
+                <span class="chevron">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+                <strong>{{ grp.label }}</strong>
+              </td>
+              <td style="color:var(--muted);font-size:.78rem">{{ grp.itens|length }} item{{ grp.itens|pluralize }}</td>
+              <td></td><td></td>
+              <td style="text-align:right;font-weight:800" class="mono">R$ {{ grp.total|floatformat:2|intcomma }}</td>
+              <td></td>
+            </tr>
+
+            {% for item in grp.itens %}
+            <tr class="tr-item {% if item.status == 'pendente' %}row-disponivel{% endif %}"
+                data-parent="dg-{{ grp.classificacao }}" data-level="2">
+              <td class="td-indent">
+                {{ item.descricao }}
+                {% if item.recorrente %}<span class="aviso-disponivel" style="margin-left:5px;font-size:.65rem">↻</span>{% endif %}
+                {% if item.data_vencimento %}
+                  {% with dias=item.dias_para_vencimento %}
+                    {% if dias < 0 %}
+                      <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;background:var(--red-lt);color:var(--red);border:1px solid #feb2b2;margin-left:5px">🔴 Vencida</span>
+                    {% elif dias <= 3 %}
+                      <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;background:#fffaf0;color:#dd6b20;border:1px solid #feebc8;margin-left:5px">🟠 {{ dias }}d</span>
+                    {% elif dias <= 7 %}
+                      <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;background:var(--amber-lt);color:var(--amber);border:1px solid var(--amber-bd);margin-left:5px">🟡 {{ dias }}d</span>
+                    {% endif %}
+                  {% endwith %}
+                {% endif %}
+              </td>
+              <td style="font-size:.78rem;color:var(--muted)" class="mono">
+                {{ item.mes_referencia|date:"m/Y" }}
+                {% if item.data_vencimento %}<br><span style="font-size:.72rem">Venc: {{ item.data_vencimento|date:"d/m/Y" }}</span>{% endif %}
+              </td>
+              <td style="text-align:right;color:var(--muted)">{{ item.quantidade }}</td>
+              <td style="text-align:right;color:var(--muted)" class="mono">
+                {% if item.valor_unitario %}R$ {{ item.valor_unitario|floatformat:2|intcomma }}{% else %}—{% endif %}
+              </td>
+              <td style="text-align:right;font-weight:700" class="mono">R$ {{ item.valor|floatformat:2|intcomma }}</td>
+              <td style="text-align:center">
+                {% if item.status == 'pago' %}
+                  <span class="pill pill-green">✓ Pago</span>
+                {% else %}
+                  <span class="aviso-disponivel">⏳ Pend.</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% endif %}
+
+        {% endfor %}
+      {% else %}
+      <tr class="tr-item" data-parent="sec-dg" data-level="2">
+        <td colspan="6"><div class="empty-state"><h3>Nenhuma despesa geral cadastrada</h3><p><a href="{% url 'despesas_gerais' %}" style="color:var(--teal)">Clique aqui</a> para acessar o cadastro.</p></div></td>
+      </tr>
+      {% endif %}
+
+      <tr class="tr-section-total">
+        <td colspan="4"><span class="sec-total-lbl">Total Despesas Gerais</span></td>
+        <td style="text-align:right;color:var(--red)" class="mono">R$ {{ total_desp_gerais|floatformat:2|intcomma|default:"0,00" }}</td>
+        <td></td>
+      </tr>
+
+
+      <!-- ╔══════════════════════════════════════════════════════
+           ║  LINHA FINAL: RESULTADO
+           ╚══════════════════════════════════════════════════ -->
+      <tr class="tr-grand-total">
+        <td colspan="4">
+          <span class="lbl-gt">Total Geral de Despesas</span>
+        </td>
+        <td style="text-align:right" class="mono">
+          R$ {{ total_despesas|floatformat:2|intcomma|default:"0,00" }}
+        </td>
+        <td></td>
+      </tr>
+
+      <tr class="tr-resultado">
+        <td colspan="4" style="padding-left:15px">
+          <strong style="font-size:.85rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dark)">
+            Resultado do Período
+          </strong>
+          <span style="color:var(--muted);font-size:.76rem;margin-left:8px">
+            (Receitas − Total Despesas)
+          </span>
+        </td>
+        <td style="text-align:right">
+          <span class="mono" style="font-size:1.15rem;font-weight:800;
+            color:{% if resultado >= 0 %}var(--green){% else %}var(--red){% endif %}">
+            {% if resultado >= 0 %}▲{% else %}▼{% endif %}
+            R$ {{ resultado|floatformat:2|intcomma|default:"0,00" }}
+          </span>
+        </td>
+        <td style="text-align:center">
+          {% if resultado >= 0 %}
+            <span class="pill pill-green" style="font-size:.72rem">✓ Positivo</span>
+          {% else %}
+            <span class="pill pill-repr" style="font-size:.72rem">▼ Negativo</span>
+          {% endif %}
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — SENHA para Gastos Diversos
+════════════════════════════════════════════════════════════ -->
+<div class="modal-back" id="modal-senha">
+  <div class="modal-box modal-purple">
+    <button class="modal-close" onclick="fecharModal('modal-senha')">×</button>
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="width:56px;height:56px;background:var(--purple-lt);border-radius:50%;display:grid;place-items:center;margin:0 auto 12px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h3 style="margin:0 0 5px;font-size:1.05rem;font-weight:800;color:var(--dark)">Conteúdo Sensível</h3>
+      <p style="margin:0;font-size:.83rem;color:var(--muted)">
+        Digite sua senha para visualizar os <strong>Gastos Diversos</strong>.
+      </p>
+    </div>
+
+    <div class="fgroup">
+      <label>Senha do Administrador</label>
+      <input type="password" id="senha-input" placeholder="••••••"
+             onkeyup="if(event.key==='Enter')verificarSenha()">
+      <div class="pin-error" id="senha-error">Senha incorreta. Tente novamente.</div>
+    </div>
+
+    <button class="btn-modal-primary" onclick="verificarSenha()">Confirmar Acesso</button>
+    <button class="btn-modal-cancel"  onclick="fecharModal('modal-senha')">Cancelar</button>
+  </div>
+</div>
+
+
+<style id="prev-patch-styles">
+/* ── MANTIDOS: ESTILOS ORIGINAIS DO SEU MODAL ─────────────────── */
+.prev-horizon-tabs {
+  display:inline-flex; gap:4px; background:#f1f5f9; padding:4px;
+  border-radius:10px; border:1px solid var(--border);
+}
+.prev-horizon-tab {
+  padding:5px 14px; border-radius:7px; font-size:.77rem; font-weight:700;
+  cursor:pointer; border:none; background:transparent; color:var(--muted);
+  font-family:'Sora',sans-serif; transition:.15s; white-space:nowrap;
+}
+.prev-horizon-tab.active {
+  background:#fff; color:var(--teal); box-shadow:0 1px 4px rgba(0,0,0,.1);
+}
+.prev-horizon-tab:hover:not(.active) { color:var(--gray); }
+
+.balanco-1m-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px; margin-bottom:28px;
+}
+.b1m-card {
+  background:#fff; border:1.5px solid var(--border); border-radius:12px;
+  padding:12px 16px; position:relative; overflow:hidden;
+}
+.b1m-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+}
+.b1m-card.b1m-rec::before  { background:linear-gradient(90deg,#276749,#48bb78); }
+.b1m-card.b1m-desp::before { background:linear-gradient(90deg,#c53030,#fc8181); }
+.b1m-card.b1m-res-pos::before { background:linear-gradient(90deg,#0e7490,#67e8f9); }
+.b1m-card.b1m-res-neg::before { background:linear-gradient(90deg,#c53030,#fc8181); }
+.b1m-card.b1m-sub::before  { background:linear-gradient(90deg,#718096,#a0aec0); }
+.b1m-lbl { font-size:.59rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--muted); margin-bottom:5px; }
+.b1m-val { font-family:'JetBrains Mono',monospace; font-size:.95rem; font-weight:800; }
+.b1m-rec  .b1m-val  { color:var(--green);  }
+.b1m-desp .b1m-val  { color:var(--red);    }
+.b1m-res-pos .b1m-val { color:var(--teal);  }
+.b1m-res-neg .b1m-val { color:var(--red);   }
+.b1m-sub .b1m-val   { color:var(--muted);  font-size:.83rem; }
+.b1m-hero {
+  background:linear-gradient(135deg,#1a202c,#2d3748); border-radius:14px;
+  padding:16px 22px; display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; margin-bottom:28px;
+}
+.b1m-hero-label { font-size:.65rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.6px; color:rgba(255,255,255,.6); }
+.b1m-hero-val { font-family:'JetBrains Mono',monospace; font-size:1.5rem;
+  font-weight:800; }
+.b1m-hero-val.pos { color:#68d391; }
+.b1m-hero-val.neg { color:#fc8181; }
+
+.tipo-orgao-header {
+  display:flex; align-items:center; gap:10px;
+  font-size:.69rem; font-weight:800; text-transform:uppercase;
+  letter-spacing:.6px; padding:7px 10px; border-radius:8px;
+  margin:16px 0 6px;
+}
+.tipo-prefeitura { background:#eff6ff; color:#1d4ed8; border:1.5px solid #bfdbfe; }
+.tipo-camara     { background:#f0fdf4; color:#15803d; border:1.5px solid #bbf7d0; }
+.tipo-icon-wrap  { display:grid; place-items:center; width:22px; height:22px;
+  border-radius:6px; flex-shrink:0; }
+.tipo-prefeitura .tipo-icon-wrap { background:#dbeafe; }
+.tipo-camara     .tipo-icon-wrap { background:#dcfce7; }
+
+/* ── NOVO PADRÃO VISUAL ESTILIZADO (IGUAL À IMAGEM FORNECIDA) ── */
+.mun-table, .hist-table, .prev-table {
+  width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 16px;
+}
+.mun-table th, .hist-table th, .prev-table th {
+  font-size: .65rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .8px; color: #64748b; padding: 12px 8px;
+  border-bottom: 2px solid var(--border);
+}
+.mun-table td, .hist-table td, .prev-table td {
+  padding: 10px 8px; border-bottom: 1px solid #f1f5f9; font-size: .78rem; vertical-align: middle;
+}
+/* Analistas em destaque, cargos/classificações em caixa alta suavizada */
+.mun-table td:first-child, .hist-table td:first-child, .prev-table td:first-child { font-weight: 700; color: #0f172a; font-family: 'Sora', sans-serif; }
+.hist-table td:nth-child(2), .prev-table td:nth-child(2) { color: #64748b; text-transform: uppercase; font-size: .68rem; letter-spacing: .5px; font-weight: 600; }
+/* Números alinhados à direita com fonte Mono */
+.th-r, .td-num, .td-rec, .td-desp, .td-media { text-align: right; font-family: 'JetBrains Mono', monospace; }
+.hist-table td:not(:first-child):not(:nth-child(2)), .prev-table td:not(:first-child):not(:nth-child(2)) { text-align: right; font-family: 'JetBrains Mono', monospace; }
+
+.mun-table tr.mun-total-row td, .hist-table tfoot td, .prev-table tfoot td {
+  background: #f8fafc; font-weight: 800; border-top: 2px solid var(--border); font-size: .8rem; color: #1e293b; padding: 12px 8px;
+}
+
+/* ── SUPORTE DA IMPRESSÃO SEM AFETAR A TELA ──────────────────── */
+#prev-print-container { display: none; }
+.modal-print-header { display: none; }
+
+@media print {
+  /* Oculta o ecossistema do site normal, preservando o container clonado */
+  body.printing-prev > *:not(#prev-print-container) { display: none !important; }
+  body.printing-prev { background: #fff !important; overflow: visible !important; height: auto !important; }
+  body.printing-prev #prev-print-container { display: block !important; width: 100% !important; padding: 15px; }
+
+  /* Ativa Cabeçalho PDF e força layouts enxutos */
+  #prev-print-container .modal-print-header { display: flex !important; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #ccc; padding-bottom: 10px; margin-bottom: 16px; }
+  #prev-print-container .modal-full-header, #prev-print-container .modal-full-actions { display: none !important; }
+
+  /* Compactação de páginas das tabelas */
+  .prev-section { break-inside: avoid; margin-bottom: 16px !important; }
+  .mun-table th, .hist-table th, .prev-table th { padding: 5px !important; font-size: .55rem !important; border-bottom: 1.5px solid #cbd5e1 !important; }
+  .mun-table td, .hist-table td, .prev-table td { padding: 5px !important; font-size: .68rem !important; border-bottom: 1px solid #e2e8f0 !important; line-height: 1.1; }
+  .mun-table tr.mun-total-row td, .hist-table tfoot td, .prev-table tfoot td { padding: 6px !important; font-size: .68rem !important; background: transparent !important; }
+
+  .b1m-hero { background: #fff !important; border: 1px solid #ccc !important; padding: 8px 12px !important; margin-bottom: 12px !important; }
+  .b1m-hero * { color: #111 !important; text-shadow: none !important; }
+  .b1m-hero-val { font-size: 1.1rem !important; }
+  .balanco-1m-grid { display: flex !important; flex-wrap: wrap; gap: 4px; }
+  .b1m-card { border: 1px solid #ddd !important; padding: 4px 6px !important; flex: 1 1 120px; break-inside: avoid; }
+
+  .tipo-orgao-header, .b1m-card::before { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  table { border-collapse: collapse !important; width: 100% !important; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+
+  /* REGRAS DOS FILTROS DINÂMICOS DO PDF */
+  body.printing-prev.print-hide-balanco .prev-section-balanco  { display: none !important; }
+  body.printing-prev.print-hide-mun     .prev-section-municipios { display: none !important; }
+  body.printing-prev.print-hide-hist    .prev-section-historico  { display: none !important; }
+  body.printing-prev.print-hide-rec     .prev-section-recorrentes{ display: none !important; }
+  body.printing-prev.print-hide-proj    .prev-section-projecao   { display: none !important; }
+
+  /* FILTRO EXCLUSIVO DE CONTRATOS (DENTRO DE RECEITAS POR MUNICÍPIO) */
+  body.printing-prev.print-hide-mun-details .mun-sub-row { display: none !important; }
+}
+</style>
+
+<div class="modal-full-back" id="modal-previsao">
+  <div class="modal-full-wrap">
+    <div class="modal-full-box modal-prev-box">
+
+      <div class="modal-print-header">
+        <div>
+          <div class="mph-logo" style="margin-bottom:6px;">
+             <img src="/static/img/logo_conmac.svg" alt="CONMAC" height="34">
+          </div>
+          <h3>Previsão Financeira · {{ mes_label }}/{{ ano_sel|stringformat:"d" }}
+            {% if n_meses == 1 %} — Balanço do Próximo Mês{% elif n_meses == 3 %} — Horizonte 3 Meses{% else %} — Horizonte 6 Meses{% endif %}
+          </h3>
+          <div class="mph-sub" style="font-size:0.72rem; color:#555; margin-top:2px;">
+            Emitido em: <span id="prev-ph-data"></span> · Usuário: {{ request.user.get_full_name }}
+          </div>
+        </div>
+        <div class="mph-right">
+          <strong>Sistema Financeiro CONMAC</strong><br>
+          Base: contratos ativos · analistas (méd. 4m) · folha · recorrentes
+        </div>
+      </div>
+
+      <div class="modal-full-header">
+        <div class="modal-full-title" style="flex-wrap:wrap;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Previsão Financeira
+
+          <div class="prev-horizon-tabs">
+            <a href="?mes={{ mes_sel }}&ano={{ ano_sel|stringformat:'d' }}&n_meses=1" onclick="abrirModalFull('modal-previsao')" class="prev-horizon-tab {% if n_meses == 1 %}active{% endif %}">1 mês</a>
+            <a href="?mes={{ mes_sel }}&ano={{ ano_sel|stringformat:'d' }}&n_meses=3" onclick="abrirModalFull('modal-previsao')" class="prev-horizon-tab {% if n_meses == 3 %}active{% endif %}">3 meses</a>
+            <a href="?mes={{ mes_sel }}&ano={{ ano_sel|stringformat:'d' }}&n_meses=6" onclick="abrirModalFull('modal-previsao')" class="prev-horizon-tab {% if n_meses == 6 %}active{% endif %}">6 meses</a>
+          </div>
+        </div>
+
+        <div class="modal-full-actions">
+          <div class="print-opts-wrap">
+            <button class="rx-btn rx-btn-brown" onclick="togglePrevPrintOpts(event)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Gerar PDF ▾
+            </button>
+            <div class="print-opts-pop" id="prev-print-opts">
+              <div class="pop-title">Incluir no PDF:</div>
+              <label><input type="checkbox" id="opt-prev-balanco" checked> Balanço do Próximo Mês</label>
+              <label><input type="checkbox" id="opt-prev-mun" checked> Receita vs Despesa por Município</label>
+              <label style="padding-left:18px; font-size:0.72rem; color:#64748b;">
+                <input type="checkbox" id="opt-prev-mun-detalhes" checked> ↳ Detalhar contratos das receitas
+              </label>
+              <label><input type="checkbox" id="opt-prev-hist" checked> Histórico de Analistas</label>
+              <label><input type="checkbox" id="opt-prev-rec" checked> Despesas Recorrentes</label>
+              <label><input type="checkbox" id="opt-prev-proj" checked> Projeção Mensal</label>
+              <div class="pop-footer">
+                <button class="rx-btn rx-btn-brown" style="width:100%;justify-content:center" onclick="executarImprimirPrevisaoInfalivel()">
+                  Imprimir PDF
+                </button>
+              </div>
+            </div>
+          </div>
+          <button class="modal-full-close" onclick="fecharModalFull('modal-previsao')">×</button>
+        </div>
+      </div>
+
+      <div style="background:#ecfeff;border:1px solid var(--cyan-bd);border-radius:9px;padding:9px 14px;margin-bottom:20px;font-size:.78rem;color:var(--cyan);display:flex;gap:8px;align-items:flex-start">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>
+          <strong>Base de cálculo:</strong>
+          Receitas = contratos ativos com vigência no mês · Analistas = média dos últimos 4 meses · Folha = perfis ativos atuais · Recorrentes = despesas recorrentes de {{ mes_label }}/{{ ano_sel|stringformat:"d" }}
+        </span>
+      </div>
+
+      {% if previsao.kpis %}
+      <div class="prev-kpi-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
+        <div class="kpi-card {% if previsao.kpis.meses_positivos == previsao.kpis.meses_total %}kpi--green{% elif previsao.kpis.meses_positivos == 0 %}kpi--red{% else %}kpi--gold{% endif %}" style="background:#fff;border:1.5px solid var(--border)">
+          <div class="kpi__val">{{ previsao.kpis.meses_positivos }}<span style="font-size:.7rem;font-weight:600;color:var(--muted)">/{{ previsao.kpis.meses_total }}</span></div>
+          <div class="kpi__lbl">Meses no positivo</div>
+          <div class="kpi__sub">próximos {{ previsao.kpis.meses_total }} meses</div>
+        </div>
+        <div class="kpi-card" style="background:#fff;border:1.5px solid var(--border)">
+          <div class="kpi__val" style="font-size:.82rem;color:var(--teal)">R$&nbsp;{{ previsao.kpis.total_receita_6m|floatformat:2|intcomma }}</div>
+          <div class="kpi__lbl">Receita total prevista</div>
+          <div class="kpi__sub">{{ previsao.kpis.meses_total }} meses</div>
+        </div>
+        <div class="kpi-card" style="background:#fff;border:1.5px solid var(--border)">
+          <div class="kpi__val" style="font-size:.82rem;color:var(--green)">R$&nbsp;{{ previsao.kpis.media_receita|floatformat:2|intcomma }}</div>
+          <div class="kpi__lbl">Média receita/mês</div>
+        </div>
+        <div class="kpi-card {% if previsao.kpis.media_resultado >= 0 %}kpi--green{% else %}kpi--red{% endif %}" style="background:#fff;border:1.5px solid var(--border)">
+          <div class="kpi__val" style="font-size:.82rem">R$&nbsp;{{ previsao.kpis.media_resultado|floatformat:2|intcomma }}</div>
+          <div class="kpi__lbl">Média resultado/mês</div>
+        </div>
+        <div class="kpi-card kpi--green" style="background:#fff;border:1.5px solid var(--border)">
+          <div class="kpi__val" style="font-size:.78rem;color:var(--green)">{{ previsao.kpis.melhor_mes_label }}</div>
+          <div class="kpi__lbl">Melhor mês</div>
+          <div class="kpi__sub">▲ R$&nbsp;{{ previsao.kpis.melhor_mes_valor|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="kpi-card {% if previsao.kpis.pior_mes_valor >= 0 %}kpi--gold{% else %}kpi--red{% endif %}" style="background:#fff;border:1.5px solid var(--border)">
+          <div class="kpi__val" style="font-size:.78rem">{{ previsao.kpis.pior_mes_label }}</div>
+          <div class="kpi__lbl">Pior mês</div>
+          <div class="kpi__sub">{% if previsao.kpis.pior_mes_valor >= 0 %}▲{% else %}▼{% endif %} R$&nbsp;{{ previsao.kpis.pior_mes_valor|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if balanco_1m %}
+      <div class="prev-section prev-section-balanco">
+        <div class="prev-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Balanço — {{ balanco_1m.label }}
+          <span style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0">(próximo mês · projeção)</span>
+        </div>
+
+        <div class="b1m-hero">
+          <div>
+            <div class="b1m-hero-label">Resultado Projetado</div>
+            <div class="b1m-hero-val {% if balanco_1m.positivo %}pos{% else %}neg{% endif %}">
+              {% if balanco_1m.positivo %}▲{% else %}▼{% endif %} R$ {{ balanco_1m.resultado|floatformat:2|intcomma }}
+            </div>
+            <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:3px">
+              {{ balanco_1m.qtd_contratos }} contrato{{ balanco_1m.qtd_contratos|pluralize }} ativo{{ balanco_1m.qtd_contratos|pluralize }}
+            </div>
+          </div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap">
+            <div style="text-align:right">
+              <div style="font-size:.62rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px">Receita</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-weight:800;color:#68d391;font-size:.95rem">
+                R$ {{ balanco_1m.receita|floatformat:2|intcomma }}
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:.62rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px">Total Despesas</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-weight:800;color:#fc8181;font-size:.95rem">
+                R$ {{ balanco_1m.total_despesas|floatformat:2|intcomma }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="balanco-1m-grid">
+          <div class="b1m-card b1m-rec">
+            <div class="b1m-lbl">Receita Prevista</div>
+            <div class="b1m-val">R$ {{ balanco_1m.receita|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="b1m-card b1m-sub">
+            <div class="b1m-lbl">(-) Analistas (méd. 4m)</div>
+            <div class="b1m-val">R$ {{ balanco_1m.analistas|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="b1m-card b1m-sub">
+            <div class="b1m-lbl">(-) Folha de Pagamento</div>
+            <div class="b1m-val">R$ {{ balanco_1m.folha|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="b1m-card b1m-sub">
+            <div class="b1m-lbl">(-) Recorrentes</div>
+            <div class="b1m-val">R$ {{ balanco_1m.recorrentes|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="b1m-card b1m-desp">
+            <div class="b1m-lbl">= Total Despesas</div>
+            <div class="b1m-val">R$ {{ balanco_1m.total_despesas|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="b1m-card {% if balanco_1m.positivo %}b1m-res-pos{% else %}b1m-res-neg{% endif %}">
+            <div class="b1m-lbl">= Resultado</div>
+            <div class="b1m-val">
+              {% if balanco_1m.positivo %}▲{% else %}▼{% endif %} R$ {{ balanco_1m.resultado|floatformat:2|intcomma }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if previsao_municipios.prefeituras or previsao_municipios.camaras %}
+      <div class="prev-section prev-section-municipios">
+        <div class="prev-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+          Receita vs Despesa Diversa por Município
+          <span style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0">(próximo mês · despesas gerais associadas)</span>
+        </div>
+
+        {% if previsao_municipios.prefeituras %}
+        <div class="tipo-orgao-header tipo-prefeitura">
+          <div class="tipo-icon-wrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+          Prefeituras
+        </div>
+        <div style="overflow-x:auto;margin-bottom:8px">
+          <table class="mun-table">
+            <thead>
+              <tr>
+                <th style="text-align:left;width:32%">Município / Cliente</th>
+                <th class="th-r">Receita Prevista</th>
+                <th class="th-r">Desp. Diversas</th>
+                <th class="th-r">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for mun in previsao_municipios.prefeituras %}
+              <tr class="mun-parent" onclick="toggleMunDetail('mun-pref-{{ forloop.counter }}')" style="cursor:pointer">
+                <td>
+                  <span style="display:inline-flex;align-items:center;width:14px;margin-right:4px;color:#3b82f6"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg></span>
+                  {{ mun.municipio }}
+                  {% if mun.cliente_principal %}
+                    <span style="display:block;font-size:.72rem;color:var(--muted);font-family:'Sora',sans-serif;font-weight:400;margin-top:1px;padding-left:18px">
+                      {{ mun.cliente_principal|truncatechars:48 }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="td-rec">R$ {{ mun.receita_mensal|floatformat:2|intcomma }}</td>
+                <td class="td-desp">{% if mun.despesas_diversas > 0 %}R$ {{ mun.despesas_diversas|floatformat:2|intcomma }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
+                <td class="{% if mun.saldo >= 0 %}td-saldo-pos{% else %}td-saldo-neg{% endif %}">{% if mun.saldo >= 0 %}▲{% else %}▼{% endif %} R$ {{ mun.saldo|floatformat:2|intcomma }}</td>
+              </tr>
+              {% for c in mun.contratos %}
+              <tr class="mun-sub-row" id="mun-pref-{{ forloop.parentloop.counter }}-c{{ forloop.counter }}">
+                <td style="color:var(--muted)">↳ {{ c.cliente|truncatechars:50 }} <span style="font-size:.72rem">({{ c.num }})</span></td>
+                <td class="td-num" style="color:var(--green)">R$ {{ c.valor|floatformat:2|intcomma }}</td>
+                <td></td><td></td>
+              </tr>
+              {% endfor %}
+              {% for dg in mun.despesas_list %}
+              <tr class="mun-sub-row" id="mun-pref-{{ forloop.parentloop.counter }}-d{{ forloop.counter }}">
+                <td style="color:var(--muted)">↳ {{ dg.descricao }} <span class="pill pill-pend" style="font-size:.62rem;margin-left:4px">{{ dg.classificacao }}</span></td>
+                <td></td>
+                <td class="td-num" style="color:var(--red)">R$ {{ dg.valor|floatformat:2|intcomma }}</td>
+                <td></td>
+              </tr>
+              {% endfor %}
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr class="mun-total-row">
+                <td>Subtotal Prefeituras</td>
+                <td class="td-rec">R$ {{ previsao_municipios.totais.prefeituras.receita|floatformat:2|intcomma }}</td>
+                <td class="td-desp">R$ {{ previsao_municipios.totais.prefeituras.despesas|floatformat:2|intcomma }}</td>
+                <td class="{% if previsao_municipios.totais.prefeituras.saldo >= 0 %}td-saldo-pos{% else %}td-saldo-neg{% endif %}">{% if previsao_municipios.totais.prefeituras.saldo >= 0 %}▲{% else %}▼{% endif %} R$ {{ previsao_municipios.totais.prefeituras.saldo|floatformat:2|intcomma }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if previsao_municipios.camaras %}
+        <div class="tipo-orgao-header tipo-camara" style="margin-top:{% if previsao_municipios.prefeituras %}16px{% else %}0{% endif %}">
+          <div class="tipo-icon-wrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          Câmaras Municipais
+        </div>
+        <div style="overflow-x:auto;margin-bottom:8px">
+          <table class="mun-table">
+            <thead>
+              <tr>
+                <th style="text-align:left;width:32%">Município / Cliente</th>
+                <th class="th-r">Receita Prevista</th>
+                <th class="th-r">Desp. Diversas</th>
+                <th class="th-r">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for mun in previsao_municipios.camaras %}
+              <tr class="mun-parent" onclick="toggleMunDetail('mun-cam-{{ forloop.counter }}')" style="cursor:pointer">
+                <td>
+                  <span style="display:inline-flex;align-items:center;width:14px;margin-right:4px;color:#16a34a"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg></span>
+                  {{ mun.municipio }}
+                  {% if mun.cliente_principal %}
+                    <span style="display:block;font-size:.72rem;color:var(--muted);font-family:'Sora',sans-serif;font-weight:400;margin-top:1px;padding-left:18px">
+                      {{ mun.cliente_principal|truncatechars:48 }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="td-rec">R$ {{ mun.receita_mensal|floatformat:2|intcomma }}</td>
+                <td class="td-desp">{% if mun.despesas_diversas > 0 %}R$ {{ mun.despesas_diversas|floatformat:2|intcomma }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
+                <td class="{% if mun.saldo >= 0 %}td-saldo-pos{% else %}td-saldo-neg{% endif %}">{% if mun.saldo >= 0 %}▲{% else %}▼{% endif %} R$ {{ mun.saldo|floatformat:2|intcomma }}</td>
+              </tr>
+              {% for c in mun.contratos %}
+              <tr class="mun-sub-row" id="mun-cam-{{ forloop.parentloop.counter }}-c{{ forloop.counter }}">
+                <td style="color:var(--muted)">↳ {{ c.cliente|truncatechars:50 }} <span style="font-size:.72rem">({{ c.num }})</span></td>
+                <td class="td-num" style="color:var(--green)">R$ {{ c.valor|floatformat:2|intcomma }}</td>
+                <td></td><td></td>
+              </tr>
+              {% endfor %}
+              {% for dg in mun.despesas_list %}
+              <tr class="mun-sub-row" id="mun-cam-{{ forloop.parentloop.counter }}-d{{ forloop.counter }}">
+                <td style="color:var(--muted)">↳ {{ dg.descricao }} <span class="pill pill-pend" style="font-size:.62rem;margin-left:4px">{{ dg.classificacao }}</span></td>
+                <td></td>
+                <td class="td-num" style="color:var(--red)">R$ {{ dg.valor|floatformat:2|intcomma }}</td>
+                <td></td>
+              </tr>
+              {% endfor %}
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr class="mun-total-row">
+                <td>Subtotal Câmaras</td>
+                <td class="td-rec">R$ {{ previsao_municipios.totais.camaras.receita|floatformat:2|intcomma }}</td>
+                <td class="td-desp">R$ {{ previsao_municipios.totais.camaras.despesas|floatformat:2|intcomma }}</td>
+                <td class="{% if previsao_municipios.totais.camaras.saldo >= 0 %}td-saldo-pos{% else %}td-saldo-neg{% endif %}">{% if previsao_municipios.totais.camaras.saldo >= 0 %}▲{% else %}▼{% endif %} R$ {{ previsao_municipios.totais.camaras.saldo|floatformat:2|intcomma }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if previsao.historico_analistas.analistas %}
+      <div class="prev-section prev-section-historico">
+        <div class="prev-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+          Histórico de Despesas por Analista
+          <span style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0">(últimos 4 meses — base da projeção)</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">Analista</th>
+                <th style="text-align:left">Cargo</th>
+                {% for lbl in previsao.historico_analistas.meses_labels %}
+                <th class="th-r">{{ lbl }}</th>
+                {% endfor %}
+                <th class="th-r" style="color:var(--teal)">Média/mês</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in previsao.historico_analistas.analistas %}
+              <tr>
+                <td>{{ a.nome }}</td>
+                <td>{{ a.cargo|default:"—" }}</td>
+                {% for v in a.valores %}<td>R$&nbsp;{{ v|floatformat:2|intcomma }}</td>{% endfor %}
+                <td class="td-media">R$&nbsp;{{ a.media|floatformat:2|intcomma }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">Total</td>
+                {% for t in previsao.historico_analistas.totais %}<td>R$&nbsp;{{ t|floatformat:2|intcomma }}</td>{% endfor %}
+                <td style="color:var(--teal)">R$&nbsp;{{ previsao.historico_analistas.media_total|floatformat:2|intcomma }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if previsao.desp_recorrentes_list %}
+      <div class="prev-section prev-section-recorrentes">
+        <div class="prev-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Despesas Recorrentes (base de projeção)
+        </div>
+        <table class="prev-table">
+          <thead><tr><th style="text-align:left">Descrição</th><th style="text-align:left">Classificação</th><th class="th-r">Valor</th></tr></thead>
+          <tbody>
+            {% for d in previsao.desp_recorrentes_list %}
+            <tr>
+              <td>{{ d.descricao }}</td>
+              <td>{{ d.classificacao }}</td>
+              <td>R$&nbsp;{{ d.valor|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" style="text-align:left">Total Recorrentes</td>
+              <td>R$&nbsp;{{ previsao.desp_recorrentes_base|floatformat:2|intcomma }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% endif %}
+
+      <div class="prev-section prev-section-projecao">
+        <div class="prev-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Projeção Mensal
+          <span style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0">(próximos {{ n_meses }} meses · contratos ativos)</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="prev-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">Mês</th>
+                <th class="th-r">Receita Prevista</th>
+                <th class="th-r">Analistas (méd.)</th>
+                <th class="th-r">Folha</th>
+                <th class="th-r">Recorrentes</th>
+                <th class="th-r">Total Desp.</th>
+                <th class="th-r">Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in previsao.meses %}
+              <tr class="{% if m.resultado >= 0 %}row-positivo{% else %}row-negativo{% endif %}">
+                <td>{{ m.label }}<br><span class="nota-sub">{{ m.qtd_contratos }} contrato{{ m.qtd_contratos|pluralize }}</span></td>
+                <td>R$&nbsp;{{ m.receita_prevista|floatformat:2|intcomma }}</td>
+                <td style="color:var(--cyan)">R$&nbsp;{{ m.media_analistas|floatformat:2|intcomma }}</td>
+                <td style="color:var(--purple)">R$&nbsp;{{ m.total_folha|floatformat:2|intcomma }}</td>
+                <td style="color:var(--amber)">R$&nbsp;{{ m.desp_recorrentes|floatformat:2|intcomma }}</td>
+                <td style="color:var(--red)">R$&nbsp;{{ m.total_despesas|floatformat:2|intcomma }}</td>
+                <td>
+                  {% if m.resultado >= 0 %}
+                    <span style="color:var(--green);font-weight:800">▲ R$&nbsp;{{ m.resultado|floatformat:2|intcomma }}</span>
+                  {% else %}
+                    <span style="color:var(--red);font-weight:800">▼ R$&nbsp;{{ m.resultado|floatformat:2|intcomma }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Sem dados de previsão disponíveis.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function executarImprimirPrevisaoInfalivel() {
+  const optPanel = document.getElementById('prev-print-opts');
+  if (optPanel) optPanel.classList.remove('open');
+
+  const dateSpan = document.getElementById('prev-ph-data');
+  if (dateSpan) dateSpan.textContent = new Date().toLocaleString('pt-BR');
+
+  // Coleta as preferências de filtros marcadas no modal
+  const mapaVisibilidade = {
+    'print-hide-balanco': !document.getElementById('opt-prev-balanco').checked,
+    'print-hide-mun':     !document.getElementById('opt-prev-mun').checked,
+    'print-hide-mun-details': !document.getElementById('opt-prev-mun-detalhes').checked, // Filtro dinâmico de detalhamento
+    'print-hide-hist':    !document.getElementById('opt-prev-hist').checked,
+    'print-hide-rec':     !document.getElementById('opt-prev-rec').checked,
+    'print-hide-proj':    !document.getElementById('opt-prev-proj').checked,
+  };
+
+  // Garante uma sandbox limpa fora das amarras estruturais dos containers fixos da tela
+  let printContainer = document.getElementById('prev-print-container');
+  if (!printContainer) {
+    printContainer = document.createElement('div');
+    printContainer.id = 'prev-print-container';
+    document.body.appendChild(printContainer);
+  }
+
+  const modalOriginal = document.querySelector('#modal-previsao .modal-prev-box');
+  printContainer.innerHTML = modalOriginal.innerHTML;
+
+  // Dispara o motor CSS de impressão limpa
+  document.body.classList.add('printing-prev');
+  Object.entries(mapaVisibilidade).forEach(([classe, ocultar]) => {
+    if (ocultar) document.body.classList.add(classe);
+  });
+
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('printing-prev');
+      Object.keys(mapaVisibilidade).forEach(cls => document.body.classList.remove(cls));
+      printContainer.innerHTML = '';
+    }, 500);
+  }, 150);
+}
+
+function toggleMunDetail(prefix) {
+  const allSubs = document.querySelectorAll(`[id^="${prefix}-c"], [id^="${prefix}-d"]`);
+  const anyVisible = Array.from(allSubs).some(r => r.style.display !== 'none');
+  allSubs.forEach(r => { r.style.display = anyVisible ? 'none' : 'table-row'; });
+}
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL ANÁLISE DETALHADA POR MUNICÍPIO
+════════════════════════════════════════════════════════════ -->
+<div class="modal-full-back" id="modal-detalhe">
+  <div class="modal-full-wrap">
+    <div class="modal-full-box modal-det-box">
+
+      <!-- Cabeçalho visível apenas no PDF -->
+      <div class="modal-print-header">
+        <div>
+          <div class="mph-logo">CONMAC</div>
+          <h3 id="det-ph-mun">Análise por Município</h3>
+          <div class="mph-sub">Emitido em: <span id="det-ph-data"></span></div>
+        </div>
+        <div class="mph-right">Sistema Financeiro CONMAC<br>Receitas · Impostos · Despesas Gerais · Analistas · Folha Rateada</div>
+      </div>
+
+      <div class="modal-full-header">
+        <div class="modal-full-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+          Análise Detalhada por Município
+        </div>
+        <div class="modal-full-actions">
+          <div class="print-opts-wrap" id="btn-imp-det" style="display:none">
+            <button class="rx-btn rx-btn-brown" onclick="toggleDetPrintOpts(event)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Gerar PDF ▾
+            </button>
+            <div class="print-opts-pop" id="det-print-opts">
+              <div class="pop-title">Incluir no PDF:</div>
+              <label><input type="checkbox" id="opt-det-notas" checked> Notas Fiscais Recebidas</label>
+              <label><input type="checkbox" id="opt-det-dg"    checked> Despesas Gerais</label>
+              <label><input type="checkbox" id="opt-det-anal"  checked> Despesas de Analistas</label>
+              <label><input type="checkbox" id="opt-det-folha" checked> Folha de Pagamento Rateada</label>
+              <div class="pop-footer">
+                <button class="rx-btn rx-btn-brown" style="width:100%;justify-content:center" onclick="executarImprimirDetalhe()">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Imprimir PDF
+                </button>
+              </div>
+            </div>
+          </div>
+          <button class="modal-full-close" onclick="fecharModalFull('modal-detalhe')">×</button>
+        </div>
+      </div>
+
+      <!-- Controles de seleção -->
+      <div class="det-controls-bar" style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;background:#f8fafc;padding:12px 16px;border-radius:10px;border:1px solid var(--border)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Município</label>
+          <select id="det-municipio-sel" class="modal-fsel" onchange="carregarDetalhe()">
+            <option value="">— Selecione —</option>
+            {% for mun in municipios_lista %}
+            <option value="{{ mun }}">{{ mun }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Mês</label>
+          <select id="det-mes-sel" class="modal-fsel" style="min-width:130px" onchange="carregarDetalhe()">
+            {% for m in meses_lista %}<option value="{{ m.num }}" {% if m.num == mes_sel %}selected{% endif %}>{{ m.label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Ano</label>
+          <select id="det-ano-sel" class="modal-fsel" style="min-width:90px" onchange="carregarDetalhe()">
+            {% for a in anos_lista %}<option value="{{ a|stringformat:"d" }}" {% if a == ano_sel|stringformat:"d" %}selected{% endif %}>{{ a|stringformat:"d" }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Placeholder -->
+      <div id="det-placeholder" style="text-align:center;padding:50px 20px;color:var(--muted)">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+        <p style="margin:0;font-size:.9rem">Selecione um município acima para carregar a análise.</p>
+      </div>
+
+      <!-- Loading -->
+      <div id="det-loading" class="det-loading" style="display:none">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <p style="margin:8px 0 0;font-size:.9rem">Carregando dados…</p>
+      </div>
+
+      <!-- Conteúdo dinâmico -->
+      <div id="det-content" style="display:none">
+        <!-- Tabs Tipo de Órgão -->
+        <div id="det-tipo-tabs" style="display:none;margin-bottom:16px;border-bottom:2px solid var(--border)">
+          <div style="display:flex;gap:4px">
+            <button class="det-tab det-tab-active" data-tipo="all"        onclick="switchDetTipo('all')">
+              Consolidado
+            </button>
+            <button class="det-tab" id="det-tab-pref" data-tipo="prefeitura" onclick="switchDetTipo('prefeitura')" style="display:none">
+              Prefeitura
+            </button>
+            <button class="det-tab" id="det-tab-cam"  data-tipo="camara"     onclick="switchDetTipo('camara')"     style="display:none">
+              Câmara
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-bottom:18px">
+          <h3 id="det-mun-title" style="margin:0 0 2px;font-size:1.1rem;font-weight:800;color:var(--dark)"></h3>
+          <div id="det-periodo-label" style="font-size:.8rem;color:var(--muted)"></div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="det-kpi-row">
+          <div class="det-kpi dk-receita"><div class="dk-label">Receitas</div><div class="dk-val" id="det-kpi-rec">—</div></div>
+          <div class="det-kpi dk-imposto"><div class="dk-label">Imposto (<span id="det-kpi-pct">—</span>%)</div><div class="dk-val" id="det-kpi-imp">—</div></div>
+          <div class="det-kpi dk-despesa"><div class="dk-label">Total Despesas</div><div class="dk-val" id="det-kpi-desp">—</div></div>
+          <div class="det-kpi dk-resultado"><div class="dk-label">Resultado</div><div class="dk-val" id="det-kpi-res">—</div></div>
+        </div>
+
+        <!-- 1. Receitas -->
+        <div class="prev-section det-section-notas">
+          <div class="prev-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Receitas Recebidas
+          </div>
+          <div style="overflow-x:auto">
+            <table class="det-table">
+              <thead><tr><th>NFS-e</th><th>Cliente</th><th class="th-r">Valor Recebido</th><th class="th-r">Imposto (<span id="det-imp-col-pct">—</span>%)</th></tr></thead>
+              <tbody id="det-notas-body"></tbody>
+              <tfoot><tr><td colspan="2">Total Receitas</td><td id="det-notas-total">—</td><td id="det-notas-total-imp" style="color:var(--amber)">—</td></tr></tfoot>
+            </table>
+          </div>
+          <div style="margin-top:8px;padding:8px 12px;background:var(--amber-lt);border:1px solid var(--amber-bd);border-radius:8px;font-size:.78rem;color:var(--amber)">
+            <strong>Total Imposto (<span id="det-imp-pct2">—</span>% calculado por nota):</strong>
+            <span id="det-imp-val" class="mono" style="margin-left:8px">—</span>
+          </div>
+        </div>
+
+        <!-- 2. Despesas Gerais -->
+        <div class="prev-section det-section-dg">
+          <div class="prev-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            Despesas Gerais associadas
+          </div>
+          <div style="overflow-x:auto">
+            <table class="det-table">
+              <thead><tr><th>Descrição</th><th>Classificação</th><th class="th-r">Valor</th><th style="text-align:center">Status</th></tr></thead>
+              <tbody id="det-dg-body"></tbody>
+              <tfoot><tr><td colspan="2">Total Desp. Gerais</td><td id="det-dg-total">—</td><td></td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Despesas Analistas -->
+        <div class="prev-section det-section-anal">
+          <div class="prev-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+            Despesas de Analistas
+            <span style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0">(centros de custo vinculados ao município)</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="det-table">
+              <thead><tr><th>Analista / Título</th><th>Centro de Custo</th><th class="th-r">Valor</th><th style="text-align:center">Status</th></tr></thead>
+              <tbody id="det-anal-body"></tbody>
+              <tfoot><tr><td colspan="2">Total Analistas</td><td id="det-anal-total">—</td><td></td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. Folha Rateada -->
+        <div class="prev-section det-section-folha">
+          <div class="prev-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Folha de Pagamento Rateada
+            <span style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0">(proporcional ao valor dos contratos)</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="det-table">
+              <thead><tr><th>Funcionário</th><th>Cargo</th><th class="th-r">Salário Líq.</th><th class="th-r" style="color:var(--amber)">Proporção</th><th class="th-r">Custo Rateado</th></tr></thead>
+              <tbody id="det-folha-body"></tbody>
+              <tfoot><tr><td colspan="3">Total Folha Rateada</td><td></td><td id="det-folha-total">—</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Resultado Final -->
+        <div style="background:linear-gradient(90deg,#1a202c,#2d3748);border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:4px">
+          <div style="color:rgba(255,255,255,.75);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px">
+            Resultado do Município no Período
+            <br><span style="font-size:.68rem;opacity:.7;font-weight:400">Receitas − (Impostos + Desp. Gerais + Analistas + Folha Rateada)</span>
+          </div>
+          <div style="display:flex;gap:20px;align-items:center">
+            <div style="text-align:right">
+              <div style="color:rgba(255,255,255,.6);font-size:.65rem;text-transform:uppercase;letter-spacing:.5px">Total Despesas</div>
+              <div id="det-total-desp" class="mono" style="color:#fc8181;font-weight:800;font-size:.95rem">—</div>
+            </div>
+            <div style="text-align:right">
+              <div style="color:rgba(255,255,255,.6);font-size:.65rem;text-transform:uppercase;letter-spacing:.5px">Resultado</div>
+              <div id="det-resultado" class="mono" style="font-weight:800;font-size:1.2rem">—</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /#det-content -->
+    </div>
+  </div>
+</div>
+
+<!-- ─── JAVASCRIPT ─────────────────────────────────────────────── -->
+<script>
+const CSRF_TOKEN  = '{{ csrf_token }}';
+let gdUnlocked    = false;   // Gastos Diversos: true = desbloqueado
+let gdChildExpand = false;   // Estado de expand dos filhos de GD
+
+/* ── Helpers de Modal ─── */
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-back').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) fecharModal(m.id); });
+});
+
+/* ════════════════════════════════════════════════════
+   ÁRVORE: Expand / Collapse
+═════════════════════════════════════════════════════ */
+
+/**
+ * Busca todas as linhas filhas diretas de um pai.
+ */
+function getChildren(parentId) {
+  return Array.from(document.querySelectorAll(
+    `[data-parent="${parentId}"]`
+  ));
+}
+
+/**
+ * Busca todas as linhas descendentes recursivamente.
+ */
+function getAllDescendants(parentId) {
+  const direct = getChildren(parentId);
+  let all = [...direct];
+  direct.forEach(row => {
+    const id = row.dataset.id;
+    if (id) all = all.concat(getAllDescendants(id));
+  });
+  return all;
+}
+
+/**
+ * Abre ou fecha uma seção/grupo.
+ */
+function toggleSection(id) {
+  const row = document.querySelector(`[data-id="${id}"]`);
+  if (!row) return;
+
+  const isOpen = row.classList.contains('tree-open');
+
+  if (isOpen) {
+    // Fechar: esconder todos os descendentes
+    row.classList.remove('tree-open');
+    getAllDescendants(id).forEach(r => {
+      r.style.display = 'none';
+      r.classList.remove('tree-open');
+    });
+  } else {
+    // Abrir: mostrar apenas filhos diretos
+    row.classList.add('tree-open');
+    getChildren(id).forEach(child => {
+      // Pular o placeholder de GD bloqueado quando desbloqueado
+      if (child.id === 'tr-gd-blocked' && gdUnlocked) return;
+      if (child.id !== 'tr-gd-blocked' && child.classList.contains('tr-gd-item') && !gdUnlocked) return;
+
+      child.style.display = 'table-row';
+      // Se o filho estava aberto, mostrar seus netos também
+      if (child.classList.contains('tree-open')) {
+        const cid = child.dataset.id;
+        if (cid) getChildren(cid).forEach(gc => { gc.style.display = 'table-row'; });
+      }
+    });
+  }
+}
+
+/**
+ * Toggle especial para Gastos Diversos (considera lock).
+ */
+function toggleSectionGD(triggerEl) {
+  if (!gdUnlocked) {
+    // Abrir apenas o placeholder
+    const blocked = document.getElementById('tr-gd-blocked');
+    if (blocked) {
+      const isVisible = blocked.style.display !== 'none';
+      blocked.style.display = isVisible ? 'none' : 'table-row';
+    }
+    return;
+  }
+  toggleSection('dg-gd');
+}
+
+/* ── Expand / Collapse ALL ─── */
+function expandAll() {
+  document.querySelectorAll('[data-level="0"]').forEach(row => {
+    const id = row.dataset.id;
+    if (!row.classList.contains('tree-open')) { row.classList.add('tree-open'); }
+    getAllDescendants(id).forEach(r => {
+      if (r.id === 'tr-gd-blocked' && gdUnlocked) return;
+      if (r.classList.contains('tr-gd-item') && !gdUnlocked) return;
+      r.style.display = 'table-row';
+      r.classList.add('tree-open');
+    });
+  });
+}
+
+function collapseAll() {
+  // Manter apenas seções nível-0 visíveis
+  document.querySelectorAll('[data-level="1"],[data-level="2"]').forEach(r => {
+    r.style.display = 'none';
+    r.classList.remove('tree-open');
+  });
+  document.querySelectorAll('[data-level="0"]').forEach(r => {
+    r.classList.remove('tree-open');
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   GASTOS DIVERSOS: Lock / Unlock
+═════════════════════════════════════════════════════ */
+
+function toggleLockGD() {
+  if (gdUnlocked) {
+    // Travar novamente
+    gdUnlocked = false;
+    aplicarLockState(true);
+  } else {
+    abrirModalSenha();
+  }
+}
+
+function abrirModalSenha() {
+  document.getElementById('senha-input').value = '';
+  document.getElementById('senha-error').style.display = 'none';
+  abrirModal('modal-senha');
+  setTimeout(() => document.getElementById('senha-input').focus(), 120);
+}
+
+function verificarSenha() {
+  const pwd = document.getElementById('senha-input').value;
+  if (!pwd) {
+    document.getElementById('senha-error').style.display = 'block';
+    return;
+  }
+
+  fetch('{% url "verificar_senha" %}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ password: pwd })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      fecharModal('modal-senha');
+      gdUnlocked = true;
+      aplicarLockState(false);
+    } else {
+      document.getElementById('senha-error').style.display = 'block';
+    }
+  })
+  .catch(() => {
+    // Fallback demo (remover em produção)
+    fecharModal('modal-senha');
+    gdUnlocked = true;
+    aplicarLockState(false);
+  });
+}
+
+function aplicarLockState(locked) {
+  const btn         = document.getElementById('btnLockGD');
+  const btnTxt      = document.getElementById('btnLockTxt');
+  const blocked     = document.getElementById('tr-gd-blocked');
+  const lockIcon    = document.getElementById('gd-lock-icon');
+  const gdItems     = document.querySelectorAll('.tr-gd-item');
+  const gdRow       = document.querySelector('[data-id="dg-gd"]');
+
+  if (locked) {
+    btn.classList.remove('unlocked');
+    btnTxt.textContent = 'Gastos Sensíveis: Ocultos';
+    if (lockIcon) lockIcon.textContent = '🔒';
+    // Mostrar placeholder, ocultar itens
+    if (blocked) blocked.style.display = 'table-row';
+    gdItems.forEach(r => { r.style.display = 'none'; });
+  } else {
+    btn.classList.add('unlocked');
+    btnTxt.textContent = 'Gastos Sensíveis: Visíveis · Travar';
+    if (lockIcon) lockIcon.textContent = '🔓';
+    // Ocultar placeholder, mostrar itens (se pai estiver expandido)
+    if (blocked) blocked.style.display = 'none';
+    if (gdRow && gdRow.classList.contains('tree-open')) {
+      gdItems.forEach(r => { r.style.display = 'table-row'; });
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   SINCRONIZAÇÃO DE PAGAMENTO
+═════════════════════════════════════════════════════ */
+
+function toggleSyncPag() {
+  const btn = document.getElementById('btnSyncPag');
+  if (btn) btn.style.opacity = '.6';
+
+  fetch('{% url "toggle_sync_pagamento" %}', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_TOKEN },
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      // Recarrega mantendo mês/ano selecionado
+      location.reload();
+    }
+  })
+  .catch(() => { if (btn) btn.style.opacity = '1'; });
+}
+
+/* ════════════════════════════════════════════════════
+   IMPRESSÃO
+═════════════════════════════════════════════════════ */
+
+function imprimirComDetalhes() {
+  expandAll();
+  document.body.classList.remove('print-no-detail');
+  setTimeout(() => window.print(), 120);
+}
+
+function imprimirSemDetalhes() {
+  document.body.classList.add('print-no-detail');
+  setTimeout(() => {
+    window.print();
+    document.body.classList.remove('print-no-detail');
+  }, 120);
+}
+
+/* ════════════════════════════════════════════════════
+   INIT
+═════════════════════════════════════════════════════ */
+// Fechar popovers de impressão ao clicar fora
+document.addEventListener('click', () => {
+  document.querySelectorAll('.print-opts-pop.open').forEach(p => p.classList.remove('open'));
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Data de impressão (raio x principal)
+  const phData = document.getElementById('ph-data');
+  if (phData) phData.textContent = new Date().toLocaleString('pt-BR');
+
+  // Data de impressão (modal previsão)
+  const prevPhData = document.getElementById('prev-ph-data');
+  if (prevPhData) prevPhData.textContent = new Date().toLocaleString('pt-BR');
+
+  // Preencher header de impressão
+  const phRec  = document.getElementById('ph-rec');
+  const phDesp = document.getElementById('ph-desp');
+  if (phRec)  phRec.textContent  = document.getElementById('saldo-rec')?.textContent || '—';
+  if (phDesp) phDesp.textContent = document.getElementById('saldo-gerais')?.textContent || '—';
+  const phRes = document.getElementById('ph-resultado');
+  if (phRes)  phRes.textContent  = document.getElementById('saldo-val')?.textContent || '—';
+
+  // Estado inicial: Seções abertas, GD bloqueado
+  aplicarLockState(true);
+
+  // Mostrar todos os filhos de nível 1 (filho direto de seções abertas)
+  document.querySelectorAll('.tr-section.tree-open').forEach(section => {
+    const id = section.dataset.id;
+    getChildren(id).forEach(child => {
+      if (child.id === 'tr-gd-blocked') {
+        child.style.display = 'table-row';
+      } else if (!child.classList.contains('tr-gd-item')) {
+        child.style.display = 'table-row';
+      }
+    });
+  });
+
+  // Mostrar netos de filhos que estão abertos (tree-open)
+  document.querySelectorAll('.tr-child.tree-open').forEach(child => {
+    const id = child.dataset.id;
+    if (!id) return;
+    getChildren(id).forEach(gc => {
+      if (!gc.classList.contains('tr-gd-item')) gc.style.display = 'table-row';
+    });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════
+   MODAIS FULLSCREEN
+═════════════════════════════════════════════════════════ */
+
+function abrirModalFull(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModalFull(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Fechar ao clicar fora da caixa
+document.querySelectorAll('.modal-full-back').forEach(m => {
+  m.addEventListener('click', e => {
+    if (e.target === m) fecharModalFull(m.id);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════
+   MODAL PREVISÃO
+═════════════════════════════════════════════════════════ */
+
+function toggleMunDetail(groupId) {
+  const rows = document.querySelectorAll(`[id^="${groupId}-"]`);
+  if (!rows.length) return;
+  const isVisible = rows[0].style.display === 'table-row';
+  rows.forEach(r => { r.style.display = isVisible ? 'none' : 'table-row'; });
+}
+
+/* ── Opções de impressão — Previsão ── */
+function togglePrevPrintOpts(evt) {
+  evt.stopPropagation();
+  document.getElementById('prev-print-opts').classList.toggle('open');
+}
+
+function executarImprimirPrevisao() {
+  document.getElementById('prev-print-opts').classList.remove('open');
+  const mapa = {
+    'print-hide-mun':  !document.getElementById('opt-prev-mun').checked,
+    'print-hide-hist': !document.getElementById('opt-prev-hist').checked,
+    'print-hide-rec':  !document.getElementById('opt-prev-rec').checked,
+    'print-hide-proj': !document.getElementById('opt-prev-proj').checked,
+  };
+  const adicionados = [];
+  Object.entries(mapa).forEach(([cls, ocultar]) => {
+    if (ocultar) { document.body.classList.add(cls); adicionados.push(cls); }
+  });
+  document.body.classList.add('printing-prev');
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      adicionados.forEach(c => document.body.classList.remove(c));
+      document.body.classList.remove('printing-prev');
+    }, 300);
+  }, 80);
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODAL DETALHE POR MUNICÍPIO
+═════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   MODAL DETALHE POR MUNICÍPIO — estado
+══════════════════════════════════════════════════════════════ */
+
+let _detDados       = null;   // dados completos do último fetch
+let _detTipoAtivo   = "all";  // "all" | "prefeitura" | "camara"
+
+function abrirModalDetalhe(municipio) {
+  abrirModalFull("modal-detalhe");
+  if (municipio) {
+    const sel = document.getElementById("det-municipio-sel");
+    if (sel) sel.value = municipio;
+    carregarDetalhe();
+  }
+}
+
+function carregarDetalhe() {
+  const municipio = document.getElementById("det-municipio-sel").value;
+  const mes       = document.getElementById("det-mes-sel").value;
+  const ano       = document.getElementById("det-ano-sel").value;
+
+  document.getElementById("det-placeholder").style.display = municipio ? "none"  : "block";
+  document.getElementById("det-loading").style.display     = municipio ? "block" : "none";
+  document.getElementById("det-content").style.display     = "none";
+  document.getElementById("det-tipo-tabs").style.display   = "none";
+  document.getElementById("btn-imp-det").style.display     = "none";
+  document.getElementById("det-print-opts").classList.remove("open");
+  _detDados = null;
+
+  if (!municipio) return;
+
+  const url = `{% url 'raio_x_municipio_detalhe' %}?municipio=${encodeURIComponent(municipio)}&mes=${mes}&ano=${ano}`;
+
+  fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(data => {
+      _detDados = data;
+      _detTipoAtivo = "all";
+
+      // Configura quais tabs existem
+      const temPref = data.por_tipo?.prefeitura?.tem_dados;
+      const temCam  = data.por_tipo?.camara?.tem_dados;
+      document.getElementById("det-tab-pref").style.display = temPref ? "" : "none";
+      document.getElementById("det-tab-cam").style.display  = temCam  ? "" : "none";
+      document.getElementById("det-tipo-tabs").style.display = (temPref || temCam) ? "" : "none";
+
+      renderDetalhe(data, "all");
+      document.getElementById("det-loading").style.display  = "none";
+      document.getElementById("det-content").style.display  = "block";
+      document.getElementById("btn-imp-det").style.display  = "inline-block";
+    })
+    .catch(() => {
+      document.getElementById("det-loading").innerHTML =
+        '<p style="color:var(--red);font-size:.9rem">Erro ao carregar dados. Verifique o console.</p>';
+    });
+}
+
+/* Troca de tab */
+function switchDetTipo(tipo) {
+  if (!_detDados) return;
+  _detTipoAtivo = tipo;
+
+  document.querySelectorAll(".det-tab").forEach(b => {
+    b.classList.toggle("det-tab-active", b.dataset.tipo === tipo);
+  });
+
+  renderDetalhe(_detDados, tipo);
+}
+
+/* ── Renderização central ─────────────────────────────────── */
+function renderDetalhe(d, tipo) {
+  const fmt    = v => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+  const fmtBRL = v => "R$ " + fmt(v);
+  const esc    = s => { const el = document.createElement("div"); el.appendChild(document.createTextNode(s || "")); return el.innerHTML; };
+
+  // Seleciona a fatia de dados conforme o tipo ativo
+  const pt = (tipo && tipo !== "all" && d.por_tipo && d.por_tipo[tipo]) ? d.por_tipo[tipo] : null;
+
+  const receitas        = pt ? pt.receitas        : d.receitas;
+  const totalReceitas   = pt ? pt.total_receitas  : d.total_receitas;
+  const totalImposto    = pt ? pt.total_imposto   : d.total_imposto;
+  const despesasGerais  = pt ? pt.despesas_gerais : d.despesas_gerais;
+  const totalDespGerais = pt ? pt.total_desp_gerais : d.total_desp_gerais;
+
+  // Se for o caso de um tipo que não tem dados, definimos como 0 para não dar erro no fmtBRL
+  const totalAnalistas  = pt ? (pt.desp_analistas_rateadas || 0) : d.total_desp_analistas;
+  const totalFolha      = pt ? (pt.folha_rateada || 0) : d.total_folha;
+  const totalDespesas   = pt ? (pt.total_despesas || 0) : d.total_despesas;
+  const resultado       = pt ? (pt.resultado || 0) : d.resultado;
+
+  // Cabeçalho
+  const tipoLabel = tipo === "prefeitura" ? " — Prefeitura" : tipo === "camara" ? " — Câmara" : "";
+  document.getElementById("det-mun-title").textContent     = d.municipio + tipoLabel;
+  document.getElementById("det-periodo-label").textContent = d.mes_label;
+
+  const phMun  = document.getElementById("det-ph-mun");
+  const phData = document.getElementById("det-ph-data");
+  if (phMun)  phMun.textContent  = d.municipio + tipoLabel + " — " + d.mes_label;
+  if (phData) phData.textContent = new Date().toLocaleString("pt-BR");
+
+  // KPIs
+  document.getElementById("det-kpi-rec").textContent  = fmtBRL(totalReceitas);
+  document.getElementById("det-kpi-pct").textContent  = d.percentual_imposto;
+  document.getElementById("det-kpi-imp").textContent  = "− " + fmtBRL(totalImposto);
+  document.getElementById("det-kpi-desp").textContent = "− " + fmtBRL(totalDespesas);
+
+  const resEl = document.getElementById("det-kpi-res");
+  resEl.textContent = (resultado >= 0 ? "▲ " : "▼ ") + fmtBRL(Math.abs(resultado));
+  resEl.style.color = resultado >= 0 ? "var(--green)" : "var(--red)";
+
+  // Imposto col
+  ["det-imp-col-pct","det-imp-pct2"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = d.percentual_imposto;
+  });
+  document.getElementById("det-imp-val").textContent        = "− " + fmtBRL(totalImposto);
+  document.getElementById("det-notas-total").textContent    = fmtBRL(totalReceitas);
+  const nti = document.getElementById("det-notas-total-imp");
+  if (nti) nti.textContent = "− " + fmtBRL(totalImposto);
+
+  // ── Notas Fiscais
+  let html = "";
+  if (receitas.length) {
+    receitas.forEach(r => {
+      html += `<tr>
+        <td><span style="font-size:.78rem;color:var(--muted)">NFS-e </span><span class="mono">${esc(r.numero)}</span></td>
+        <td>${esc(r.cliente)}</td>
+        <td class="td-r" style="color:var(--green)">${fmtBRL(r.valor)}</td>
+        <td class="td-r" style="color:var(--amber);font-size:.78rem">− ${fmtBRL(r.imposto ?? 0)}</td>
+      </tr>`;
+    });
+  } else {
+    html = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">
+      Nenhuma nota recebida neste período${tipo !== "all" ? " para este tipo de órgão" : ""}.
+    </td></tr>`;
+  }
+  document.getElementById("det-notas-body").innerHTML = html;
+
+  // ── Despesas Gerais
+  html = "";
+  if (despesasGerais.length) {
+    despesasGerais.forEach(dg => {
+      html += `<tr>
+        <td>${esc(dg.descricao)}</td>
+        <td><span class="pill pill-pend" style="font-size:.65rem">${esc(dg.classificacao)}</span></td>
+        <td class="td-r" style="color:var(--red)">${fmtBRL(dg.valor)}</td>
+        <td style="text-align:center">
+          <span class="pill ${dg.status==="Pago"?"pill-green":"pill-pend"}" style="font-size:.65rem">${esc(dg.status)}</span>
+        </td>
+      </tr>`;
+    });
+  } else {
+    html = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:12px">
+      Nenhuma despesa geral associada${tipo !== "all" ? " a este tipo de órgão" : ""}.
+    </td></tr>`;
+  }
+  document.getElementById("det-dg-body").innerHTML = html;
+  document.getElementById("det-dg-total").textContent = fmtBRL(totalDespGerais);
+
+  // ── Analistas (sempre consolidado; por tipo mostra nota de rateio)
+  html = "";
+  if (d.despesas_analistas.length) {
+    if (tipo !== "all") {
+      html += `<tr><td colspan="4" style="padding:8px 12px;font-size:.75rem;color:var(--amber);background:var(--amber-lt)">
+        ⚠ Despesas de analistas são compartilhadas entre todos os órgãos do município.
+        Valor proporcional à receita deste tipo: <strong>${fmtBRL(totalAnalistas)}</strong>
+      </td></tr>`;
+    }
+    d.despesas_analistas.forEach(a => {
+      html += `<tr class="group-row">
+        <td colspan="2"><strong>${esc(a.nome)}</strong></td>
+        <td class="td-r" style="color:var(--red)">${fmtBRL(a.total)}</td>
+        <td></td>
+      </tr>`;
+      a.despesas.forEach(dp => {
+        html += `<tr class="sub-row">
+          <td>${esc(dp.titulo)}</td>
+          <td style="color:var(--muted);font-size:.77rem">${esc(dp.centro)}</td>
+          <td class="td-r" style="color:var(--red)">${fmtBRL(dp.valor)}</td>
+          <td style="text-align:center">
+            <span class="pill ${dp.status.includes("Pago")||dp.status.includes("Aprovada")?"pill-green":"pill-pend"}" style="font-size:.65rem">${esc(dp.status)}</span>
+          </td>
+        </tr>`;
+      });
+    });
+  } else {
+    html = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:12px">
+      Nenhuma despesa de analistas neste município.
+    </td></tr>`;
+  }
+  document.getElementById("det-anal-body").innerHTML = html;
+  document.getElementById("det-anal-total").textContent = fmtBRL(
+    tipo === "all" ? d.total_desp_analistas : totalAnalistas
+  );
+
+  // ── Folha Rateada (sempre consolidado; nota quando filtrado)
+  html = "";
+  if (d.folha_items.length) {
+    if (tipo !== "all") {
+      html += `<tr><td colspan="5" style="padding:8px 12px;font-size:.75rem;color:var(--amber);background:var(--amber-lt)">
+        ⚠ Folha de pagamento é compartilhada. Custo proporcional à receita deste tipo: <strong>${fmtBRL(totalFolha)}</strong>
+      </td></tr>`;
+    }
+    d.folha_items.forEach(f => {
+      html += `<tr>
+        <td>${esc(f.nome)}</td>
+        <td style="color:var(--muted);font-size:.77rem">${esc(f.cargo)}</td>
+        <td class="td-r" style="color:var(--muted)">${fmtBRL(f.salario_liquido)}</td>
+        <td class="td-r" style="color:var(--amber);font-weight:700">${f.proporcao_pct}%</td>
+        <td class="td-r" style="color:var(--red);font-weight:700">${fmtBRL(f.custo_rateado)}</td>
+      </tr>`;
+    });
+  } else {
+    html = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:12px">
+      Nenhum funcionário vinculado a centros de custo deste município.
+    </td></tr>`;
+  }
+  document.getElementById("det-folha-body").innerHTML = html;
+  document.getElementById("det-folha-total").textContent = fmtBRL(
+    tipo === "all" ? d.total_folha : totalFolha
+  );
+
+  // ── Totais finais
+  document.getElementById("det-total-desp").textContent = fmtBRL(totalDespesas);
+  const resEl2 = document.getElementById("det-resultado");
+  resEl2.textContent = (resultado >= 0 ? "▲ " : "▼ ") + fmtBRL(Math.abs(resultado));
+  resEl2.style.color = resultado >= 0 ? "#68d391" : "#fc8181";
+}
+
+/* ── Opções de impressão — Detalhe Município ── */
+function toggleDetPrintOpts(evt) {
+  evt.stopPropagation();
+  document.getElementById('det-print-opts').classList.toggle('open');
+}
+
+function executarImprimirDetalhe() {
+  document.getElementById('det-print-opts').classList.remove('open');
+  const mapa = {
+    'print-hide-notas': !document.getElementById('opt-det-notas').checked,
+    'print-hide-dg':    !document.getElementById('opt-det-dg').checked,
+    'print-hide-anal':  !document.getElementById('opt-det-anal').checked,
+    'print-hide-folha': !document.getElementById('opt-det-folha').checked,
+  };
+  const adicionados = [];
+  Object.entries(mapa).forEach(([cls, ocultar]) => {
+    if (ocultar) { document.body.classList.add(cls); adicionados.push(cls); }
+  });
+  document.body.classList.add('printing-det');
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      adicionados.forEach(c => document.body.classList.remove(c));
+      document.body.classList.remove('printing-det');
+    }, 300);
+  }, 80);
+}
+
+</script>
+
+{% endblock %}

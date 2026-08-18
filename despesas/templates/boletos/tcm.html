@@ -1,0 +1,542 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Monitor TCM-BA · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --brown:      #945f34;
+  --brown-dark: #7a4d2a;
+  --teal:       #239FAB;
+  --teal-dark:  #1a7a84;
+  --gold:       #c8922a;
+  --dark:       #1a202c;
+  --gray:       #4a5568;
+  --muted:      #718096;
+  --border:     #e2e8f0;
+  --bg:         #f4f6f9;
+  --card:       #ffffff;
+  --gradient:   linear-gradient(135deg, var(--brown) 0%, var(--teal) 100%);
+
+  /* Status */
+  --c-red:    #c53030;
+  --c-orange: #dd6b20;
+  --c-yellow: #b7791f;
+  --c-green:  #276749;
+  --c-gray:   #718096;
+
+  /* TCM accent */
+  --tcm-blue:      #1a4f9b;
+  --tcm-blue-bg:   #ebf0fa;
+  --tcm-blue-light:#dce8ff;
+}
+
+/* ── HERO ── */
+.rh-hero {
+  margin-top: 10px;
+  background: var(--gradient);
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 16px 40px rgba(148,95,52,.2);
+  flex-wrap: wrap;
+  position: relative;
+}
+.rh-hero::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:200px; height:200px; background:rgba(255,255,255,.05);
+  border-radius:50%; pointer-events:none;
+}
+.rh-hero::after {
+  content:''; position:absolute; bottom:-60px; left:30%;
+  width:250px; height:250px; background:rgba(255,255,255,.04);
+  border-radius:50%; pointer-events:none;
+}
+.rh-hero__left { display:flex; align-items:center; gap:20px; position:relative; z-index:1; }
+.rh-hero__ico {
+  width:68px; height:68px; display:grid; place-items:center;
+  background:rgba(255,255,255,.2); border-radius:50%;
+  border:2px solid rgba(255,255,255,.3); flex-shrink:0;
+}
+.rh-hero__txt h2 { margin:0; font-size:1.9rem; line-height:1.1; font-weight:800; color:#fff; }
+.rh-hero__txt p  { margin:7px 0 0; opacity:.85; font-size:.95rem; color:#fff; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.15); border-radius:20px; padding:4px 12px;
+  font-size:.75rem; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  margin-top:10px; border:1px solid rgba(255,255,255,.2);
+}
+.rh-hero__kpis { display:flex; gap:14px; flex-wrap:wrap; position:relative; z-index:1; }
+.kpi-card {
+  background:rgba(255,255,255,.97); border-radius:18px; padding:16px 20px;
+  min-width:130px; text-align:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.12); position:relative; overflow:hidden;
+}
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--gradient); border-radius:2px 2px 0 0;
+}
+.kpi-card.kpi--danger::before  { background:var(--c-red); }
+.kpi-card.kpi--warning::before { background:var(--c-orange); }
+.kpi-card.kpi--soon::before    { background:var(--c-yellow); }
+.kpi-card.kpi--green::before   { background:var(--c-green); }
+.kpi-card.kpi--gray::before    { background:var(--c-gray); }
+.kpi__value { font-size:1.6rem; font-weight:800; margin-bottom:5px; color:var(--teal); line-height:1; }
+.kpi__label { font-size:.7rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.6px; }
+.kpi--danger .kpi__value  { color:var(--c-red); }
+.kpi--warning .kpi__value { color:var(--c-orange); }
+.kpi--soon .kpi__value    { color:var(--c-yellow); }
+.kpi--green .kpi__value   { color:var(--c-green); }
+.kpi--gray .kpi__value    { color:var(--c-gray); }
+
+/* ── BANNER ── */
+.colabs-banner {
+  display:flex; align-items:center; gap:12px;
+  background:#fff; border:1px solid var(--border); border-radius:14px;
+  padding:14px 22px; margin:22px 0 0; box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.colabs-banner .cb-ico {
+  width:42px; height:42px; background:var(--gradient);
+  border-radius:10px; display:grid; place-items:center; flex-shrink:0;
+}
+.colabs-banner .cb-text strong { font-size:1.1rem; color:var(--dark); font-weight:800; }
+.colabs-banner .cb-text span   { font-size:.8rem; color:var(--muted); display:block; }
+
+/* ── TIPOS ── */
+.tipos-row {
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;
+}
+.tipo-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 13px; border-radius:9999px; border:1.5px solid var(--border);
+  background:#fff; font-size:.77rem; font-weight:700; color:var(--gray);
+  cursor:pointer; transition:.15s; user-select:none;
+}
+.tipo-chip:hover { border-color:var(--teal); color:var(--teal); }
+.tipo-chip.active { background:var(--teal); border-color:var(--teal); color:#fff; }
+.tipo-chip .chip-count {
+  background:rgba(0,0,0,.08); border-radius:999px;
+  padding:1px 7px; font-size:.7rem;
+}
+.tipo-chip.active .chip-count { background:rgba(255,255,255,.25); }
+
+/* ── ALERTA ERRO ── */
+.alert-error {
+  background:#fff5f5; border:1px solid #feb2b2; color:#c53030;
+  padding:14px 20px; border-radius:12px; margin-top:20px;
+  font-size:.9rem; display:flex; align-items:center; gap:.6rem; font-weight:600;
+}
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:14px; margin-top:20px; margin-bottom:15px;
+}
+.toolbar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.search-wrap  { position:relative; }
+.search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+.search-input {
+  padding:10px 16px 10px 38px; border:1.5px solid var(--border);
+  border-radius:10px; width:280px; background:#fff; font-size:.88rem; transition:.2s;
+}
+.search-input:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(35,159,171,.1); outline:none; }
+.filter-select {
+  padding:10px 32px 10px 14px; border:1.5px solid var(--border);
+  border-radius:10px; background:#fff; font-size:.88rem; font-weight:600;
+  color:var(--gray); cursor:pointer; transition:.18s;
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
+}
+.filter-select:focus { border-color:var(--teal); outline:none; }
+.btn-primary {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 20px; border:none; border-radius:10px;
+  font-size:.88rem; font-weight:700; cursor:pointer; transition:.18s;
+  background:var(--teal); color:#fff; text-decoration:none;
+}
+.btn-primary:hover { background:var(--teal-dark); transform:translateY(-1px); box-shadow:0 4px 12px rgba(35,159,171,.3); color:#fff; }
+
+/* ── CARDS DE COMUNICAÇÃO ── */
+.cards-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));
+  gap:16px;
+}
+
+.tcm-card {
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(0,0,0,.05);
+  transition:box-shadow .18s, transform .18s;
+  display:flex; flex-direction:column;
+}
+.tcm-card:hover {
+  box-shadow:0 8px 28px rgba(0,0,0,.1);
+  transform:translateY(-2px);
+}
+
+/* Barra colorida lateral */
+.tcm-card { border-left:4px solid var(--c-gray); }
+.tcm-card[data-urgencia="tcm-overdue"] { border-left-color:var(--c-red); }
+.tcm-card[data-urgencia="tcm-urgent"]  { border-left-color:var(--c-orange); }
+.tcm-card[data-urgencia="tcm-soon"]    { border-left-color:var(--c-yellow); }
+.tcm-card[data-urgencia="tcm-ok"]      { border-left-color:var(--c-green); }
+.tcm-card[data-urgencia="tcm-unknown"] { border-left-color:var(--c-gray); }
+
+.card-header {
+  padding:14px 16px 10px;
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  border-bottom:1px solid var(--border);
+}
+.card-tipo-wrap { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.card-tipo {
+  display:inline-flex; align-items:center; gap:5px;
+  background:var(--tcm-blue-bg); color:var(--tcm-blue);
+  border:1px solid var(--tcm-blue-light);
+  padding:3px 10px; border-radius:999px;
+  font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
+}
+.card-tipo svg { flex-shrink:0; }
+
+/* Pill de urgência */
+.pill {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 9px; border-radius:20px;
+  font-size:.7rem; font-weight:700; letter-spacing:.3px; text-transform:uppercase; white-space:nowrap;
+}
+.pill-red    { background:#fff5f5; color:var(--c-red);    border:1px solid #feb2b2; }
+.pill-orange { background:#fffaf0; color:var(--c-orange); border:1px solid #feebc8; }
+.pill-yellow { background:#fffff0; color:var(--c-yellow); border:1px solid #fef08a; }
+.pill-green  { background:#f0fff4; color:var(--c-green);  border:1px solid #9ae6b4; }
+.pill-gray   { background:#f7fafc; color:var(--c-gray);   border:1px solid #e2e8f0; }
+
+.card-subject {
+  padding:10px 16px 0;
+  font-size:.82rem; color:var(--gray); font-weight:500;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Grid de campos */
+.card-fields {
+  padding:12px 16px;
+  display:grid; grid-template-columns:1fr 1fr; gap:8px 14px;
+  flex:1;
+}
+.field-item {}
+.field-label {
+  font-size:.65rem; text-transform:uppercase; letter-spacing:.6px;
+  color:var(--muted); font-weight:700; margin-bottom:2px;
+}
+.field-value {
+  font-size:.82rem; color:var(--dark); font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.field-value.full { grid-column:1/-1; white-space:normal; }
+.field-value.mono { font-family:'Courier New',monospace; font-size:.8rem; letter-spacing:.3px; }
+.field-value.processo {
+  background:var(--tcm-blue-bg); color:var(--tcm-blue);
+  border-radius:6px; padding:2px 8px; display:inline-block;
+  font-family:'Courier New',monospace; font-size:.78rem; font-weight:700;
+}
+
+.card-footer {
+  padding:10px 16px;
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:.75rem; color:var(--muted);
+  background:#fafbfc;
+}
+.card-footer-sender {
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60%;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-state svg { color:#cbd5e0; margin-bottom:15px; }
+.empty-state p    { margin:0; font-size:1.1rem; color:var(--gray); font-weight:700; }
+.empty-state span { font-size:.85rem; }
+
+/* ── RESPONSIVO ── */
+@media(max-width:768px){
+  .rh-hero { padding:20px 16px; }
+  .rh-hero__kpis { gap:8px; }
+  .kpi-card { min-width:90px; padding:12px 14px; }
+  .kpi__value { font-size:1.3rem; }
+  .cards-grid { grid-template-columns:1fr; }
+  .search-input { width:200px; }
+  .card-fields { grid-template-columns:1fr; }
+}
+</style>
+
+<!-- ── HERO ── -->
+<section class="rh-hero">
+  <div class="rh-hero__left">
+    <div class="rh-hero__ico">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <div class="rh-hero__txt">
+      <h2>Monitor TCM-BA</h2>
+      <p>Comunicações e notificações do Tribunal de Contas dos Municípios</p>
+      <span class="hero-badge">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+        Atualização Automática
+      </span>
+    </div>
+  </div>
+
+  <div class="rh-hero__kpis">
+    <div class="kpi-card">
+      <div class="kpi__value">{{ total }}</div>
+      <div class="kpi__label">Total</div>
+    </div>
+    <div class="kpi-card kpi--danger">
+      <div class="kpi__value">{{ overdue }}</div>
+      <div class="kpi__label">Atrasados</div>
+    </div>
+    <div class="kpi-card kpi--warning">
+      <div class="kpi__value">{{ urgent }}</div>
+      <div class="kpi__label">Urgentes</div>
+    </div>
+    <div class="kpi-card kpi--soon">
+      <div class="kpi__value">{{ soon }}</div>
+      <div class="kpi__label">Próximos</div>
+    </div>
+    <div class="kpi-card kpi--green">
+      <div class="kpi__value">{{ ok }}</div>
+      <div class="kpi__label">Em Dia</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ERRO ── -->
+{% if error %}
+<div class="alert-error">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  Falha ao conectar: {{ error }}
+</div>
+{% endif %}
+
+<!-- ── BANNER + TIPOS ── -->
+<div class="colabs-banner">
+  <div class="cb-ico">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  </div>
+  <div class="cb-text">
+    <strong id="visibleCount">{{ total }} comunicaç{{ total|pluralize:"ão,ões" }} exibida{{ total|pluralize:"s" }}</strong>
+    <span>Processos e notificações recebidos do e-TCM · TCM-BA</span>
+  </div>
+</div>
+
+{% if tipos_count %}
+<div class="tipos-row" id="tiposRow">
+  <span class="tipo-chip active" data-tipo="all">
+    Todos
+    <span class="chip-count">{{ total }}</span>
+  </span>
+  {% for tipo, qtd in tipos_count.items %}
+  <span class="tipo-chip" data-tipo="{{ tipo }}">
+    {{ tipo }}
+    <span class="chip-count">{{ qtd }}</span>
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── TOOLBAR ── -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" class="search-input"
+        placeholder="Buscar entidade, processo, gestor…" autocomplete="off">
+    </div>
+
+    <select id="urgenciaFilter" class="filter-select">
+      <option value="all">Todos os Status</option>
+      <option value="tcm-overdue">🔴 Atrasados</option>
+      <option value="tcm-urgent">🟠 Urgentes (≤3d)</option>
+      <option value="tcm-soon">🟡 Próximos (≤7d)</option>
+      <option value="tcm-ok">🟢 Em dia</option>
+      <option value="tcm-unknown">⚪ Sem prazo</option>
+    </select>
+  </div>
+
+  <a href="{% url 'tcm_monitor' %}" class="btn-primary">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    Sincronizar E-mails
+  </a>
+</div>
+
+<!-- ── CARDS ── -->
+{% if comunicacoes %}
+<div class="cards-grid" id="cardsGrid">
+  {% for c in comunicacoes %}
+  <div class="tcm-card"
+       data-urgencia="{{ c.urgencia }}"
+       data-tipo="{{ c.tipo }}"
+       data-search="{{ c.entidade|lower }} {{ c.processo|lower }} {{ c.gestor|lower }} {{ c.subject|lower }}">
+
+    <div class="card-header">
+      <div class="card-tipo-wrap">
+        <span class="card-tipo">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {{ c.tipo }}
+        </span>
+      </div>
+
+      {% if c.urgencia == 'tcm-overdue' %}
+        <span class="pill pill-red">Atrasado</span>
+      {% elif c.urgencia == 'tcm-urgent' %}
+        <span class="pill pill-orange">Urgente</span>
+      {% elif c.urgencia == 'tcm-soon' %}
+        <span class="pill pill-yellow">Próximo</span>
+      {% elif c.urgencia == 'tcm-ok' %}
+        <span class="pill pill-green">Em dia</span>
+      {% else %}
+        <span class="pill pill-gray">Sem prazo</span>
+      {% endif %}
+    </div>
+
+    <div class="card-subject" title="{{ c.subject }}">{{ c.subject }}</div>
+
+    <div class="card-fields">
+
+      <div class="field-item" style="grid-column:1/-1">
+        <div class="field-label">Entidade</div>
+        <div class="field-value full">{{ c.entidade }}</div>
+      </div>
+
+      <div class="field-item">
+        <div class="field-label">Processo</div>
+        <div class="field-value">
+          {% if c.processo != '—' %}
+            <span class="processo">{{ c.processo }}</span>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+
+      <div class="field-item">
+        <div class="field-label">Competência</div>
+        <div class="field-value mono">{{ c.competencia }}</div>
+      </div>
+
+      <div class="field-item">
+        <div class="field-label">Periodicidade</div>
+        <div class="field-value">{{ c.periodicidade }}</div>
+      </div>
+
+      <div class="field-item">
+        <div class="field-label">Prazo</div>
+        <div class="field-value mono
+          {% if c.urgencia == 'tcm-overdue' %}" style="color:var(--c-red);font-weight:700
+          {% elif c.urgencia == 'tcm-urgent' %}" style="color:var(--c-orange);font-weight:700
+          {% endif %}">{{ c.prazo }}</div>
+      </div>
+
+      <div class="field-item" style="grid-column:1/-1">
+        <div class="field-label">Gestor Responsável</div>
+        <div class="field-value">{{ c.gestor }}</div>
+      </div>
+
+    </div>
+
+    <div class="card-footer">
+      <span class="card-footer-sender" title="{{ c.sender_email }}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:4px;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        {{ c.sender_email }}
+      </span>
+      <span>{{ c.received }}</span>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div style="background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.04);">
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <p>Nenhuma comunicação TCM encontrada</p>
+    <span>Nenhum e-mail do Tribunal de Contas foi identificado na caixa de entrada.</span>
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  const cards        = Array.from(document.querySelectorAll('.tcm-card'));
+  const countEl      = document.getElementById('visibleCount');
+  const searchInput  = document.getElementById('searchInput');
+  const urgFilter    = document.getElementById('urgenciaFilter');
+  const tipoChips    = document.querySelectorAll('.tipo-chip');
+
+  let activeUrgencia = 'all';
+  let activeTipo     = 'all';
+  let searchTerm     = '';
+
+  function plural(n) {
+    return n === 1 ? `${n} comunicação exibida` : `${n} comunicações exibidas`;
+  }
+
+  function applyFilters() {
+    let visible = 0;
+    cards.forEach(card => {
+      const urg    = activeUrgencia === 'all' || card.dataset.urgencia === activeUrgencia;
+      const tipo   = activeTipo === 'all' || card.dataset.tipo === activeTipo;
+      const srch   = !searchTerm || card.dataset.search.includes(searchTerm);
+      const show   = urg && tipo && srch;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if (countEl) countEl.textContent = plural(visible);
+  }
+
+  if (urgFilter) {
+    urgFilter.addEventListener('change', e => {
+      activeUrgencia = e.target.value;
+      applyFilters();
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      searchTerm = searchInput.value.toLowerCase().trim();
+      applyFilters();
+    });
+  }
+
+  tipoChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      tipoChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeTipo = chip.dataset.tipo;
+      applyFilters();
+    });
+  });
+})();
+</script>
+
+{% endblock %}

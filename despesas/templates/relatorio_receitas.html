@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Relatório de Receitas · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --brown:    #945f34; --teal:#239FAB; --teal-dark:#1a7a84;
+  --green:    #276749; --green-light:#f0fff4;
+  --red:      #c53030; --red-light:#fff5f5;
+  --gold:     #c8922a; --dark:#1a202c; --gray:#4a5568;
+  --muted:    #718096; --border:#e2e8f0;
+  --gradient: linear-gradient(135deg, var(--brown) 0%, var(--teal) 100%);
+}
+
+.rel-hero {
+  margin-top:10px; background:var(--gradient); border-radius:24px;
+  color:#fff; padding:26px 32px; display:flex; align-items:center;
+  justify-content:space-between; gap:20px;
+  box-shadow:0 16px 40px rgba(148,95,52,.2); flex-wrap:wrap; overflow:hidden; position:relative;
+}
+.rel-hero::before {
+  content:''; position:absolute; top:-50px; right:-50px;
+  width:220px; height:220px; background:rgba(255,255,255,.05); border-radius:50%;
+}
+.hero-left { display:flex; align-items:center; gap:18px; position:relative; z-index:1; }
+.hero-ico  { width:58px; height:58px; display:grid; place-items:center; background:rgba(255,255,255,.18); border-radius:50%; border:2px solid rgba(255,255,255,.28); }
+.hero-txt h2 { margin:0; font-size:1.7rem; font-weight:800; color:#fff; }
+.hero-txt p  { margin:5px 0 0; opacity:.85; font-size:.9rem; }
+.hero-right { display:flex; gap:14px; flex-wrap:wrap; position:relative; z-index:1; }
+
+.kpi-mini {
+  background:rgba(255,255,255,.97); border-radius:16px; padding:14px 18px;
+  min-width:160px; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,.1);
+  position:relative; overflow:hidden;
+}
+.kpi-mini::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gradient); }
+.kpi-mini.g::before { background:linear-gradient(90deg,#276749,#48bb78); }
+.kpi-mini.r::before { background:linear-gradient(90deg,#c53030,#fc8181); }
+.kpi-mini.o::before { background:linear-gradient(90deg,#945f34,#d69e2e); }
+.kv { font-size:1.25rem; font-weight:800; color:var(--teal); font-variant-numeric:tabular-nums; }
+.kl { font-size:.68rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.5px; margin-top:3px; }
+.kpi-mini.g .kv { color:var(--green); }
+.kpi-mini.r .kv { color:var(--red); }
+.kpi-mini.o .kv { color:var(--brown); }
+
+/* Seletor de ano */
+.ano-bar {
+  display:flex; align-items:center; gap:12px; margin:22px 0 18px; flex-wrap:wrap;
+}
+.ano-bar a {
+  padding:8px 18px; border-radius:10px; border:1.5px solid var(--border);
+  color:var(--muted); text-decoration:none; font-size:.83rem; font-weight:600; background:#fff;
+  transition:.18s;
+}
+.ano-bar a:hover { border-color:var(--teal); color:var(--teal); }
+.ano-bar a.active { background:var(--teal); color:#fff; border-color:var(--teal); }
+.ano-bar a.btn-notas {
+  background:var(--gradient); color:#fff; border:none;
+  display:flex; align-items:center; gap:6px; margin-left:auto;
+}
+
+/* Tabela de relatório */
+.rel-table-wrap {
+  background:#fff; border-radius:16px; border:1px solid var(--border);
+  box-shadow:0 2px 12px rgba(0,0,0,.04); overflow:hidden; margin-bottom:16px;
+}
+.rel-table { width:100%; border-collapse:collapse; }
+.rel-table thead tr { background:#f8fafc; }
+.rel-table th {
+  padding:13px 18px; text-align:left; font-size:.72rem;
+  text-transform:uppercase; font-weight:700; color:var(--gray);
+  border-bottom:2px solid var(--border); letter-spacing:.4px;
+}
+.rel-table td {
+  padding:13px 18px; border-bottom:1px solid #f1f5f9;
+  font-size:.88rem; color:var(--dark); vertical-align:middle;
+}
+.rel-table tbody tr:last-child td { border-bottom:none; }
+.rel-table tbody tr:hover td { background:#fafbff; }
+.rel-table tfoot td {
+  padding:14px 18px; background:#f8fafc; font-weight:700;
+  border-top:2px solid var(--border); font-size:.88rem;
+}
+
+/* Barra de progresso inline */
+.prog-cell { min-width:120px; }
+.prog-mini { height:7px; background:#e2e8f0; border-radius:99px; overflow:hidden; }
+.prog-mini-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#276749,#48bb78); }
+
+/* Badges de status do mês */
+.badge-futuro  { font-size:.7rem; color:#a0aec0; background:#f8fafc; padding:2px 8px; border-radius:20px; border:1px solid var(--border); }
+.badge-ok      { font-size:.7rem; color:var(--green); background:var(--green-light); padding:2px 8px; border-radius:20px; border:1px solid #9ae6b4; }
+.badge-parcial { font-size:.7rem; color:var(--gold); background:#fff8f1; padding:2px 8px; border-radius:20px; border:1px solid #fbd38d; }
+.badge-zero    { font-size:.7rem; color:var(--muted); background:#f8fafc; padding:2px 8px; border-radius:20px; border:1px solid var(--border); }
+
+.link-mes {
+  color:var(--teal); text-decoration:none; font-size:.78rem; font-weight:600;
+  display:inline-flex; align-items:center; gap:4px;
+}
+.link-mes:hover { text-decoration:underline; }
+.mono { font-family:'Courier New',monospace; font-weight:600; }
+</style>
+
+<!-- ── HERO ── -->
+<section class="rel-hero">
+  <div class="hero-left">
+    <div class="hero-ico">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6"  y1="20" x2="6"  y2="14"/>
+      </svg>
+    </div>
+    <div class="hero-txt">
+      <h2>Relatório de Receitas</h2>
+      <p>Consolidado anual · Emitido × Recebido por competência</p>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="kpi-mini">
+      <div class="kv">R$ {{ total_ano_emitido|floatformat:2|intcomma }}</div>
+      <div class="kl">Emitido {{ ano_sel|stringformat:"d" }}</div>
+    </div>
+    <div class="kpi-mini g">
+      <div class="kv">R$ {{ total_ano_recebido|floatformat:2|intcomma }}</div>
+      <div class="kl">Recebido</div>
+    </div>
+    <div class="kpi-mini r">
+      <div class="kv">R$ {{ total_ano_pendente|floatformat:2|intcomma }}</div>
+      <div class="kl">Pendente</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SELETOR DE ANO ── -->
+<div class="ano-bar">
+  {% for a in anos_range %}
+  <a href="?ano={{ a|stringformat:'d' }}" class="{% if a == ano_sel %}active{% endif %}">
+      {{ a|stringformat:'d' }}
+  </a>
+  {% endfor %}
+
+
+  <a href="{% url 'receitas_dashboard' %}" class="btn-notas">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.92 15.45V19h-2.5v-1.48c-1.45-.26-2.6-1.2-2.79-2.5h1.73c.16.68.86 1.19 2.3 1.19 1.32 0 2.03-.75 2.03-1.58 0-1.04-.8-1.57-2.72-2-.91-.21-3.15-.74-3.15-3.14 0-1.63 1.31-2.66 2.52-2.93V5.5h2.5v1.43c1.23.22 2.12 1 2.3 2.29h-1.74c-.1-.61-.7-1.06-1.73-1.06-1.01 0-1.9.55-1.9 1.52 0 .83.65 1.27 2.59 1.71 2.07.47 3.21 1.48 3.21 3.04 0 1.77-1.43 2.79-2.73 3.02z" />
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    Ver Contratos
+  </a>
+
+
+  <a href="{% url 'notas_competencia' %}" class="btn-notas">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    Ver por Competência
+  </a>
+
+
+
+
+</div>
+
+<!-- ── TABELA ANUAL ── -->
+<div class="rel-table-wrap">
+  <table class="rel-table">
+    <thead>
+      <tr>
+        <th>Mês</th>
+        <th style="text-align:center">Notas</th>
+        <th style="text-align:right">Emitido</th>
+        <th style="text-align:right">Recebido</th>
+        <th style="text-align:right">Pendente</th>
+        <th style="text-align:center;min-width:140px">Realizado</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center">Detalhar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in relatorio %}
+      <tr>
+        <!-- Mês -->
+        <td><strong>{{ row.mes_nome }}</strong></td>
+
+        <!-- Qtd Notas -->
+        <td style="text-align:center;color:var(--muted)">
+          {% if row.qtd_notas > 0 %}
+            {{ row.qtd_notas }}
+            <small style="color:#a0aec0">({{ row.qtd_pagas }} pg.)</small>
+          {% else %}
+            <span style="color:#cbd5e0">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Emitido -->
+        <td style="text-align:right" class="mono">
+          {% if row.emitido > 0 %}
+            R$ {{ row.emitido|floatformat:2|intcomma }}
+          {% else %}
+            <span style="color:#cbd5e0">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Recebido -->
+        <td style="text-align:right" class="mono">
+          {% if row.recebido > 0 %}
+            <span style="color:var(--green);font-weight:700">R$ {{ row.recebido|floatformat:2|intcomma }}</span>
+          {% else %}
+            <span style="color:#cbd5e0">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Pendente -->
+        <td style="text-align:right" class="mono">
+          {% if row.pendente > 0 %}
+            <span style="color:var(--red)">R$ {{ row.pendente|floatformat:2|intcomma }}</span>
+          {% else %}
+            <span style="color:#cbd5e0">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Barra de progresso -->
+        <td class="prog-cell">
+          {% if row.emitido > 0 %}
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="prog-mini" style="flex:1">
+                <div class="prog-mini-fill" style="width:{{ row.pct }}%"></div>
+              </div>
+              <small style="font-size:.72rem;color:var(--gray);white-space:nowrap;font-weight:700">
+                {{ row.pct }}%
+              </small>
+            </div>
+          {% else %}
+            <span style="color:#cbd5e0;font-size:.78rem">Sem dados</span>
+          {% endif %}
+        </td>
+
+        <!-- Status badge -->
+        <td style="text-align:center">
+          {% if row.emitido == 0 %}
+            <span class="badge-futuro">Sem notas</span>
+          {% elif row.pct >= 100 %}
+            <span class="badge-ok">✓ Completo</span>
+          {% elif row.recebido > 0 %}
+            <span class="badge-parcial">⏳ Parcial</span>
+          {% else %}
+            <span class="badge-zero">Pendente</span>
+          {% endif %}
+        </td>
+
+        <!-- Link para detalhar -->
+        <td style="text-align:center">
+          {% if row.qtd_notas > 0 %}
+          <a href="{% url 'notas_competencia' %}?mes={{ row.mes }}&ano={{ ano_sel|stringformat:'d' }}" class="link-mes">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Ver notas
+          </a>
+          {% else %}
+          <span style="color:#cbd5e0;font-size:.78rem">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td><strong>TOTAL {{ ano_sel }}</strong></td>
+        <td style="text-align:center"></td>
+        <td style="text-align:right" class="mono">R$ {{ total_ano_emitido|floatformat:2|intcomma }}</td>
+        <td style="text-align:right;color:var(--green)" class="mono">R$ {{ total_ano_recebido|floatformat:2|intcomma }}</td>
+        <td style="text-align:right;color:var(--red)" class="mono">R$ {{ total_ano_pendente|floatformat:2|intcomma }}</td>
+        <td colspan="3">
+          {% if total_ano_emitido > 0 %}
+          {% widthratio total_ano_recebido total_ano_emitido 100 as pct_total %}
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="prog-mini" style="flex:1;height:9px">
+              <div class="prog-mini-fill" style="width:{{ pct_total }}%"></div>
+            </div>
+            <strong style="font-size:.82rem;color:var(--green)">{{ pct_total }}% recebido</strong>
+          </div>
+          {% endif %}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{% endblock %}

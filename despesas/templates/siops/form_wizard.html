@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    :root {
+        --conmac-teal: #1a8f9e;
+        --conmac-dark-teal: #136a75;
+        --conmac-orange: #e67e22;
+        --conmac-gradient: linear-gradient(135deg, #2ca9bc 0%, #1a8f9e 100%);
+        --conmac-gray-bg: #f4f6f9;
+    }
+
+    body { background-color: var(--conmac-gray-bg); font-family: 'Segoe UI', 'Roboto', sans-serif; }
+
+    /* --- HEADER NOVO (Centralizado Brasão | Logo) --- */
+    .header-conmac {
+        background: var(--conmac-gradient);
+        padding: 40px 0 90px; /* Espaço extra embaixo para o card subir */
+        border-radius: 0 0 50px 50px; /* Curva suave */
+        margin-bottom: -70px; /* Faz o formulário sobrepor o header */
+        position: relative;
+        z-index: 0;
+        box-shadow: 0 4px 15px rgba(26, 143, 158, 0.3);
+    }
+
+    .header-center-box {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 30px; /* Espaço entre os itens */
+    }
+
+    .logo-container {
+        background: white;
+        width: 110px;
+        height: 110px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        padding: 10px;
+        transition: transform 0.3s ease;
+    }
+    .logo-container:hover {
+        transform: translateY(-5px);
+    }
+
+    .header-img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    /* Linha Divisória Vertical (|) */
+    .header-divider {
+        width: 2px;
+        height: 60px;
+        background-color: rgba(255, 255, 255, 0.4);
+        border-radius: 2px;
+    }
+
+    /* --- RESTO DO CSS (Mantido igual) --- */
+    .wizard-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        padding: 50px;
+        margin-bottom: 60px;
+        border-top: 6px solid var(--conmac-orange);
+        position: relative;
+        z-index: 1;
+        min-height: 500px;
+    }
+
+    /* Intro Letter */
+    .intro-letter { font-family: 'Segoe UI', sans-serif; color: #333; line-height: 1.6; background-color: #fff; padding: 0px; }
+    .intro-header { font-weight: bold; margin-bottom: 20px; border-left: 4px solid var(--conmac-orange); padding-left: 15px; color: #444; }
+
+    /* Steps Nav */
+    .steps-nav { display: none; justify-content: space-between; margin-bottom: 50px; position: relative; padding: 0 20px; }
+    .steps-nav::before { content: ''; position: absolute; top: 15px; left: 30px; right: 30px; height: 3px; background: #e9ecef; z-index: 0; border-radius: 3px; }
+    .step-item { position: relative; z-index: 1; background: #fff; border: 3px solid #e9ecef; color: #adb5bd; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; transition: all 0.3s; }
+    .step-item.active { background: var(--conmac-orange); border-color: var(--conmac-orange); color: white; transform: scale(1.2); }
+    .step-item.completed { background: var(--conmac-teal); border-color: var(--conmac-teal); color: white; cursor: pointer; }
+
+    /* Form Styles */
+    .section-title { color: var(--conmac-dark-teal); font-weight: 700; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    label { font-weight: 600; color: #343a40; font-size: 0.9rem; margin-top: 15px; }
+    .input-conmac { border: 2px solid #e9ecef; padding: 10px; border-radius: 8px; width: 100%; }
+    .input-conmac:focus { border-color: var(--conmac-teal); outline: none; }
+    .radio-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px; }
+    .radio-group label { margin-top: 0; font-weight: normal; }
+
+    /* Buttons */
+    .btn-next { background: var(--conmac-orange); color: white; border: none; border-radius: 50px; padding: 12px 35px; font-weight: bold; transition: 0.3s; }
+    .btn-next:hover { background: #d35400; transform: translateY(-2px); }
+    .btn-prev { background: transparent; border: 2px solid #ddd; color: #666; border-radius: 50px; padding: 10px 30px; font-weight: 600; transition: 0.3s; }
+    .btn-prev:hover { background: #f8f9fa; }
+
+    .wizard-step { display: none; animation: fadeIn 0.5s; }
+    .wizard-step.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<div class="header-conmac">
+    <div class="container">
+        <div class="header-center-box">
+
+            <div class="logo-container" title="{{ prefeitura.nome }}">
+                {% if prefeitura.brasao %}
+                    <img src="{{ prefeitura.brasao.url }}" class="header-img" alt="Brasão Prefeitura">
+                {% else %}
+                    <span style="font-size: 40px;">🏛️</span>
+                {% endif %}
+            </div>
+
+            <div class="header-divider"></div>
+
+            <div class="logo-container" title="Conmac Gestão Inteligente">
+                <img src="{% static 'img/logo_conmac.png' %}" class="header-img" alt="CONMAC">
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <form method="post" class="wizard-card" novalidate>
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <div class="alert alert-danger shadow-sm border-0 rounded-3 mb-4">
+                <strong>Atenção:</strong> Existem campos obrigatórios não preenchidos.
+                <ul class="mb-0 mt-1 small">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="steps-nav" id="steps-nav">
+            <div class="step-item" data-step="1">1</div>
+            <div class="step-item" data-step="2">2</div>
+            <div class="step-item" data-step="3">3</div>
+            <div class="step-item" data-step="4">4</div>
+            <div class="step-item" data-step="5">5</div>
+        </div>
+
+        <div class="wizard-step active" id="step-intro">
+            <div class="intro-letter">
+                <div class="intro-header">
+                    À Prefeitura Municipal de {{ prefeitura.nome }}<br>
+                   <!-- Att. {{ prefeitura.nome_responsavel_recepcao }},<br> -->
+                    Secretaria de Saúde
+                </div>
+
+                <h5 class="text-conmac-teal fw-bold mt-4">Assunto: Questionário SIOPS</h5>
+
+                <p>Prezado(a) Senhor(a),</p>
+
+                <p style="text-align: justify;">
+                    De acordo com as determinações contidas na <strong>Lei Complementar 141/2012</strong> e na <strong>Portaria nº 53/2013</strong> do Ministério da Saúde o envio e homologação de informações e dados da execução orçamentária e financeira dos recursos da Saúde para o SIOPS passaram a ser bimestrais.
+                </p>
+                <p style="text-align: justify;">
+                    Para atendimento do envio de informações, bem como em cumprimento aos serviços ora contratados, solicitamos o preenchimento das informações abaixo listadas, as quais são consideradas obrigatórias para alimentação dos dados a serem homologados para o SIOPS.
+                </p>
+            </div>
+
+            <div class="text-center mt-5">
+                <button type="button" class="btn btn-next btn-lg px-5 py-3" onclick="startWizard()">
+                    Iniciar Preenchimento ➔
+                </button>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-1">
+            <h4 class="section-title">1. Informações dos Gestores</h4>
+            <div class="row g-3">
+                <div class="col-12"><h6 class="text-muted fw-bold border-bottom pb-2">Prefeito(a)</h6></div>
+                <div class="col-md-6">{{ form.prefeito_nome.label_tag }} {{ form.prefeito_nome }}</div>
+                <div class="col-md-6">{{ form.prefeito_telefone.label_tag }} {{ form.prefeito_telefone }}</div>
+                <div class="col-md-12">{{ form.prefeito_endereco.label_tag }} {{ form.prefeito_endereco }}</div>
+                <div class="col-md-12">{{ form.prefeito_email.label_tag }} {{ form.prefeito_email }}</div>
+
+                <div class="col-12 mt-4"><h6 class="text-muted fw-bold border-bottom pb-2">Secretário(a) de Saúde</h6></div>
+                <div class="col-md-6">{{ form.secretario_nome.label_tag }} {{ form.secretario_nome }}</div>
+                <div class="col-md-6">{{ form.secretario_telefone.label_tag }} {{ form.secretario_telefone }}</div>
+                <div class="col-md-12">{{ form.secretario_endereco.label_tag }} {{ form.secretario_endereco }}</div>
+                <div class="col-md-12">{{ form.secretario_email.label_tag }} {{ form.secretario_email }}</div>
+            </div>
+            <div style='margin-top: 10px !important' class="text-end pt-3 border-top">
+                <button type="button" class="btn btn-next" onclick="nextStep(2)">Próximo ➔</button>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-2">
+            <h4 class="section-title">2. Conselho de Saúde</h4>
+            <div class="row g-3">
+                <div class="col-md-4">{{ form.conselho_data_criacao.label_tag }} {{ form.conselho_data_criacao }}</div>
+                <div class="col-md-8">{{ form.conselho_instrumento.label_tag }} {{ form.conselho_instrumento }}</div>
+                <div class="col-md-12">{{ form.conselho_endereco.label_tag }} {{ form.conselho_endereco }}</div>
+                <div class="col-md-12">{{ form.conselho_periodicidade.label_tag }} {{ form.conselho_periodicidade }}</div>
+
+                <div class="col-12 mt-4"><h6 class="text-muted fw-bold border-bottom pb-2">Presidência do Conselho</h6></div>
+                <div class="col-md-8">{{ form.presidente_nome.label_tag }} {{ form.presidente_nome }}</div>
+                <div class="col-md-4">{{ form.presidente_segmento.label_tag }} {{ form.presidente_segmento }}</div>
+
+                <div class="col-md-12">{{ form.presidente_endereco.label_tag }} {{ form.presidente_endereco }}</div>
+
+                <div class="col-md-6">{{ form.presidente_email.label_tag }} {{ form.presidente_email }}</div>
+                <div class="col-md-6">{{ form.presidente_telefone.label_tag }} {{ form.presidente_telefone }}</div>
+
+                <div class="col-12 mt-4"><h6 class="text-muted fw-bold border-bottom pb-2">Responsável Técnico</h6></div>
+                <div class="col-md-12">{{ form.responsavel_info_nome.label_tag }} {{ form.responsavel_info_nome }}</div>
+                <div class="col-md-6">{{ form.responsavel_info_email.label_tag }} {{ form.responsavel_info_email }}</div>
+                <div class="col-md-6">{{ form.responsavel_info_telefone.label_tag }} {{ form.responsavel_info_telefone }}</div>
+            </div>
+            <div style='margin-top: 13px !important;' class="d-flex justify-content-between mt-5 pt-3 border-top">
+                <button type="button" class="btn btn-prev" onclick="prevStep(1)">🠔 Voltar</button>
+                <button type="button" class="btn btn-next" onclick="nextStep(3)">Próximo ➔</button>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-3">
+            <h4 class="section-title">3. Atuação do Conselho</h4>
+            <p class="text-muted mb-4">Indique a atuação e fiscalização do conselho:</p>
+
+            <div class="bg-light p-4 rounded border">
+                {% for field in form %}
+                    {% if field.name in 'fiscaliza_fundo,parecer_plano,parecer_ppa,delibera_programacao,delibera_loa,delibera_relatorio_gestao,parecer_relatorio_gestao,parecer_contas_quadrimestre' %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <label class="mb-0 w-75 fw-normal">{{ field.label }}</label>
+                        <div class="radio-group">
+                            {{ field }}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div style='margin-top: 13px !important;' class="d-flex justify-content-between pt-3 border-top">
+                <button type="button" class="btn btn-prev" onclick="prevStep(2)">🠔 Voltar</button>
+                <button type="button" class="btn btn-next" onclick="nextStep(4)">Próximo ➔</button>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-4">
+            <h4 class="section-title">4. Fundo Municipal de Saúde</h4>
+            <div class="row g-3">
+                <div class="col-md-6">{{ form.fundo_cnpj.label_tag }} {{ form.fundo_cnpj }}</div>
+                <div class="col-md-6">{{ form.fundo_tipo_gestao.label_tag }} {{ form.fundo_tipo_gestao }}</div>
+                <div class="col-md-12">{{ form.fundo_endereco.label_tag }} {{ form.fundo_endereco }}</div>
+
+                <div class="col-12 mt-4"><h6 class="text-muted fw-bold border-bottom pb-2">Responsável pelas Informações do Fundo</h6></div>
+                <div class="col-md-12">{{ form.fundo_responsavel_nome.label_tag }} {{ form.fundo_responsavel_nome }}</div>
+                <div class="col-md-6">{{ form.fundo_responsavel_email.label_tag }} {{ form.fundo_responsavel_email }}</div>
+                <div class="col-md-6">{{ form.fundo_responsavel_telefone.label_tag }} {{ form.fundo_responsavel_telefone }}</div>
+
+                <div class="col-12 mt-4"><h6 class="text-muted fw-bold border-bottom pb-2">Dados Bancários e Gestão</h6></div>
+                <div class="col-md-4">{{ form.banco_nome.label_tag }} {{ form.banco_nome }}</div>
+                <div class="col-md-4">{{ form.banco_agencia.label_tag }} {{ form.banco_agencia }}</div>
+                <div class="col-md-4">{{ form.banco_conta.label_tag }} {{ form.banco_conta }}</div>
+
+                <div class="col-md-12 mt-3">
+                    <label class="mb-2">O Fundo está em pleno funcionamento?</label>
+                    <div class="radio-group">{{ form.fundo_pleno_funcionamento }}</div>
+                </div>
+                <div class="col-md-12">{{ form.fundo_nome_gestor.label_tag }} {{ form.fundo_nome_gestor }}</div>
+                <div class="col-md-12">{{ form.fundo_local_administracao.label_tag }} {{ form.fundo_local_administracao }}</div>
+
+                <div class="col-md-12 mt-3 p-3 border rounded bg-light">
+                     <label class="mb-2 fw-bold text-conmac-dark-teal">Recursos Próprios Aplicados via Fundo?</label>
+                     <div class="radio-group mb-2">{{ form.recursos_proprios_aplicados }}</div>
+                     {{ form.recursos_proprios_percentual.label_tag }}
+                     <div class="input-group">
+                        {{ form.recursos_proprios_percentual }}
+                        <span class="input-group-text">%</span>
+                     </div>
+                </div>
+            </div>
+            <div style='margin-top: 13px !important;' class="d-flex justify-content-between mt-5 pt-3 border-top">
+                <button type="button" class="btn btn-prev" onclick="prevStep(3)">🠔 Voltar</button>
+                <button type="button" class="btn btn-next" onclick="nextStep(5)">Próximo ➔</button>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-5">
+            <h4 class="section-title">5. Consórcio Intermunicipal</h4>
+
+            <div class="bg-light p-4 rounded mb-4">
+                <label class="fs-5 mb-3">O município participa de algum Consórcio de Saúde?</label>
+                <div class="radio-group" onchange="toggleConsorcio(this)">
+                    {{ form.possui_consorcio }}
+                </div>
+            </div>
+
+            <div id="consorcio-details" style="display:none;" class="p-4 border rounded mb-4 bg-white">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">Detalhes do Consórcio</h6>
+                <div class="row g-3">
+                    <div class="col-md-12">{{ form.consorcio_nome.label_tag }} {{ form.consorcio_nome }}</div>
+                    <div class="col-md-6">{{ form.consorcio_cnpj.label_tag }} {{ form.consorcio_cnpj }}</div>
+                    <div class="col-md-6">{{ form.consorcio_responsavel.label_tag }} {{ form.consorcio_responsavel }}</div>
+                    <div class="col-md-6">{{ form.consorcio_email.label_tag }} {{ form.consorcio_email }}</div>
+                    <div class="col-md-6">{{ form.consorcio_telefone.label_tag }} {{ form.consorcio_telefone }}</div>
+                </div>
+            </div>
+
+            <div class="mt-5 text-center pt-5 border-top">
+                <div class="mb-4">
+                    <span style="font-size: 3rem;">📝</span>
+                </div>
+                <h3 class="text-conmac-dark-teal fw-bold">Confirmação de Envio</h3>
+                <p class="text-muted mx-auto" style="max-width: 500px;">
+                    Ao clicar no botão abaixo, todas as informações preenchidas serão encaminhadas para a base de dados da CONMAC para análise e homologação SIOPS.
+                </p>
+
+                <div class="d-flex justify-content-between align-items-center mt-5">
+                    <button type="button" class="btn btn-prev" onclick="prevStep(4)">🠔 Revisar Dados</button>
+                    <button type="submit" class="btn btn-success btn-lg px-5 py-3 shadow">
+                        ✅ Finalizar e Encaminhar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    function startWizard() {
+        document.getElementById('step-intro').classList.remove('active');
+        document.getElementById('steps-nav').style.display = 'flex';
+        nextStep(1);
+    }
+
+    function nextStep(targetStep) { showStep(targetStep); }
+    function prevStep(targetStep) {
+        if(targetStep === 0) {
+            document.getElementById('steps-nav').style.display = 'none';
+            document.getElementById('step-intro').classList.add('active');
+            document.getElementById('step-1').classList.remove('active');
+            return;
+        }
+        showStep(targetStep);
+    }
+
+    function showStep(stepNumber) {
+        document.querySelectorAll('.wizard-step').forEach(el => {
+            if(el.id !== 'step-intro') el.classList.remove('active');
+        });
+        document.getElementById('step-intro').classList.remove('active');
+        document.getElementById('step-' + stepNumber).classList.add('active');
+
+        document.querySelectorAll('.step-item').forEach(el => {
+            const step = parseInt(el.dataset.step);
+            el.classList.remove('active', 'completed');
+            if(step === stepNumber) el.classList.add('active');
+            else if (step < stepNumber) el.classList.add('completed');
+        });
+        document.querySelector('.wizard-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const consorcioRadios = document.querySelectorAll('input[name="possui_consorcio"]');
+        const detailsDiv = document.getElementById('consorcio-details');
+        function checkConsorcio() {
+            const selected = document.querySelector('input[name="possui_consorcio"]:checked');
+            if (selected && (selected.value === 'True' || selected.value === 'on')) {
+                detailsDiv.style.display = 'block';
+            } else {
+                detailsDiv.style.display = 'none';
+            }
+        }
+        consorcioRadios.forEach(radio => radio.addEventListener('change', checkConsorcio));
+        checkConsorcio();
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,230 @@
+{% load humanize %}
+<style>
+.eml-wrap{font-family:'DM Sans',system-ui,sans-serif;color:#1a1f2e}
+.eml-header{background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px 14px 0 0;padding:20px 22px 18px;display:flex;align-items:center;gap:14px;position:relative}
+.eml-hicon{width:44px;height:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:11px;display:grid;place-items:center;flex-shrink:0}
+.eml-header h3{margin:0;font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em}
+.eml-header p{margin:3px 0 0;font-size:.76rem;color:rgba(255,255,255,.5)}
+.eml-close{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);border-radius:7px;width:28px;height:28px;display:grid;place-items:center;cursor:pointer;font-size:1.1rem;line-height:1;transition:background .15s,color .15s}
+.eml-close:hover{background:rgba(255,255,255,.16);color:#fff}
+.eml-body{padding:20px 22px 22px}
+.eml-dados{background:#f8faff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:18px}
+.eml-tag{font-size:.68rem;font-weight:800;letter-spacing:.08em;color:#3b82f6;text-transform:uppercase;margin-bottom:10px}
+.eml-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.eml-dado label{display:block;font-size:.72rem;color:#64748b;margin-bottom:2px}
+.eml-dado strong{font-size:.9rem;color:#1a1f2e}
+.eml-descr{font-size:.8rem;color:#334155;background:#fff;padding:10px 12px;border:1px solid #e2e8f0;border-radius:7px;max-height:200px;overflow-y:auto;white-space:pre-wrap;font-family:'JetBrains Mono','Fira Code',monospace;line-height:1.5}
+.eml-aviso{background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:10px 14px;font-size:.83rem;color:#1d4ed8;margin-bottom:16px}
+.eml-field{margin-bottom:16px}
+.eml-field>label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:6px}
+.eml-field small{font-size:.73rem;color:#94a3b8;margin-top:4px;display:block}
+.eml-wrap input[type=text],.eml-wrap input[type=number],.eml-wrap select{border-radius:8px!important;border:1.5px solid #e2e8f0!important;padding:8px 11px!important;font-size:.88rem!important;transition:border-color .15s,box-shadow .15s!important}
+.eml-wrap input:focus,.eml-wrap select:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.12)!important;outline:none!important}
+.eml-comp{background:#fffbeb;border:1.5px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.eml-comp-lbl{font-size:.78rem;font-weight:800;color:#92400e;letter-spacing:.03em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.eml-comp-row{display:flex;gap:10px}
+.eml-comp-row>div:first-child{flex:2}
+.eml-comp-row>div:last-child{flex:1}
+.eml-comp small{color:#78350f;font-size:.73rem;margin-top:8px;display:block;line-height:1.4}
+.eml-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid #f1f5f9}
+.eml-fr{display:flex;gap:8px;align-items:center}
+.eb{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;border:none;transition:all .18s;white-space:nowrap;letter-spacing:-.01em}
+.eb:disabled{opacity:.5;cursor:not-allowed}
+.eb-ghost{background:transparent;color:#64748b;border:1.5px solid #e2e8f0!important}
+.eb-ghost:hover{background:#f8fafc;border-color:#cbd5e1!important;color:#334155}
+.eb-dark{background:#1e293b;color:#fff}
+.eb-dark:hover{background:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,.25);transform:translateY(-1px)}
+.eb-amber{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;box-shadow:0 1px 3px rgba(217,119,6,.3)}
+.eb-amber:hover{box-shadow:0 4px 14px rgba(217,119,6,.35);transform:translateY(-1px)}
+.eb-amber-ghost{background:transparent;color:#d97706;border:1.5px solid #fcd34d!important}
+.eb-amber-ghost:hover{background:#fffbeb;border-color:#f59e0b!important}
+.eb-green{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 1px 3px rgba(22,163,74,.3)}
+.eb-green:hover{box-shadow:0 4px 14px rgba(22,163,74,.35);transform:translateY(-1px)}
+.eml-resumo-card{background:#f8faff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;font-size:.86rem;line-height:1.8;color:#1a1f2e;margin-bottom:14px}
+.eml-resumo-card>div{display:flex;align-items:baseline;gap:8px}
+.eml-warn-box{background:#fff7ed;border:1.5px solid #fed7aa;border-left:4px solid #f97316;border-radius:10px;padding:11px 14px;font-size:.8rem;color:#9a3412;line-height:1.5;margin-bottom:20px}
+.eml-spin-wrap{text-align:center;padding:40px 20px 28px}
+.eml-spin{display:inline-block;width:40px;height:40px;border:3px solid #e2e8f0;border-top-color:#f59e0b;border-radius:50%;animation:eml-rot .75s linear infinite;margin-bottom:16px}
+@keyframes eml-rot{to{transform:rotate(360deg)}}
+.eml-spin-title{font-size:.94rem;font-weight:700;color:#1a1f2e}
+.eml-spin-sub{font-size:.78rem;color:#94a3b8;margin-top:4px}
+.eml-rbox{border-radius:10px;padding:14px 16px;font-size:.86rem;line-height:1.6}
+.eml-rok{background:#f0fdf4;border:1.5px solid #86efac;color:#14532d}
+.eml-rwarn{background:#fffbeb;border:1.5px solid #fde68a;color:#78350f}
+.eml-rerr{background:#fef2f2;border:1.5px solid #fca5a5;color:#7f1d1d}
+.eml-rtitle{font-weight:800;font-size:.95rem;margin-bottom:6px}
+.eml-rstats{display:flex;gap:18px;margin-bottom:8px}
+.eml-rstat{display:flex;flex-direction:column}
+.eml-rstat span:first-child{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.7}
+.eml-rstat span:last-child{font-size:1.4rem;font-weight:800}
+.eml-rerrs{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.08);font-size:.79rem}
+</style>
+
+<div class="eml-wrap">
+
+  <div class="eml-header">
+    <div class="eml-hicon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </div>
+    <div>
+      <h3>{% if detalhes %}Edição de Contrato{% else %}Edição em Lote{% endif %}</h3>
+      <p>{% if detalhes %}Dados carregados do Omie{% else %}{{ qtd }} contrato(s) selecionado(s){% endif %}</p>
+    </div>
+    <button class="eml-close" data-close-modal title="Fechar">×</button>
+  </div>
+
+  <div class="eml-body">
+
+    <div id="painel-edicao">
+
+      {% if detalhes %}
+      <div class="eml-dados">
+        <div class="eml-tag">Dados Atuais no Omie</div>
+        <div class="eml-grid2">
+          <div class="eml-dado">
+            <label>Valor Mensal</label>
+            <strong>R$ {{ detalhes.valor|floatformat:2|intcomma }}</strong>
+          </div>
+          <div class="eml-dado">
+            <label>Código NBS</label>
+            <strong>{{ detalhes.nbs }}</strong>
+          </div>
+        </div>
+        <label style="font-size:.72rem;color:#64748b;display:block;margin-bottom:5px">Descrição do Serviço</label>
+        <div class="eml-descr">{{ detalhes.descricao|default:"Sem descrição disponível." }}</div>
+      </div>
+      {% endif %}
+
+      {% if aviso_lote %}
+      <div class="eml-aviso">
+        ℹ️ Você selecionou <strong>{{ qtd }} contratos</strong>. As alterações abaixo serão aplicadas a <strong>todos</strong> eles.
+      </div>
+      {% endif %}
+
+      <form id="form-edicao-lote" method="POST" action="{% url 'receitas_editar_lote' %}" onsubmit="event.preventDefault();">
+        {% csrf_token %}
+        {{ form.ids_selecionados }}
+
+        <div class="eml-field">
+          <label>{{ form.valor_mensal.label }}</label>
+          {{ form.valor_mensal }}
+          <small>Deixe em branco para não alterar o valor atual.</small>
+        </div>
+
+        <div class="eml-field">
+          <label>{{ form.codigo_nbs.label }}</label>
+          {{ form.codigo_nbs }}
+          <small>Atualiza o código fiscal para emissão de nota.</small>
+        </div>
+
+        <div class="eml-comp">
+          <div class="eml-comp-lbl">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Competência na Descrição
+          </div>
+          <div class="eml-comp-row">
+            <div>{{ form.nova_competencia_mes }}</div>
+            <div>{{ form.nova_competencia_ano }}</div>
+          </div>
+          <small>Localiza "MÊS DE [X] DE [Y]" na descrição e substitui pelo período selecionado.</small>
+        </div>
+
+      </form>
+
+      <div id="painel-edicao-feedback" style="display:none;margin-bottom:14px"></div>
+
+      <div class="eml-footer">
+        <button type="button" id="btn-faturar-sem-editar" class="eb eb-amber-ghost">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          Faturar sem editar
+        </button>
+        <div class="eml-fr">
+          <button type="button" class="eb eb-ghost" data-close-modal>Cancelar</button>
+          <button type="button" id="btn-salvar" class="eb eb-dark">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Salvar Alterações
+          </button>
+          <button type="button" id="btn-salvar-e-faturar" class="eb eb-amber">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+            Salvar e Faturar
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="painel-confirmacao" style="display:none">
+          <div class="eml-resumo-card" id="conf-resumo"></div>
+
+          <div class="eml-warn-box" id="conf-aviso-faturamento">
+            ⚠️ Esta ação <strong>gera Ordens de Serviço</strong> no Omie e <strong>não pode ser desfeita</strong>. Revise antes de confirmar.
+          </div>
+
+          <div class="eml-warn-box" id="conf-aviso-salvar" style="display:none; background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; border-left-color:#3b82f6;">
+            ℹ️ Esta ação vai <strong>apenas atualizar os dados</strong> no Omie. Nenhuma ordem de serviço será gerada agora.
+          </div>
+
+          <div class="eml-footer">
+            <button type="button" id="btn-voltar-para-edicao" class="eb eb-ghost">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Voltar
+            </button>
+            <button type="button" id="btn-confirmar-faturar" class="eb eb-green">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span id="btn-confirmar-txt">Confirmar e Faturar</span>
+            </button>
+          </div>
+    </div>
+
+    <div id="painel-executando" style="display:none">
+      <div class="eml-spin-wrap">
+        <div class="eml-spin"></div>
+        <div class="eml-spin-title" id="exec-msg">Processando contratos…</div>
+        <div class="eml-spin-sub">Não feche esta janela. Pode levar alguns instantes.</div>
+        <div style="margin:16px auto 0;max-width:300px">
+          <div style="background:#e2e8f0;border-radius:99px;height:10px;overflow:hidden">
+            <div id="eml-barra"
+                 style="height:10px;border-radius:99px;
+                        background:linear-gradient(90deg,#f59e0b,#d97706);
+                        width:0%;transition:width .4s ease;min-width:4px">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px">
+            <span id="eml-barra-txt" style="font-size:.73rem;color:#94a3b8">Aguardando…</span>
+            <span id="eml-barra-pct" style="font-size:.73rem;font-weight:700;color:#f59e0b">0%</span>
+          </div>
+          <div id="eml-lote-info" style="font-size:.71rem;color:#cbd5e1;margin-top:3px;text-align:center"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="painel-resultado-fat" style="display:none">
+      <div id="resultado-fat-html"></div>
+      <div class="eml-footer" style="justify-content:flex-end;padding-top:14px;margin-top:4px">
+        <button type="button" class="eb eb-ghost" data-close-modal>Fechar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+

@@ -191,8 +191,12 @@ class DespesaCheckboxes(forms.ModelMultipleChoiceField):
         super().__init__(*args, **kwargs)
 
     def label_from_instance(self, d: Despesa) -> str:
-        # título · data · valor [+ usuário se show_user=True]
-        base = f"{d.titulo} · {d.data_fato.strftime('%d/%m/%Y')} · R$ {d.valor:.2f}"
+        # Formata valor para PT-BR: 1.234,56
+        valor_fmt = f"{d.valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+        # título · data · valor
+        base = f"{d.titulo} · {d.data_fato.strftime('%d/%m/%Y')} · R$ {valor_fmt}"
+
         if self.show_user:
             nome = (d.usuario.get_full_name() or d.usuario.username).upper()
             return f"{base} · {nome}"
@@ -482,3 +486,233 @@ class AssociaAnalistaForm(forms.Form):
                        .values_list("usuario_id", flat=True)
         self.fields["usuario"].queryset = User.objects.exclude(id__in=associados).order_by("first_name","last_name")
 
+
+
+#conmacfest2025
+
+# eventos/forms.py
+from django import forms
+from .models import Rsvp
+
+class RsvpForm(forms.ModelForm):
+    class Meta:
+        model = Rsvp
+        fields = ["nome", "vai_ir"]
+        widgets = {
+            "nome": forms.TextInput(attrs={
+                "placeholder": "nome completo",
+                "class": "form-control",
+                "autocomplete": "name",
+            }),
+            "vai_ir": forms.RadioSelect(choices=[(True, "eu vou para CONMAC FEST 2025."), (False, "não poderei ir.")]),
+        }
+        labels = {
+            "nome": "",
+            "vai_ir": "",
+        }
+
+
+#--------------------
+
+
+from django import forms
+from .models import Etapa, NivelChoices
+
+# despesas/forms.py
+
+class EtapaForm(forms.ModelForm):
+    class Meta:
+        model = Etapa
+        fields = [
+            'nivel', 'nome', 'descricao', 'ordem', 'ativa', 'exige_anexo',
+            'obrigatoria_para_fila_siga', 'obrigatoria_para_fila_etcm',
+            'obrigatoria_para_fila_siope', 'obrigatoria_para_fila_siops',
+            'obrigatoria_para_fila_siconf'
+        ]
+        widgets = {
+            'nivel': forms.Select(attrs={'class': 'conmac-input', 'id': 'id_etapa_nivel'}), # Adicionei ID para facilitar o JS
+            'nome': forms.TextInput(attrs={'class': 'conmac-input', 'placeholder': 'Nome da Etapa'}),
+            'descricao': forms.Textarea(attrs={'class': 'conmac-input', 'rows': 3, 'placeholder': 'Descrição breve...'}),
+            'ordem': forms.NumberInput(attrs={'class': 'conmac-input', 'style': 'width: 80px;'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        nivel_selecionado = cleaned_data.get('nivel')
+
+        # Mapeamento: Nivel -> Nome do Campo de Obrigatoriedade
+        mapa_conflito = {
+            'SIGA': 'obrigatoria_para_fila_siga',
+            'E-TCM': 'obrigatoria_para_fila_etcm', # Ajuste se no model a choice for 'E_TCM' ou 'E-TCM'
+            'SIOPE': 'obrigatoria_para_fila_siope',
+            'SIOPS': 'obrigatoria_para_fila_siops',
+            'SICONF': 'obrigatoria_para_fila_siconf',
+        }
+
+        # Se o nível selecionado tiver um campo de obrigatoriedade correspondente
+        campo_proibido = mapa_conflito.get(nivel_selecionado)
+
+        if campo_proibido and cleaned_data.get(campo_proibido):
+            # Opção A: Auto-corrigir (Definir como False silenciosamente) - Recomendado para UX
+            cleaned_data[campo_proibido] = False
+
+            # Opção B: Levantar erro (Se preferir travar o salvamento)
+            # self.add_error(campo_proibido, f"Uma etapa do {nivel_selecionado} não pode ser pré-requisito para ele mesmo.")
+
+        return cleaned_data
+
+
+
+
+from django import forms
+from .models import QuestionarioSIOPS
+
+# Variável definida fora da classe para estar disponível no escopo dos widgets
+CHOICES_SIM_NAO = [
+    (True, 'Sim'),
+    (False, 'Não')
+]
+
+from django import forms
+from .models import QuestionarioSIOPS
+
+CHOICES_SIM_NAO = [
+    (True, 'Sim'),
+    (False, 'Não')
+]
+
+class QuestionarioForm(forms.ModelForm):
+    class Meta:
+        model = QuestionarioSIOPS
+        exclude = ['prefeitura', 'data_envio']
+
+        widgets = {
+            'conselho_data_criacao': forms.DateInput(attrs={'type': 'date'}),
+            'prefeito_endereco': forms.TextInput(attrs={'placeholder': 'Rua, Número, Bairro, CEP'}),
+            'fiscaliza_fundo': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'parecer_plano': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'parecer_ppa': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'delibera_programacao': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'delibera_loa': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'delibera_relatorio_gestao': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'parecer_relatorio_gestao': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'parecer_contas_quadrimestre': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'fundo_pleno_funcionamento': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'recursos_proprios_aplicados': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'recursos_sus_aplicados': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+            'possui_consorcio': forms.RadioSelect(choices=CHOICES_SIM_NAO),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field_name, field in self.fields.items():
+            # 1. Limpeza agressiva do
+            # Se o label existir, pega tudo antes do primeiro '[' e remove espaços extras
+            if field.label:
+                if '[' in field.label:
+                    field.label = field.label.split('[')[0].strip()
+
+                # Remove também se estiver no help_text, por garantia
+                if field.help_text and '[' in field.help_text:
+                    field.help_text = field.help_text.split('[')[0].strip()
+
+            # 2. Classes CSS
+            if isinstance(field.widget, forms.RadioSelect):
+                field.widget.attrs.update({'class': 'form-check-input'})
+            else:
+                field.widget.attrs.update({'class': 'form-control input-conmac'})
+
+from django import forms
+from .models import Contrato, ServicoExtra
+
+from django import forms
+from datetime import date
+# Mantenha as importações existentes
+
+class EdicaoLoteContratoForm(forms.Form):
+    ids_selecionados = forms.CharField(widget=forms.HiddenInput())
+
+    valor_mensal = forms.DecimalField(
+        max_digits=12, decimal_places=2, required=False,
+        label="Novo Valor Mensal (R$)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Manter valor atual'})
+    )
+
+    codigo_nbs = forms.CharField(
+        max_length=20, required=False, label="Novo Código NBS",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Manter NBS atual'})
+    )
+
+    # --- NOVOS CAMPOS PARA COMPETÊNCIA ---
+    MESES = [
+        ('', '--- Manter Mês Atual ---'),
+        ('JANEIRO', 'JANEIRO'), ('FEVEREIRO', 'FEVEREIRO'), ('MARÇO', 'MARÇO'),
+        ('ABRIL', 'ABRIL'), ('MAIO', 'MAIO'), ('JUNHO', 'JUNHO'),
+        ('JULHO', 'JULHO'), ('AGOSTO', 'AGOSTO'), ('SETEMBRO', 'SETEMBRO'),
+        ('OUTUBRO', 'OUTUBRO'), ('NOVEMBRO', 'NOVEMBRO'), ('DEZEMBRO', 'DEZEMBRO')
+    ]
+
+    # Pega ano atual e próximo para opções
+    ano_atual = date.today().year
+    ANOS = [('', '---')] + [(str(y), str(y)) for y in range(ano_atual-1, ano_atual+2)]
+
+    nova_competencia_mes = forms.ChoiceField(
+        choices=MESES, required=False, label="Alterar Mês de Referência",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    nova_competencia_ano = forms.ChoiceField(
+        choices=ANOS, required=False, label="Alterar Ano",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class ServicoExtraForm(forms.ModelForm):
+    class Meta:
+        model = ServicoExtra
+        fields = ['descricao', 'valor', 'data_servico', 'contrato']
+        widgets = {
+            'data_servico': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'descricao': forms.TextInput(attrs={'class': 'form-control'}),
+            'valor': forms.NumberInput(attrs={'class': 'form-control'}),
+            'contrato': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+
+
+# forms.py
+
+from django import forms
+from .models import EmailMunicipio, Contrato
+
+class EmailMunicipioForm(forms.ModelForm):
+
+    # Popula o select de municípios com os que já existem nos contratos
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        municipios = (
+            Contrato.objects
+            .exclude(municipio__isnull=True).exclude(municipio='')
+            .values_list('municipio', flat=True)
+            .distinct().order_by('municipio')
+        )
+        choices = [('', '---------')] + [(m, m) for m in municipios]
+        self.fields['municipio'].widget = forms.Select(choices=choices)
+        self.fields['municipio'].widget.attrs.update({'class': 'form-select'})
+        for field in self.fields.values():
+            if not field.widget.attrs.get('class'):
+                field.widget.attrs['class'] = 'form-control'
+
+    class Meta:
+        model  = EmailMunicipio
+        fields = ['municipio', 'tipo_entidade', 'email', 'nome_contato', 'principal']
+        widgets = {
+            'tipo_entidade': forms.Select(attrs={'class': 'form-select'}),
+            'principal':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'municipio':     'Município',
+            'tipo_entidade': 'Tipo de Entidade',
+            'email':         'E-mail',
+            'nome_contato':  'Nome do Contato',
+            'principal':     'Marcar como e-mail principal nos contratos',
+        }

@@ -1,151 +1,403 @@
 <style>
-    .modal__header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.2rem;
-      background-color: #f3f4f6;
-      border-bottom: 1px solid #e5e7eb;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
+  /* --- CORES E VARIÁVEIS --- */
+  /* Definindo o gradiente solicitado */
+  :root {
+    --gradiente-principal: linear-gradient(90deg, #945f34 0%, #239FAB 100%);
+    --cor-primaria: #239FAB; /* Usado para bordas e textos de destaque */
+    --cor-secundaria: #945f34;
+  }
+
+  .modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    background: white;
+    color: black;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+
+  .modal__header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #000000;
+    font-weight: 600;
+  }
+
+  .modal__close {
+    background: rgb(0 0 0 / 20%);
+    border: none;
+    font-size: 1.4rem;
+    color: #ffffff;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .modal__close:hover {
+    background: rgba(255,255,255,0.3);
+    transform: rotate(90deg);
+  }
+
+  .modal__content {
+    padding: 1.2rem;
+    background-color: #ffffff;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+
+  /* --- KPIs do Modal (Layout Ajustado) --- */
+  .modal-kpis {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa; /* Fundo neutro suave */
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+
+    /* Lógica de colunas: Mobile First (2 por linha) */
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Quando a tela for maior que 700px, força 4 por linha */
+  @media (min-width: 700px) {
+    .modal-kpis {
+      grid-template-columns: repeat(4, 1fr);
     }
-    
-    .modal__header h3 {
-      margin: 0;
-      font-size: 1.2rem;
-      color: #111827;
-    }
-    
-    .modal__close {
-      background: none;
-      border: none;
-      font-size: 1.4rem;
-      color: #6b7280;
-      cursor: pointer;
-      transition: color 0.2s ease;
-    }
-    
-    .modal__close:hover {
-      color: #111827;
-    }
-    
-    .modal__content {
-      padding: 1.2rem;
-      background-color: #ffffff;
-      border-bottom-left-radius: 12px;
-      border-bottom-right-radius: 12px;
-    }
-    
-    .modal__content form p {
-      margin-bottom: 1rem;
-      font-size: 0.95rem;
-      color: #374151;
-    }
-    
-    .modal__content label {
-      font-weight: 500;
-      margin-right: 0.5rem;
-    }
-    
-    .modal__content input[type="text"],
-    .modal__content input[type="date"],
-    .modal__content select {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.95rem;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      background-color: #f9fafb;
-      width: 100%;
-      max-width: 320px;
-    }
-    
-    .modal__content input[type="file"] {
-      margin-top: 0.4rem;
-    }
-    
-    .lote-list {
-      background-color: #f9fafb;
-      font-size: 0.9rem;
-    }
-    
-    .lote-list label.mini {
-      font-weight: 600;
-      color: #374151;
-    }
-    
-    .err {
-      background-color: #fee2e2;
-      color: #991b1b;
-      padding: 0.5rem 0.75rem;
-      border-radius: 8px;
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-    }
-    
-    .modal__footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-    }
-    
-    .btn,
-    .btn-outline {
-      padding: 0.5rem 1rem;
-      font-size: 0.95rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
-    
-    .btn {
-      background-color: #2563eb;
-      color: white;
-      border: none;
-    }
-    
-    .btn:hover {
-      background-color: #1d4ed8;
-    }
-    
-    .btn-outline {
-      background-color: transparent;
-      color: #2563eb;
-      border: 1px solid #2563eb;
-    }
-    
-    .btn-outline:hover {
-      background-color: #eef2ff;
-    }    
-    
+  }
+
+  .modal-kpi {
+    background: white;
+    padding: 1rem 0.5rem; /* Padding lateral reduzido para caber melhor */
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+    border: 1px solid #eee;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
+  .modal-kpi__label {
+    font-size: 0.7rem; /* Levemente menor para garantir que caiba */
+    color: #6b7280;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+  }
+
+  .modal-kpi__value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #111827;
+    word-break: break-word; /* Evita quebra de layout se valor for gigante */
+  }
+
+  /* Highlight com o novo gradiente */
+  .modal-kpi--highlight {
+    background: var(--gradiente-principal);
+    color: white;
+    border: none;
+  }
+
+  .modal-kpi--highlight .modal-kpi__label,
+  .modal-kpi--highlight .modal-kpi__value {
+    color: white;
+  }
+
+  .modal__content form p {
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    color: #374151;
+  }
+
+  .modal__content label {
+    font-weight: 500;
+    margin-right: 0.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #374151;
+  }
+
+  .modal__content input[type="text"],
+  .modal__content input[type="date"],
+  .modal__content select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #f9fafb;
+    width: 100%;
+    max-width: 320px;
+    transition: border-color 0.2s ease;
+  }
+
+  .modal__content input:focus,
+  .modal__content select:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(35, 159, 171, 0.1);
+  }
+
+  .modal__content input[type="file"] {
+    margin-top: 0.4rem;
+  }
+
+  /* Área de Seleção */
+  .lote-selector {
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .lote-selector__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .select-all-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .select-all-wrapper:hover {
+    background: var(--cor-primaria);
+    color: white;
+  }
+
+  .select-all-wrapper input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .select-all-wrapper label {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+  }
+
+  .lote-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .lote-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .lote-list li {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .lote-list li:hover {
+    border-color: var(--cor-primaria);
+    background: #f0faff; /* Azul bem clarinho */
+  }
+
+  .lote-list li.selected {
+    background: linear-gradient(90deg, rgba(148, 95, 52, 0.05) 0%, rgba(35, 159, 171, 0.1) 100%);
+    border-color: var(--cor-primaria);
+  }
+
+  .lote-list label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    margin: 0;
+    font-weight: 400;
+    font-size: 0.9rem;
+  }
+
+  .lote-list input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .despesa-valor {
+    font-weight: 700;
+    color: var(--cor-primaria); /* Teal */
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .err {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid #fecaca;
+  }
+
+  .modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .btn,
+  .btn-outline {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    border: none;
+  }
+
+  .btn {
+    background: var(--gradiente-principal);
+    color: white;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(35, 159, 171, 0.4);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    color: var(--cor-primaria);
+    border: 2px solid var(--cor-primaria);
+  }
+
+  .btn-outline:hover {
+    background-color: var(--cor-primaria);
+    color: white;
+  }
+
+  /* Scrollbar personalizada */
+  .lote-list::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .lote-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .lote-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+  }
+
+  .lote-list::-webkit-scrollbar-thumb:hover {
+    background: var(--cor-primaria);
+  }
 </style>
 
-
 <div class="modal__header">
-  <h3>Alterar status em lote</h3>
-  <button class="modal__close" data-close-modal>×</button>
+
+  <h3>
+    💳 Alterar Status em Lote {% if colaborador_nome %} - <strong>{{ colaborador_nome }}</strong> {% endif %}
+ </h3>
+
+ <button class="modal__close" data-close-modal aria-label="Fechar">×</button>
+
 </div>
+
 
 <div class="modal__content">
   {% if erro_parametros %}
-    <div class="err">Parâmetros ausentes ou inválidos. Reabra o modal pela tela de Centros.</div>
+    <div class="err">❌ Parâmetros ausentes ou inválidos. Reabra o modal pela tela de Centros.</div>
   {% elif not form_lote %}
-    <div class="err">Não foi possível montar o formulário de lote.</div>
+    <div class="err">❌ Não foi possível montar o formulário de lote.</div>
   {% else %}
+
+    <div class="modal-kpis">
+      <div class="modal-kpi">
+        <div class="modal-kpi__label">Disponíveis</div>
+        <div class="modal-kpi__value" id="kpi-qtd-disponivel">{{ qtd_disponivel }}</div>
+      </div>
+      <div class="modal-kpi">
+        <div class="modal-kpi__label">Total Disponível</div>
+        <div class="modal-kpi__value" id="kpi-total-disponivel">
+          R$ {{ total_disponivel|floatformat:2 }}
+        </div>
+      </div>
+      <div class="modal-kpi modal-kpi--highlight">
+        <div class="modal-kpi__label">Selecionados</div>
+        <div class="modal-kpi__value" id="kpi-qtd-selecionados">0</div>
+      </div>
+      <div class="modal-kpi modal-kpi--highlight">
+        <div class="modal-kpi__label">Total Selecionado</div>
+        <div class="modal-kpi__value" id="kpi-total-selecionados">R$ 0,00</div>
+      </div>
+    </div>
+
     <form method="post" enctype="multipart/form-data"
           class="js-admin-form"
-          action="{% url 'despesas_lote_modal' %}?centro={{ centro.id }}&ano={{ ano }}&mes={{ mes }}"
+          action="{% url 'despesas_lote_modal' %}?centro={{ centro_id }}&user={{ user_id }}&ano={{ ano|stringformat:'s' }}&mes={{ mes }}"
           id="form-lote">
       {% csrf_token %}
 
-      {# redundância útil p/ POST puro: mantém escopo #}
       <input type="hidden" name="centro" value="{{ centro.id }}">
-      <input type="hidden" name="ano" value="{{ ano }}">
+      <input type="hidden" name="ano" value="{{ ano|stringformat:'s' }}">
       <input type="hidden" name="mes" value="{{ mes }}">
 
       {{ form_lote.non_field_errors }}
 
-      <p>{{ form_lote.status.label_tag }} {{ form_lote.status }}</p>
+      <p>
+        {{ form_lote.status.label_tag }}
+        {{ form_lote.status }}
+      </p>
 
       <p>
         {{ form_lote.comprovante_pagamento.label_tag }}
@@ -158,33 +410,157 @@
         {% for e in form_lote.pago_em.errors %}<div class="err">{{ e }}</div>{% endfor %}
       </p>
 
-      <div class="lote-list" style="max-height:220px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin:8px 0;">
-        <label class="mini" style="display:block;margin-bottom:6px;">
-          <input type="checkbox" id="js-select-all"> SELECIONAR TODOS
-        </label>
-        {{ form_lote.despesas }}
-        {% for e in form_lote.despesas.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      <div class="lote-selector">
+        <div class="lote-selector__header">
+          <div class="select-all-wrapper">
+            <input type="checkbox" id="js-select-all">
+            <label for="js-select-all">Selecionar Todos</label>
+          </div>
+        </div>
+
+        <div class="lote-list" id="despesas-list">
+          {{ form_lote.despesas }}
+          {% for e in form_lote.despesas.errors %}<div class="err">{{ e }}</div>{% endfor %}
+        </div>
       </div>
 
       <div class="modal__footer">
-        <button type="button" class="btn-outline" data-close-modal>fechar</button>
-        <button type="submit" class="btn js-submit">aplicar em lote</button>
+        <button type="button" class="btn-outline" data-close-modal>Cancelar</button>
+        <button type="submit" class="btn js-submit" id="btn-aplicar">Aplicar em Lote</button>
       </div>
     </form>
   {% endif %}
 </div>
 
 <script>
-  // “Selecionar todos” no modal de lote
-  (function(){
-    const root = document.currentScript.closest('.modal');
-    const chkAll = root.querySelector('#js-select-all');
-    const list = root.querySelector('.lote-list');
+(function() {
+  setTimeout(() => {
+      const checkAll = document.getElementById('js-select-all');
+      const listContainer = document.getElementById('despesas-list');
+      const btnAplicar = document.getElementById('btn-aplicar');
+      const kpiQtdSel = document.getElementById('kpi-qtd-selecionados');
+      const kpiTotalSel = document.getElementById('kpi-total-selecionados');
 
-    if (chkAll && list) {
-      chkAll.addEventListener('change', () => {
-        list.querySelectorAll('input[type="checkbox"]').forEach(ch => ch.checked = chkAll.checked);
+      if (!listContainer) return;
+
+      // --- FUNÇÃO DE EXTRAÇÃO SEGURA ---
+      // Só aceita valores que tenham "R$" antes. Evita somar IDs, Datas, etc.
+      function extrairValorSeguro(elementoLinha) {
+        if (!elementoLinha) return 0;
+
+        // Pega todo o texto da linha (Label + Input + spans)
+        const texto = elementoLinha.innerText || elementoLinha.textContent || "";
+
+        // REGEX MAIS RIGOROSA:
+        // Procura: "R$" (opcionalmente com espaço) seguido de números/pontos, uma vírgula e dois dígitos
+        // Ex: "R$ 1.200,50" ou "R$ 50,00"
+        const match = texto.match(/R\$\s*([\d.]+,[\d]{2})/);
+
+        if (!match) {
+            // Se não achou com R$, tenta procurar apenas o padrão monetário (último recurso)
+            // mas garante que não é uma data (evita barras)
+            const fallback = texto.match(/(?<![\d\/])([\d.]+,[\d]{2})/);
+            if (!fallback) return 0;
+            return parseMoney(fallback[1]);
+        }
+
+        return parseMoney(match[1]);
+      }
+
+      function parseMoney(valorString) {
+        // Remove pontos de milhar e troca vírgula por ponto decimal
+        // "1.234,56" -> "1234.56"
+        const limpo = valorString.replace(/\./g, '').replace(',', '.');
+        return parseFloat(limpo) || 0;
+      }
+
+      function updateKPIs() {
+        const checkboxes = listContainer.querySelectorAll('input[type="checkbox"]');
+        let qtd = 0;
+        let total = 0;
+
+        checkboxes.forEach(chk => {
+          if (chk.checked) {
+            qtd++;
+            // Acha a linha (li) ou o wrapper do checkbox
+            const row = chk.closest('li') || chk.closest('.checkbox-row') || chk.closest('label');
+            const valor = extrairValorSeguro(row);
+
+            // Debug para verificar valores exorbitantes (veja no F12)
+            // console.log(`Item checkado: ${valor}`);
+
+            total += valor;
+          }
+        });
+
+        // Atualiza UI
+        if (kpiQtdSel) kpiQtdSel.textContent = qtd;
+
+        if (kpiTotalSel) {
+          kpiTotalSel.textContent = total.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          });
+        }
+
+        // Botão Aplicar
+        if (btnAplicar) {
+            btnAplicar.disabled = (qtd === 0);
+            btnAplicar.innerHTML = qtd > 0
+                ? `Aplicar em ${qtd} despesa(s)`
+                : `Selecione despesas`;
+        }
+
+        // Checkbox "Todos"
+        if (checkAll) {
+          const totalCheckboxes = checkboxes.length;
+          const allChecked = (qtd === totalCheckboxes && totalCheckboxes > 0);
+          checkAll.checked = allChecked;
+          checkAll.indeterminate = (qtd > 0 && qtd < totalCheckboxes);
+        }
+      }
+
+      // --- LISTENERS ---
+
+      // 1. Selecionar Todos
+      if (checkAll) {
+          checkAll.addEventListener('change', function() {
+            const checkboxes = listContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(chk => {
+              chk.checked = this.checked;
+              const row = chk.closest('li') || chk.closest('.checkbox-row');
+              if (row) row.classList.toggle('selected', this.checked);
+            });
+            updateKPIs();
+          });
+      }
+
+      // 2. Listener Delegado (Captura mudanças em qualquer checkbox da lista)
+      listContainer.addEventListener('change', function(e) {
+        if (e.target.matches('input[type="checkbox"]')) {
+           const row = e.target.closest('li') || e.target.closest('.checkbox-row');
+           if (row) row.classList.toggle('selected', e.target.checked);
+           updateKPIs();
+        }
       });
-    }
-  })();
+
+      // 3. Melhoria de UX (Clique na linha)
+      listContainer.addEventListener('click', function(e) {
+        if (e.target.matches('input') || e.target.closest('label') || e.target.matches('a')) return;
+
+        const row = e.target.closest('li') || e.target.closest('.checkbox-row');
+        if (row) {
+          const chk = row.querySelector('input[type="checkbox"]');
+          if (chk) {
+            chk.checked = !chk.checked;
+            chk.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      });
+
+      // Roda uma vez para garantir (caso o navegador tenha mantido estados)
+      updateKPIs();
+
+  }, 50); // Aumentei levemente o timeout para 50ms para garantir renderização
+})();
 </script>

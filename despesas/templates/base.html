@@ -7,9 +7,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="{% static 'css/base.css' %}" rel="stylesheet">
   <link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
   <meta name="theme-color" content="#007bff">
 
   <style>
+
+/* Layout do Card de Notificação */
+  #notification-card {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 20px;
+    width: 320px;
+    z-index: 9999;
+    font-family: 'Segoe UI', sans-serif;
+    border-left: 5px solid #007bff; /* Cor destaque */
+    display: none; /* Começa oculto */
+    animation: slideIn 0.5s ease-out;
+  }
+
+  #notification-card h4 {
+    margin: 0 0 10px;
+    color: #333;
+    font-size: 16px;
+  }
+
+  #notification-card p {
+    margin: 0 0 15px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .notif-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .btn-notif {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: 0.2s;
+  }
+
+  .btn-allow {
+    background-color: #007bff;
+    color: white;
+  }
+
+  .btn-allow:hover { background-color: #0056b3; }
+
+  .btn-deny {
+    background-color: transparent;
+    color: #888;
+  }
+
+  .btn-deny:hover { color: #333; background: #f0f0f0; }
+
+  @keyframes slideIn {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
 
 /* Base para ícones e links */
 .app-nav__link,
@@ -127,6 +194,27 @@
 
 <body>
 
+
+<!-- Push prompt minimalista -->
+<div id="push-prompt" style="display:none;position:fixed;bottom:18px;right:18px;z-index:9999;
+     background:#fff;border:1px solid #e0e0e0;padding:12px 14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:320px;">
+  <div style="display:flex;gap:10px;align-items:center;">
+    <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" style="flex:0 0 auto;fill:#007bff">
+      <path d="M12 2L8 6h8l-4-4zm0 20a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2zM5 10v4l-1.5 1.5A1 1 0 0 0 4 17h16a1 1 0 0 0 .5-1.5L19 14v-4L17 9V6a5 5 0 0 0-10 0v3L5 10z"></path>
+    </svg>
+    <div style="flex:1">
+      <div style="font-weight:700;margin-bottom:3px">Receber notificações</div>
+      <div style="font-size:.88rem;color:#555">Ative notificações para receber avisos sobre atualizações de etapas e mensagens importantes.</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+    <button id="push-decline" style="background:transparent;border:0;color:#666;padding:6px 8px;border-radius:6px;cursor:pointer">Não, obrigado</button>
+    <button id="push-accept" style="background:#007bff;border:0;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer">Permitir</button>
+  </div>
+</div>
+
+
   <header class="topbar">
     <nav class="user">
       {% if request.user.is_authenticated %}
@@ -143,6 +231,12 @@
   </a>
 </div>
 
+    {% if messages %}
+      <div class="msgs alert-primary">
+        {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+      </div>
+    {% endif %}
+
 <div id="pwa-alert" style="position:fixed;bottom:20px;left:50%;transform: translateX(-50%) translateY(-100px); background:#007bff;color:#fff;padding:15px 20px;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.2);z-index:999;display:none;">
   <span>Instale o web app da CONMAC para uma experiência melhor!</span>
   <div style='display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 6px;'>
@@ -154,99 +248,129 @@
 {% endif %}
 
 
-  <main class="container ">
-    {% if messages %}
-      <div class="msgs alert-primary">
-        {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
-      </div>
-    {% endif %}
+<main class="container ">
 
-{% if request.user.is_authenticated %}
-
-<!-- Navegação para computador -->
-<nav class="app-nav" role="navigation" aria-label="Navegação principal">
-  <div class="app-nav__inner">
-    <ul class="app-nav__links">
-
-      <li>
-        <button type="button" class="app-nav__link" id="js-back-btn" aria-label="Voltar">
-          <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-            <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>Voltar</span>
-        </button>
-      </li>
-
-      <li>
-        <a href="{% url 'home' %}" class="app-nav__link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" aria-label="Início">
-          <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-            <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>Início</span>
-        </a>
-      </li>
-
-      {% if request.user.is_staff %}
-        <li>
-          <a href="https://conmac.pythonanywhere.com/centros/" class="app-nav__link">
-            <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-              <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>Meus Centros</span>
-          </a>
-        </li>
-      {% else %}
-        <li>
-          <a href="{% url 'viagens_centros' %}" class="app-nav__link {% if request.resolver_match.url_name == 'viagens_centros' %}is-active{% endif %}">
-            <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-              <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>Meus Centros</span>
-          </a>
-        </li>
-      {% endif %}
-    </ul>
-  </div>
-</nav>
-
-<!-- Navegação para celular -->
-<nav class="app-btmnav" role="navigation" aria-label="Navegação móvel">
-  <button type="button" class="app-btmnav__item" id="js-back-btn-mobile" aria-label="Voltar">
-    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-      <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span>Voltar</span>
-  </button>
-
-  <a href="{% url 'home' %}" class="app-btmnav__item {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" aria-label="Início">
-    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-      <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span>Início</span>
-  </a>
-
-  <a href="{% if request.user.is_staff %}https://conmac.pythonanywhere.com/centros/{% else %}{% url 'viagens_centros' %}{% endif %}"
-     class="app-btmnav__item {% if request.resolver_match.url_name == 'viagens_centros' %}is-active{% endif %}"
-     aria-label="Meus Centros">
-    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
-      <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span>Meus Centros</span>
-  </a>
-</nav>
-
-{% endif %}
-
-
-
-    {% block content %}{% endblock %}
-  </main>
 
     {% if request.user.is_authenticated %}
-      <p style="text-align: center;margin-top: 50px;font-size: 16px;padding: 25px;margin-bottom: 70px;"> Equipe de Desenvolvimento da CONMAC - 2025</p>
+
+    <!-- Navegação para computador -->
+    <nav class="app-nav" role="navigation" aria-label="Navegação principal">
+      <div class="app-nav__inner">
+        <ul class="app-nav__links">
+
+          <li>
+            <button type="button" class="app-nav__link" id="js-back-btn" aria-label="Voltar">
+              <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+                <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Voltar</span>
+            </button>
+          </li>
+
+          <li>
+            <a href="{% url 'home' %}" class="app-nav__link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" aria-label="Início">
+              <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+                <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Início</span>
+            </a>
+          </li>
+
+          {% if request.user.is_staff %}
+            <li>
+              <a href="https://conmac.pythonanywhere.com/centros/" class="app-nav__link">
+                <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+                  <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Meus Centros</span>
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{% url 'viagens_centros' %}" class="app-nav__link {% if request.resolver_match.url_name == 'viagens_centros' %}is-active{% endif %}">
+                <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+                  <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Meus Centros</span>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Navegação para celular -->
+    <nav class="app-btmnav" role="navigation" aria-label="Navegação móvel">
+      <button type="button" class="app-btmnav__item" id="js-back-btn-mobile" aria-label="Voltar">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+          <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Voltar</span>
+      </button>
+
+      <a href="{% url 'home' %}" class="app-btmnav__item {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" aria-label="Início">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+          <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Início</span>
+      </a>
+
+      <a href="{% if request.user.is_staff %}https://conmac.pythonanywhere.com/centros/{% else %}{% url 'viagens_centros' %}{% endif %}"
+         class="app-btmnav__item {% if request.resolver_match.url_name == 'viagens_centros' %}is-active{% endif %}"
+         aria-label="Meus Centros">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true">
+          <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 3v15M15 6v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Meus Centros</span>
+      </a>
+    </nav>
+
+
+    {% if request.user.is_authenticated %}
+    <!-- push prompt (estático) -->
+    <div id="push-prompt" style="display:none; border-radius:8px; border:1px solid #d7eaf0;
+         padding:12px; background:#f3fbfd; color:#0b5566; margin:12px 0;">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <strong>Ativar notificações</strong>
+          <div style="font-size:.95rem; color:#0b5566; opacity:.95;">
+            Receba avisos importantes sobre alterações de status e mensagens da CONMAC.
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="push-accept" style="background:#007bff;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;">
+            Permitir
+          </button>
+          <button id="push-decline" style="background:transparent;color:#007bff;border:1px solid #007bff;padding:6px 10px;border-radius:6px;cursor:pointer;">
+            Não, obrigado
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+
+    {% endif %}
+
+
+    <div id="notification-card">
+      <h4>Ativar Notificações?</h4>
+      <p>Receba alertas sobre fechamentos e atividades importantes em tempo real.</p>
+      <div class="notif-actions">
+        <button id="btn-deny-notif" class="btn-notif btn-deny">Agora não</button>
+        <button id="btn-enable-notif" class="btn-notif btn-allow">Ativar</button>
+      </div>
+    </div>
+
+    {% block content %}{% endblock %}
+
+</main>
+
+    {% if request.user.is_authenticated %}
+      <p style="text-align: center;margin-top: 50px;font-size: 16px;padding: 25px;margin-bottom: 70px;"> Equipe de Desenvolvimento da CONMAC - 2026</p>
     {% endif %}
 
   <img class="conmac-watermark" src="{% static 'img/watermark_conmac.png' %}" alt="" aria-hidden="true">
@@ -277,150 +401,150 @@
 
 
 
+<script>
+(() => {
+  const root = document.getElementById('modal-root');
 
-  <script>
-    (() => {
-      const root = document.getElementById('modal-root');
+  function closeModal() {
+    if (!root) return;
+    root.hidden = true;
+    root.innerHTML = '';
+  }
 
-      function closeModal() {
-        if (!root) return;
-        root.hidden = true;
-        root.innerHTML = '';
+  async function openModal(url) {
+    if (!root) return;
+    root.innerHTML = `
+      <div class="modal-backdrop" data-close-modal></div>
+      <div class="modal">
+        <div class="modal__body">Carregando…</div>
+      </div>`;
+    root.hidden = false;
+
+    try {
+      const response = await fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const html = await response.text();
+      root.querySelector('.modal__body').innerHTML = html;
+    } catch (error) {
+      console.error('Erro ao carregar modal:', error);
+      root.querySelector('.modal__body').innerHTML = '<p>Erro ao carregar conteúdo.</p>';
+    }
+  }
+
+  // Abrir e fechar modal
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('[data-modal-url]');
+    if (trigger) {
+      e.preventDefault();
+      openModal(trigger.getAttribute('data-modal-url'));
+      return;
+    }
+
+    if (
+      e.target.matches('[data-close-modal]') ||
+      e.target.classList.contains('modal-backdrop')
+    ) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Submissão AJAX do formulário
+  document.addEventListener('submit', async (e) => {
+    const form = e.target.closest('.js-admin-form');
+    if (!form) return;
+
+    e.preventDefault();
+
+    const btn = form.querySelector('.js-submit');
+    const originalText = btn ? btn.textContent : '';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'salvando…';
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const html = await response.text();
+      const body = root.querySelector('.modal__body');
+      if (body) body.innerHTML = html;
+
+      // Auto-remover mensagens após 4s
+      setTimeout(() => {
+        document.querySelectorAll('.msgs').forEach(msg => msg.remove());
+      }, 4000);
+    } catch (err) {
+      console.error('Erro ao salvar formulário:', err);
+      alert('Falha ao salvar. Tente novamente.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
+    }
+  });
 
-      async function openModal(url) {
-        if (!root) return;
-        root.innerHTML = `
-          <div class="modal-backdrop" data-close-modal></div>
-          <div class="modal">
-            <div class="modal__body">Carregando…</div>
-          </div>`;
-        root.hidden = false;
+  // Alternância entre modo individual/lote e seleção de todos
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'js-modo-lote') {
+      const isLote = e.target.checked;
+      const individualForm = document.getElementById('form-individual');
+      const loteForm = document.getElementById('form-lote');
+      if (individualForm) individualForm.hidden = isLote;
+      if (loteForm) loteForm.hidden = !isLote;
+    }
 
-        try {
-          const response = await fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          });
-          const html = await response.text();
-          root.querySelector('.modal__body').innerHTML = html;
-        } catch (error) {
-          console.error('Erro ao carregar modal:', error);
-          root.querySelector('.modal__body').innerHTML = '<p>Erro ao carregar conteúdo.</p>';
-        }
-      }
+    if (e.target.id === 'js-select-all') {
+      document.querySelectorAll('#form-lote input[type="checkbox"][name="despesas"]')
+        .forEach(chk => chk.checked = e.target.checked);
+    }
+  });
+})();
+</script>
 
-      // Abrir e fechar modal
-      document.addEventListener('click', (e) => {
-        const trigger = e.target.closest('[data-modal-url]');
-        if (trigger) {
-          e.preventDefault();
-          openModal(trigger.getAttribute('data-modal-url'));
-          return;
-        }
+<script>
+(function(){
+function goBack(fallbackUrl){
+  if (window.history.length > 1) { window.history.back(); }
+  else { window.location.href = fallbackUrl; }
+}
+const btnDesktop = document.getElementById('js-back-btn');
+const btnMobile  = document.getElementById('js-back-btn-mobile');
+const fallback   = "{% url 'viagens_lista' %}";
 
-        if (
-          e.target.matches('[data-close-modal]') ||
-          e.target.classList.contains('modal-backdrop')
-        ) {
-          closeModal();
-        }
-      });
+if (btnDesktop) btnDesktop.addEventListener('click', ()=>goBack(fallback));
+if (btnMobile)  btnMobile.addEventListener('click',  ()=>goBack(fallback));
+})();
+</script>
 
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
-      });
-
-      // Submissão AJAX do formulário
-      document.addEventListener('submit', async (e) => {
-        const form = e.target.closest('.js-admin-form');
-        if (!form) return;
-
-        e.preventDefault();
-
-        const btn = form.querySelector('.js-submit');
-        const originalText = btn ? btn.textContent : '';
-
-        if (btn) {
-          btn.disabled = true;
-          btn.textContent = 'salvando…';
-        }
-
-        try {
-          const response = await fetch(form.action, {
-            method: 'POST',
-            body: new FormData(form),
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          });
-          const html = await response.text();
-          const body = root.querySelector('.modal__body');
-          if (body) body.innerHTML = html;
-
-          // Auto-remover mensagens após 4s
-          setTimeout(() => {
-            document.querySelectorAll('.msgs').forEach(msg => msg.remove());
-          }, 4000);
-        } catch (err) {
-          console.error('Erro ao salvar formulário:', err);
-          alert('Falha ao salvar. Tente novamente.');
-        } finally {
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = originalText;
-          }
-        }
-      });
-
-      // Alternância entre modo individual/lote e seleção de todos
-      document.addEventListener('change', (e) => {
-        if (e.target.id === 'js-modo-lote') {
-          const isLote = e.target.checked;
-          const individualForm = document.getElementById('form-individual');
-          const loteForm = document.getElementById('form-lote');
-          if (individualForm) individualForm.hidden = isLote;
-          if (loteForm) loteForm.hidden = !isLote;
-        }
-
-        if (e.target.id === 'js-select-all') {
-          document.querySelectorAll('#form-lote input[type="checkbox"][name="despesas"]')
-            .forEach(chk => chk.checked = e.target.checked);
-        }
-      });
-    })();
-  </script>
-  <script>
+<script>
   (function(){
     function goBack(fallbackUrl){
-      if (window.history.length > 1) { window.history.back(); }
-      else { window.location.href = fallbackUrl; }
+      if (history.length > 1) { history.back(); }
+      else { location.href = fallbackUrl; }
     }
     const btnDesktop = document.getElementById('js-back-btn');
     const btnMobile  = document.getElementById('js-back-btn-mobile');
     const fallback   = "{% url 'viagens_lista' %}";
-
     if (btnDesktop) btnDesktop.addEventListener('click', ()=>goBack(fallback));
     if (btnMobile)  btnMobile.addEventListener('click',  ()=>goBack(fallback));
   })();
-  </script>
+</script>
 
-  <script>
-      (function(){
-        function goBack(fallbackUrl){
-          if (history.length > 1) { history.back(); }
-          else { location.href = fallbackUrl; }
-        }
-        const btnDesktop = document.getElementById('js-back-btn');
-        const btnMobile  = document.getElementById('js-back-btn-mobile');
-        const fallback   = "{% url 'viagens_lista' %}";
-        if (btnDesktop) btnDesktop.addEventListener('click', ()=>goBack(fallback));
-        if (btnMobile)  btnMobile.addEventListener('click',  ()=>goBack(fallback));
-      })();
-  </script>
-
-  <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/static/serviceworker.js');
-      }
-  </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/serviceworker.js');
+  }
+</script>
 
 <script>
   let deferredPrompt = null;
@@ -540,6 +664,130 @@
       }
     }
   };
+</script>
+
+
+<script type="module">
+  console.log("🚀 SISTEMA DE NOTIFICAÇÃO: Script Iniciado (Versão V4 - Wait Ready)");
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging.js";
+
+  // --- 1. CONFIGURAÇÃO FIREBASE ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyDIJm4fS7o1m7VgvfFU-9WpIi0i-uKUyug",
+    authDomain: "conmac-app.firebaseapp.com",
+    projectId: "conmac-app",
+    messagingSenderId: "199472856868",
+    appId: "1:199472856868:web:7bd0fb536fbe63d9007db1",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+  const vapidKey = "BDtArjaAYv_1Ljbm0I1a9X2Ina9o9XZP9TeUR0AN-Dl_xWClyGGvmHHM_oyDSvZctDq8RpajKemZaeO65HPrwl4";
+
+  // --- 2. ELEMENTOS DE UI ---
+  const card = document.getElementById('notification-card');
+  const btnEnable = document.getElementById('btn-enable-notif');
+  const btnDeny = document.getElementById('btn-deny-notif');
+
+  // --- 3. VERIFICAÇÃO INICIAL ---
+  if (Notification.permission === 'default') {
+      if(card) card.style.display = 'block';
+  } else if (Notification.permission === 'granted') {
+      console.log('✅ Permissão já existe. Atualizando token...');
+      obterTokenSilencioso();
+  } else {
+      console.log('⛔ Usuário bloqueou notificações anteriormente.');
+  }
+
+  // --- 4. EVENTOS DE BOTÃO ---
+  if(btnEnable) {
+      btnEnable.addEventListener('click', () => {
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+              console.log('✅ Permissão concedida! Iniciando registro...');
+              if(card) card.style.display = 'none';
+              // Chama a função para pegar o token
+              obterTokenSilencioso();
+            } else {
+              console.log('⛔ Usuário negou.');
+              if(card) card.style.display = 'none';
+            }
+          });
+      });
+  }
+
+  if(btnDeny) {
+      btnDeny.addEventListener('click', () => {
+          if(card) card.style.display = 'none';
+      });
+  }
+
+  // --- 5. FUNÇÃO CORRIGIDA (O PULO DO GATO) ---
+  async function obterTokenSilencioso() {
+      try {
+          if ('serviceWorker' in navigator) {
+
+              // PASSO A: Inicia o registro
+              await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+              // PASSO B (A CORREÇÃO): Espera explicitamente o SW estar PRONTO/ATIVO
+              // Sem isso, o getToken falha na primeira tentativa
+              const registration = await navigator.serviceWorker.ready;
+              console.log('🔧 Service Worker está PRONTO e ATIVO:', registration.scope);
+
+              // PASSO C: Pede o token usando o registro confirmado
+              const currentToken = await getToken(messaging, {
+                  vapidKey: vapidKey,
+                  serviceWorkerRegistration: registration
+              });
+
+              if (currentToken) {
+                  console.log('🎫 Token gerado na hora:', currentToken);
+                  enviarTokenParaBackend(currentToken);
+              } else {
+                  console.log('⚠️ Nenhum token disponível.');
+              }
+          } else {
+              console.log('❌ Navegador sem suporte a Service Worker.');
+          }
+      } catch (err) {
+          console.error('❌ Erro no processo do Token:', err);
+      }
+  }
+
+  // --- 6. ENVIO AO BACKEND ---
+  function enviarTokenParaBackend(token) {
+      fetch('/api/salvar-fcm-token/', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({ token: token })
+      })
+      .then(async response => {
+          if (response.ok) {
+              const json = await response.json(); // Assumindo que agora o backend retorna JSON correto
+              console.log("🎉 SUCESSO: Token salvo no banco!", json);
+
+              // OPCIONAL: Se você ainda quiser recarregar a página por garantia visual:
+              // window.location.reload();
+          } else {
+              console.error("❌ Erro HTTP:", response.status);
+          }
+      })
+      .catch(err => console.error("❌ Erro de Rede:", err));
+  }
+
+  // --- 7. LISTENER ---
+  onMessage(messaging, (payload) => {
+    console.log('🔔 Mensagem (Foreground):', payload);
+    const titulo = payload.notification.title || "Nova Notificação";
+    alert(`${titulo}\n${payload.notification.body}`);
+  });
+
 </script>
 
 

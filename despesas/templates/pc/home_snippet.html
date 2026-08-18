@@ -1,0 +1,42 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+  ARQUIVO A: SNIPPET PARA home.html
+  Adicione este bloco dentro do <div class="conmac-niveis" role="list">
+  APÓS o {% endfor %} do loop de níveis existente.
+  
+  Também adicione 'acesso_pc': True no contexto da view home em views.py:
+    # No final da view home_view (ou dashboard_view), adicione:
+    context['acesso_pc'] = (
+        request.user.is_staff or request.user.is_superuser or
+        (hasattr(request.user, 'perfil') and 
+         getattr(request.user.perfil, 'acesso_prestacao_contas', False))
+    )
+═══════════════════════════════════════════════════════════════════ -->
+
+{% if acesso_pc %}
+<a href="{% url 'prestacao_contas_monitor' %}"
+   role="listitem"
+   class="conmac-nivel-card"
+   title="Acompanhamento de Notificações e Prestações de Conta"
+   style="text-decoration:none; color:inherit; border: 2px solid #cffafe;">
+
+  <div style="width:100%;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f0fdfe;padding:8px 0;">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <line x1="10" y1="9"  x2="8"  y2="9"/>
+    </svg>
+  </div>
+  <div style="font-weight:700;font-size:.82rem;text-align:center;color:#0e7490;">
+    Prestação<br>de Contas
+  </div>
+</a>
+{% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+  ARQUIVO B: TEMPLATE prestacao_contas_nova.html
+  Salve em: templates/despesas/prestacao_contas_nova.html
+═══════════════════════════════════════════════════════════════════ -->
+{# Este bloco abaixo é o conteúdo completo do template #}

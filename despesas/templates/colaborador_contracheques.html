@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Meus Contracheques · CONMAC{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --brown:        #945f34;
+  --brown-dark:   #7a4d2a;
+  --teal:         #239FAB;
+  --teal-dark:    #1a7a84;
+  --gold:         #c8922a;
+  --dark:         #1a202c;
+  --gray:         #4a5568;
+  --muted:        #718096;
+  --border:       #e2e8f0;
+  --bg:           #f4f6f9;
+  --card:         #ffffff;
+  --gradient:     linear-gradient(135deg, var(--brown) 0%, var(--teal) 100%);
+}
+
+/* ── HERO ── */
+.cc-hero {
+  margin-top: 10px;
+  background: var(--gradient);
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 16px 40px rgba(148,95,52,0.2);
+  flex-wrap: wrap;
+  position: relative;
+}
+.cc-hero::before {
+  content: ''; position: absolute; top: -40px; right: -40px;
+  width: 200px; height: 200px; background: rgba(255,255,255,0.05); border-radius: 50%; pointer-events: none;
+}
+.cc-hero::after {
+  content: ''; position: absolute; bottom: -60px; left: 30%;
+  width: 250px; height: 250px; background: rgba(255,255,255,0.04); border-radius: 50%; pointer-events: none;
+}
+.cc-hero__left { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.cc-hero__ico {
+  width: 68px; height: 68px; display: grid; place-items: center;
+  background: rgba(255,255,255,0.2); border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0;
+}
+.cc-hero__txt h2 { margin: 0; font-size: 1.9rem; line-height: 1.1; font-weight: 800; color: #fff; }
+.cc-hero__txt p  { margin: 7px 0 0; opacity: .85; font-size: .95rem; color: #fff; }
+.cc-hero__kpi {
+  background: rgba(255,255,255,0.97); border-radius: 18px; padding: 18px 26px;
+  min-width: 190px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  position: relative; z-index: 1;
+}
+.cc-hero__kpi .kv { font-size: 1.6rem; font-weight: 800; color: var(--teal); }
+.cc-hero__kpi .kl { font-size: .7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .6px; margin-top: 3px; }
+
+/* ── SELETOR DE ANO ── */
+.year-tabs { display: flex; gap: 8px; margin: 24px 0 18px; flex-wrap: wrap; }
+.year-tab {
+  padding: 9px 20px; border-radius: 10px; border: 1.5px solid var(--border);
+  background: #fff; color: var(--gray); font-weight: 700; font-size: .85rem;
+  cursor: pointer; transition: .18s;
+}
+.year-tab.active { background: var(--gradient); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(148,95,52,.25); }
+.year-tab:hover:not(.active) { border-color: var(--teal); color: var(--teal); }
+
+/* ── GRID DE MESES ── */
+.month-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
+}
+.month-card {
+  background: #fff; border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.04); transition: .18s;
+  position: relative; overflow: hidden;
+}
+.month-card:hover { box-shadow: 0 8px 22px rgba(0,0,0,.08); transform: translateY(-2px); }
+.month-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--gradient);
+}
+.month-card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.month-card__mes { font-size: 1.1rem; font-weight: 800; color: var(--dark); text-transform: capitalize; }
+.month-card__ano { font-size: .78rem; color: var(--muted); font-weight: 600; }
+.month-card__valor { font-size: .74rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .5px; }
+.month-card__valor-num { font-size: 1.35rem; font-weight: 800; color: var(--teal); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.month-card__acoes { display: flex; gap: 8px; margin-top: 18px; }
+.month-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 12px; border-radius: 9px; font-size: .8rem; font-weight: 700; cursor: pointer;
+  text-decoration: none; transition: .18s; border: none;
+}
+.month-btn--view { background: #f8fafc; border: 1.5px solid var(--border); color: var(--brown); }
+.month-btn--view:hover { border-color: var(--brown); background: #fffaf5; }
+.month-btn--download { background: var(--gradient); color: #fff; }
+.month-btn--download:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(35,159,171,.3); }
+
+/* ── ESTADO VAZIO ── */
+.empty-state {
+  background: #fff; border: 1px dashed var(--border); border-radius: 16px;
+  padding: 60px 24px; text-align: center; color: var(--muted);
+}
+.empty-state svg { margin-bottom: 14px; opacity: .5; }
+.empty-state p { font-size: .92rem; margin: 0; }
+
+@media (max-width: 640px) {
+  .cc-hero { padding: 22px; }
+  .cc-hero__txt h2 { font-size: 1.5rem; }
+}
+</style>
+
+<!-- ── HERO ── -->
+<section class="cc-hero">
+  <div class="cc-hero__left">
+    <div class="cc-hero__ico">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
+      </svg>
+    </div>
+    <div class="cc-hero__txt">
+      <h2>Meus Contracheques</h2>
+      <p>{{ perfil.user.get_full_name }}{% if perfil.cargo %} · {{ perfil.cargo }}{% endif %}</p>
+    </div>
+  </div>
+  <div class="cc-hero__kpi">
+    <div class="kv">{{ total_contracheques }}</div>
+    <div class="kl">Contracheque{{ total_contracheques|pluralize:"s" }} disponíve{{ total_contracheques|pluralize:"l,is" }}</div>
+  </div>
+</section>
+
+{% if anos_ordenados %}
+  <!-- ── ABAS DE ANO ── -->
+  <div class="year-tabs">
+    {% for grupo in anos_ordenados %}
+      <button type="button" class="year-tab {% if forloop.first %}active{% endif %}" onclick="mostrarAno('{{ grupo.ano|stringformat:'d' }}', this)">
+        {{ grupo.ano|stringformat:"d" }}
+      </button>
+    {% endfor %}
+  </div>
+
+  <!-- ── GRIDS POR ANO ── -->
+  {% for grupo in anos_ordenados %}
+  <div class="month-grid ano-bloco" id="ano-{{ grupo.ano|stringformat:'d' }}" style="{% if not forloop.first %}display:none{% endif %}">
+    {% for c in grupo.itens %}
+    <div class="month-card">
+      <div class="month-card__head">
+        <span class="month-card__mes">{{ c.mes_nome }}</span>
+        <span class="month-card__ano">{{ c.ano|stringformat:"d" }}</span>
+      </div>
+      <div class="month-card__valor">Valor Líquido</div>
+      <div class="month-card__valor-num">
+        {% if c.valor_liquido %}R$ {{ c.valor_liquido|floatformat:2|intcomma }}{% else %}—{% endif %}
+      </div>
+      <div class="month-card__acoes">
+        <a class="month-btn month-btn--view" href="{% url 'colaborador_contracheque_arquivo' contracheque_id=c.id %}" target="_blank" rel="noopener">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          Visualizar
+        </a>
+        <a class="month-btn month-btn--download" href="{% url 'colaborador_contracheque_arquivo' contracheque_id=c.id %}?download=1">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Baixar
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    <p>Nenhum contracheque disponível ainda.<br>Assim que o RH sincronizar a folha do mês, ele aparece aqui.</p>
+  </div>
+{% endif %}
+
+<script>
+function mostrarAno(ano, botao) {
+  document.querySelectorAll('.ano-bloco').forEach(el => el.style.display = 'none');
+  document.getElementById('ano-' + ano).style.display = 'grid';
+  document.querySelectorAll('.year-tab').forEach(b => b.classList.remove('active'));
+  botao.classList.add('active');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+.rsvp-outer {
+  max-width: 760px;
+  margin: 50px auto;
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.rsvp-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  text-align: center;
+}
+
+.rsvp-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+/* Logo responsiva */
+.rsvp-logo img {
+  max-width: 380px;
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .rsvp-logo img {
+    max-width: 240px;
+  }
+}
+
+.rsvp-input {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 28px;
+  border: 1px solid #ddd;
+  font-size: 18px;
+  margin-bottom: 18px;
+}
+
+.rsvp-radios {
+  margin: 12px 0 24px 0;
+  font-size: 20px;
+  text-align: left;
+}
+
+.rsvp-radio-label { display: block; margin: 12px 0; }
+
+.rsvp-submit {
+  padding: 12px 36px;
+  border-radius: 28px;
+  background: #0d787d;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.success-box {
+  border: 1px solid #0d787d;
+  background: #e8f8f8;
+  padding: 22px;
+  border-radius: 10px;
+  font-size: 20px;
+  text-align: center;
+  color: #0d787d;
+  margin-bottom: 30px;
+}
+</style>
+
+<div class="rsvp-outer">   {# CONTAINER BRANCO + SOMBRA #}
+<div class="rsvp-container">
+
+  <div class="rsvp-logo">
+    <img src="{% static 'img/conmacfest2025.png' %}" alt="Logo do evento">
+  </div>
+
+  {% if success %}
+      <div class="success-box">
+          Sua confirmação foi enviada com sucesso!  
+          <br>Você será redirecionado para a página principal do sistema de Gestão Inteligente da CONMAC!
+      </div>
+
+      <script>
+          setTimeout(function() {
+              window.location.href = "{% url 'home' %}";
+          }, 7000);
+      </script>
+  {% endif %}
+
+  {% if not success %}
+  <form method="post" action="{% url 'rsvp_create' %}">
+    {% csrf_token %}
+
+    <input class="rsvp-input"
+           type="text"
+           name="nome"
+           placeholder="nome completo"
+           value="{{ form.nome.value|default_if_none:'' }}"
+           required maxlength="200">
+
+    <div class="rsvp-radios">
+      <label class="rsvp-radio-label">
+        <input type="radio" name="vai_ir" value="True"
+               {% if form.vai_ir.value == 'True' or form.vai_ir.value == True %}checked{% endif %}>
+        eu vou para CONMAC FEST 2025.
+      </label>
+
+      <label class="rsvp-radio-label">
+        <input type="radio" name="vai_ir" value="False"
+               {% if form.vai_ir.value == 'False' or form.vai_ir.value == False %}checked{% endif %}>
+        não poderei ir.
+      </label>
+    </div>
+
+    <button type="submit" class="rsvp-submit">enviar</button>
+  </form>
+  {% endif %}
+
+</div>
+</div>
+
+{% endblock content %}
