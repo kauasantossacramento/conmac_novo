@@ -2,9 +2,11 @@
 
 > Documento de referência para qualquer IA/desenvolvedor que for mexer neste
 > projeto depois. Escrito em 2026-08-18 após a implementação do módulo de
-> emissão de NFS-e via SAATRI Direto. Cobre a estrutura geral do sistema
-> (todos os módulos, mesmo os que não foram tocados nesta sessão) e o
-> detalhamento técnico completo do que foi construído.
+> emissão de NFS-e via SAATRI Direto, e **atualizado no mesmo dia** após
+> adicionar o cache local de dados de emissão (pra não depender da Omie a
+> cada nota — ver seção 4.4). Cobre a estrutura geral do sistema (todos os
+> módulos, mesmo os que não foram tocados nestas sessões) e o detalhamento
+> técnico completo do que foi construído.
 >
 > **Antes de confiar em qualquer nome de arquivo/linha citado aqui, confira
 > se ainda existe** — o `views.py` principal tem ~13.500 linhas e é editado
@@ -137,7 +139,10 @@ funções duplicadas, ver seção 6). Módulos identificados:
 - **`Contrato`**: sincronizado da Omie (`OmieService.sincronizar_dados`),
   representa um contrato de prestação de serviço com um cliente (prefeitura/
   câmara). Campos-chave: `omie_cod_ctr`, `omie_num_ctr`, `cliente_id_omie`,
-  `cliente_nome`, `valor_mensal`, `municipio`, `tipo_entidade`.
+  `cliente_nome`, `valor_mensal`, `municipio`, `tipo_entidade`. Desde a
+  segunda sessão (2026-08-18), também guarda um **cache local completo dos
+  dados de emissão** (`descricao_servico`, `item_lista_servico`,
+  `codigo_nbs`, `aliquota_iss`, `dados_tomador` em JSON) — ver seção 4.4.
 - **`NotaFiscal`**: uma NFS-e já emitida. Tem o campo **`origem`** (novo):
   `'omie'` (fluxo padrão, todo o histórico até 2026-08-18) ou `'saatri'`
   (emissão direta, novo). A tela `notas_competencia.html` e o envio de
@@ -184,13 +189,11 @@ CNPJ/endereço do cliente) — só não usa a Omie pra *emitir*.
 2. Se escolher SAATRI: `chamarFaturarLote()` (JS) posta pra
    `/receitas/contratos/faturar-lote-saatri/` em vez de `/faturar-lote/`.
 3. `faturar_lote_saatri_view` (`despesas/views_saatri.py`), por contrato:
-   - `OmieService.consultar_contrato_completo()` → pega valor, descrição e
-     NBS **atuais** do contrato na Omie (respeitando o que `alterar_contrato_
-     lote` já tiver ajustado).
-   - `OmieService.consultar_cliente_completo()` (**novo método**) → busca o
-     cadastro fiscal completo do tomador direto na Omie (CNPJ/CPF, endereço,
-     `cidade_ibge`, telefone, e-mail) — não existe cadastro de tomador local,
-     é sempre ao vivo.
+   - Pega valor/descrição/NBS/alíquota e dados fiscais do tomador de uma de
+     duas **fontes**, escolhida pelo usuário no momento da emissão (ver
+     seção 4.4): **`fonte='local'`** (lê só o cache do `Contrato`, zero
+     chamada à Omie) ou **`fonte='omie'`** (`consultar_contrato_completo` +
+     `consultar_cliente_completo`, ao vivo — comportamento original).
    - Monta um `RpsSaatri` (numera via `SaatriNumeracao`, contador
      dedicado — nunca reusa `omie_cod_ctr`/OS da Omie) e chama
      `saatri.client.gerar_nfse()`.
@@ -211,6 +214,70 @@ CNPJ/endereço do cliente) — só não usa a Omie pra *emitir*.
    `nota_fiscal.origem == 'saatri'` e baixa via `saatri.client.baixar_pdf_
    nfse()` em vez de tentar o caminho da Omie (que falharia, pois
    `omie_nfse_id` é `None` pra essas notas).
+
+### 4.4 Cache local de emissão — evitando o throttling da Omie
+
+**Problema real que motivou isso**: em lotes grandes, `faturar_lote_saatri_
+view` consultando a Omie contrato por contrato (`consultar_contrato_
+completo` + `consultar_cliente_completo`) esbarrava no throttling
+"REDUNDANT" da Omie — cada ocorrência força **65 segundos de espera**
+(`OmieService._request`, retry automático), tornando o lote inteiro
+extremamente lento.
+
+**Solução**: `Contrato` guarda um cache local completo (campos
+`descricao_servico`, `item_lista_servico`, `codigo_nbs`, `aliquota_iss`,
+`dados_tomador` — este último um JSON no mesmo formato que
+`consultar_cliente_completo` retorna). Emitir a partir desse cache não faz
+**nenhuma** chamada à Omie.
+
+**Como o cache é alimentado/mantido** — toggle "Sincronizar com a Omie" em
+`modal_editar_lote.html` (switch animado, campo `sincronizar_omie` no
+`EdicaoLoteContratoForm`, **default `True`** — preserva o comportamento
+anterior pra quem não mexer):
+
+- **Ligado** (padrão): `editar_lote_modal` chama `OmieService.
+  alterar_contrato_lote()` normalmente (grava na Omie) **e** aproveita o
+  retorno dessa mesma chamada (`dados_response`, já contém a versão
+  pós-alteração — não precisa de uma segunda consulta) pra popular
+  `descricao_servico`/`codigo_nbs`/`aliquota_iss` no `Contrato`. Se
+  `dados_tomador` ainda estiver vazio (primeira vez), busca uma vez via
+  `consultar_cliente_completo` e cacheia.
+- **Desligado**: `editar_lote_modal` **não faz nenhuma chamada à Omie**.
+  Só atualiza os campos locais diretamente — a substituição de
+  competência na descrição usa `omie_service.atualizar_competencia_em_
+  descricao(desc_atual, mes, ano)`, uma função **pura** (extraída de
+  dentro de `alterar_contrato_lote` pra poder ser reaproveitada sem rede).
+  Exige que o contrato **já tenha uma `descricao_servico` em cache** — se
+  não tiver (nunca foi sincronizado) e o usuário tentar editar a
+  competência com o toggle desligado, a view recusa com uma mensagem
+  pedindo pra sincronizar pelo menos uma vez antes.
+
+**Na emissão** (`faturar_lote_saatri_view`): seletor "Consultar valor/
+descrição/tomador em: Banco de dados próprio | Omie (ao vivo)" — só
+aparece quando "Emitir via: SAATRI Direto" está selecionado. Vira o campo
+`fonte` (`'local'` ou `'omie'`) no `POST` pra `/receitas/contratos/
+faturar-lote-saatri/`. `_dados_emissao_do_contrato()` e `_tomador_do_
+contrato()` (em `views_saatri.py`) recebem esse `fonte` e branch: local lê
+direto do `Contrato`, omie consulta ao vivo como antes.
+
+⚠️ **Cuidado ao usar fonte local**: se o valor/descrição real do contrato
+mudar na Omie e ninguém sincronizar de novo (toggle ligado) antes de
+emitir, a nota sai com dados **desatualizados**. O cache não se auto-
+invalida — é responsabilidade do usuário sincronizar quando o contrato
+muda.
+
+### 4.5 Status de faturamento por competência
+
+`receitas_dashboard` ganhou um filtro de competência (`mes_fat`/`ano_fat`,
+GET params, **default = mês/ano atual**) e uma coluna "Faturamento" por
+contrato: badge verde "Faturado" ou vermelho "Não faturado", calculado
+checando se existe `NotaFiscal.objects.filter(contrato=c, competencia_mes=
+mes_fat, competencia_ano=ano_fat, status='emitida')` — **agnóstico a
+`origem`**, conta nota Omie ou SAATRI igual. Um alerta no topo do
+dashboard mostra quantos contratos ativos ainda não têm nota na competência
+selecionada, com link direto pra filtrar só esses (`?nao_faturados=1`).
+Objetivo: antes de rodar um faturamento em lote, dá pra checar rapidamente
+quem falta faturar num mês (inclusive meses passados, pra achar lacunas).
 
 ---
 
@@ -297,6 +364,10 @@ resultado = saatri_client.gerar_nfse(rps_dict, tomador)
   útil pra debug.
 - **`NotaFiscal`** ganhou: `origem`, `codigo_verificacao`, `xml_completo`.
   `omie_nfse_id` virou `null=True, blank=True` (antes era obrigatório).
+- **`Contrato`** ganhou (segunda sessão, 2026-08-18): `descricao_servico`,
+  `item_lista_servico` (default `"17.19.01"`), `codigo_nbs` (default
+  `"113022100"`), `aliquota_iss` (default `2.00`), `dados_tomador`
+  (`JSONField`, default `{}`), `dados_locais_atualizados_em`. Ver seção 4.4.
 
 ### 5.5 O que NÃO foi feito / pontos em aberto
 
@@ -309,12 +380,17 @@ resultado = saatri_client.gerar_nfse(rps_dict, tomador)
   reais de um contrato real (Ibirataia) mas não chegou a enviar). O teste
   real de ponta a ponta foi feito só no `nfse_project`, com dados de teste
   próprios (não um cliente real da CONMAC).
-- **Item de serviço e NBS**: hoje usa os valores padrão de
-  `saatri_config` OU o que estiver salvo no contrato na Omie
-  (`codNBS` do item). **Não há seletor/edição desses campos no formulário
-  de emissão SAATRI** — se algum contrato precisar de item/NBS diferente do
-  padrão, precisa ajustar via Omie antes (mesma limitação que já existia:
-  `alterar_contrato_lote` também assume os `PADRAO_*`).
+- **Item de serviço**: sempre `saatri_config.ITEM_LISTA_SERVICO_PADRAO`
+  (`"17.19.01"`) — não há como editar por contrato ainda, nem via Omie nem
+  local (o campo `Contrato.item_lista_servico` existe no model mas
+  `faturar_lote_saatri_view` não o lê hoje, só usa a constante fixa).
+- **NBS/valor/descrição**: editáveis via `editar_lote_modal`
+  (Omie ou local, seção 4.4), mas **sem seletor/edição no formulário de
+  emissão em si** — se precisar de um ajuste pontual só pra uma nota, tem
+  que passar pela edição em lote primeiro.
+- **Cache local não se auto-invalida** — ver aviso na seção 4.4. Não existe
+  hoje nenhum indicador visual de "cache desatualizado" (ex.: comparar
+  `dados_locais_atualizados_em` com a última alteração real na Omie).
 
 ---
 
