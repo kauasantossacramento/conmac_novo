@@ -1267,6 +1267,16 @@ document.addEventListener('DOMContentLoaded', function () {
       html += '<hr style="margin:8px 0 6px;border-color:rgba(0,0,0,.1);">' + d.msgs_erro.join('<br>');
     }
     html += '</div>';
+
+    if (d.pendentes_sefin > 0) {
+      html += '<div class="alert" style="font-size:.85rem;padding:11px 16px;border-radius:8px;margin-top:10px;' +
+              'background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;">' +
+              '⏳ <strong>' + d.pendentes_sefin + ' nota' + (d.pendentes_sefin > 1 ? 's' : '') + ' aceita' + (d.pendentes_sefin > 1 ? 's' : '') +
+              ' pela SEFIN</strong>, mas ainda não ' + (d.pendentes_sefin > 1 ? 'saíram' : 'saiu') + '. ' +
+              'Aguarde uns 5 minutos e clique em <strong>"Sincronizar NFS-e"</strong> pra buscar o resultado.' +
+              '</div>';
+    }
+
     el.innerHTML = html;
     mostrarPainel('painel-resultado-fat');
   }
@@ -1293,7 +1303,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
 
     atualizarProgresso(0, total, `Iniciando emissão (${total} contratos em ${chunks.length} lotes)…`);
 
-    let sucessos = 0, erros = 0, msgsErro = [];
+    let sucessos = 0, erros = 0, msgsErro = [], pendentesSefin = 0;
 
     for (let ci = 0; ci < chunks.length; ci++) {
       var chunk = chunks[ci];
@@ -1319,6 +1329,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
           if (data.ok || data.sucessos > 0 || data.erros > 0) {
             sucessos += data.sucessos || 0;
             erros    += data.erros    || 0;
+            pendentesSefin += data.pendentes_sefin || 0;
             if (data.msgs_erro && data.msgs_erro.length) msgsErro.push(...data.msgs_erro);
           } else {
             erros += chunk.length;
@@ -1341,6 +1352,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
       ok: erros === 0,
       sucessos: sucessos,
       erros: erros,
+      pendentes_sefin: pendentesSefin,
       msgs_erro: msgsErro
     }, true); // O "true" avisa a tela que foi ação de Faturamento
   }

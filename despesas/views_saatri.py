@@ -193,6 +193,7 @@ def faturar_lote_saatri_view(request):
     prestador = saatri_config.PRESTADOR
 
     sucessos, erros, msgs_erro = 0, 0, []
+    pendentes_sefin = 0  # RPS aceitos (DPS ok), mas a NFS-e ainda não saiu — precisa sync depois
     total = len(contratos)
 
     print(f"--- Faturar Lote SAATRI | total={total} fonte={fonte} ---")
@@ -274,6 +275,7 @@ def faturar_lote_saatri_view(request):
             rps_saatri.mensagem_erro = ''
             rps_saatri.save(update_fields=['status', 'mensagem_erro'])
             sucessos += 1
+            pendentes_sefin += 1
             print(f"  ⏳ Ctr {num_ctr}: DPS aceita (RPS {numero}) — NFS-e sai em alguns minutos, aguardando sync")
         else:
             rps_saatri.status = 'erro'
@@ -286,10 +288,11 @@ def faturar_lote_saatri_view(request):
 
         _throttle(idx, total)
 
-    print(f"--- Faturar Lote SAATRI End | sucessos={sucessos} erros={erros} ---")
+    print(f"--- Faturar Lote SAATRI End | sucessos={sucessos} erros={erros} pendentes_sefin={pendentes_sefin} ---")
 
     return JsonResponse({
         'ok': True, 'total': total, 'sucessos': sucessos, 'erros': erros,
+        'pendentes_sefin': pendentes_sefin,
         'msgs_erro': msgs_erro[:8],
     })
 
