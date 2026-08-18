@@ -9087,6 +9087,57 @@ def baixar_nfse_pdf(request, nota_id):
         'nome': nome_arquivo
     })
 
+
+@login_required
+def baixar_nfse_pdf_saatri(request, nota_id):
+    """
+    POST — baixa o PDF (DANFSe) direto do portal público do SAATRI, usando
+    numero_nfse + codigo_verificacao já salvos na NotaFiscal.
+
+    Serve pra qualquer nota (origem Omie ou SAATRI Direto) desde que tenha
+    codigo_verificacao salvo — é a ferramenta de consulta alternativa pra
+    quando o PDF não foi baixado (ou o caminho normal via Omie falhar).
+    Notas antigas emitidas antes desse campo existir não têm
+    codigo_verificacao e não podem usar essa via.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+
+    nota = get_object_or_404(NotaFiscal, pk=nota_id)
+
+    if not nota.numero_nfse or not nota.codigo_verificacao:
+        return JsonResponse({
+            'ok': False,
+            'erro': 'Esta nota não tem código de verificação salvo — não dá pra consultar direto no SAATRI. Tente "Baixar Omie".',
+        })
+
+    from .saatri import client as saatri_client
+    pdf_bytes = saatri_client.baixar_pdf_nfse(nota.numero_nfse, nota.codigo_verificacao)
+
+    if not pdf_bytes:
+        return JsonResponse({'ok': False, 'erro': 'O SAATRI não retornou um PDF válido para essa nota.'})
+
+    from .models import NotaFiscalPDF
+    try:
+        pdf_obj = nota.pdf_local
+        if pdf_obj.arquivo and os.path.isfile(pdf_obj.arquivo.path):
+            os.remove(pdf_obj.arquivo.path)
+    except NotaFiscalPDF.DoesNotExist:
+        pdf_obj = NotaFiscalPDF(nota=nota)
+
+    numero_limpo = str(nota.numero_nfse).replace('.', '').replace(',', '')
+    nome_arquivo = f'nfse_saatri_{numero_limpo}.pdf'
+
+    pdf_obj.arquivo.save(nome_arquivo, ContentFile(pdf_bytes), save=False)
+    pdf_obj.baixado_por = request.user
+    pdf_obj.save()
+
+    return JsonResponse({
+        'ok': True,
+        'arquivo': pdf_obj.arquivo.url,
+        'nome': nome_arquivo,
+    })
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  _ DOSSIÊ POR E-MAIL
 # ─────────────────────────────────────────────────────────────────────────────

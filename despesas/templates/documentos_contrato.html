@@ -724,6 +724,11 @@
                   onclick="baixarNfsePdf({{ nota.id|stringformat:"d" }}, this)">
                   ↓ baixar Omie
                 </button>
+                <button class="btn-mini baixar"
+                  title="{% if nota.codigo_verificacao %}Consulta direto no portal do SAATRI{% else %}Esta nota não tem código de verificação salvo{% endif %}"
+                  onclick="baixarNfsePdfSaatri({{ nota.id|stringformat:"d" }}, this)">
+                  ↓ baixar SAATRI
+                </button>
               {% endif %}
               <span class="nota-val">R$ {{ nota.valor_liquido|floatformat:2|intcomma }}</span>
             </div>
@@ -1285,13 +1290,13 @@ async function gerarLote() {
   }
 }
 
-// ── Baixar PDF da NFS-e ──
-async function baixarNfsePdf(notaId, btn) {
+// ── Baixar PDF da NFS-e (via Omie ou direto no SAATRI) ──
+async function _baixarNfsePdfVia(url, notaId, btn, labelBaixando) {
   const originalText = btn.textContent;
   btn.disabled    = true;
-  btn.textContent = '↓ baixando…';
+  btn.textContent = labelBaixando;
   try {
-    const r = await fetch(`/receitas/notas/${notaId}/baixar-pdf/`, {
+    const r = await fetch(url, {
       method:  'POST',
       headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
     });
@@ -1312,6 +1317,14 @@ async function baixarNfsePdf(notaId, btn) {
     btn.disabled    = false;
     btn.textContent = originalText;
   }
+}
+
+function baixarNfsePdf(notaId, btn) {
+  return _baixarNfsePdfVia(`/receitas/notas/${notaId}/baixar-pdf/`, notaId, btn, '↓ baixando…');
+}
+
+function baixarNfsePdfSaatri(notaId, btn) {
+  return _baixarNfsePdfVia(`/receitas/notas/${notaId}/baixar-pdf-saatri/`, notaId, btn, '↓ consultando SAATRI…');
 }
 
 /* ════════════════════════════════════════════════════════════

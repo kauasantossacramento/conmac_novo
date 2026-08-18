@@ -374,6 +374,43 @@
 .print-header h2 { font-size:15px; margin:0 0 3px; font-weight:800; }
 .print-header p  { font-size:10.5px; color:#555; margin:2px 0 0; }
 .print-header .print-filtros { font-size:10px; color:#777; margin-top:6px; font-style:italic; }
+
+/* ── Sistema visual "eml" — mesmo usado no modal Gerenciar (modal_editar_lote.html) —
+     reaproveitado aqui pro modal Sincronizar NFS-e, pra ficarem consistentes. ── */
+.eml-wrap{font-family:'DM Sans',system-ui,sans-serif;color:#1a1f2e;background:#fff;border-radius:18px;
+  max-height:min(88vh, 720px);display:flex;flex-direction:column;overflow:hidden;}
+.eml-header{background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:18px 18px 0 0;padding:20px 22px 18px;display:flex;align-items:center;gap:14px;position:relative;flex-shrink:0;}
+.eml-hicon{width:44px;height:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:11px;display:grid;place-items:center;flex-shrink:0}
+.eml-header h3{margin:0;font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em}
+.eml-header p{margin:3px 0 0;font-size:.76rem;color:rgba(255,255,255,.5)}
+.eml-close{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);border-radius:7px;width:28px;height:28px;display:grid;place-items:center;cursor:pointer;font-size:1.1rem;line-height:1;transition:background .15s,color .15s}
+.eml-close:hover{background:rgba(255,255,255,.16);color:#fff}
+.eml-body{padding:20px 22px 22px;overflow-y:auto;background:#fff;}
+.eml-field{margin-bottom:16px}
+.eml-field>label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:6px}
+.eml-field small{font-size:.73rem;color:#94a3b8;margin-top:4px;display:block}
+.eml-wrap input[type=text],.eml-wrap input[type=number],.eml-wrap select{border-radius:8px!important;border:1.5px solid #e2e8f0!important;padding:8px 11px!important;font-size:.88rem!important;transition:border-color .15s,box-shadow .15s!important;width:100%;box-sizing:border-box;font-family:'Sora',sans-serif;}
+.eml-wrap input:focus,.eml-wrap select:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.12)!important;outline:none!important}
+.eml-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid #f1f5f9}
+.eml-fr{display:flex;gap:8px;align-items:center}
+.eb{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;border:none;transition:all .18s;white-space:nowrap;letter-spacing:-.01em;font-family:'Sora',sans-serif;}
+.eb:disabled{opacity:.5;cursor:not-allowed}
+.eb-ghost{background:transparent;color:#64748b;border:1.5px solid #e2e8f0!important}
+.eb-ghost:hover{background:#f8fafc;border-color:#cbd5e1!important;color:#334155}
+.eb-dark{background:#1e293b;color:#fff}
+.eb-dark:hover{background:#0f172a;box-shadow:0 4px 12px rgba(15,23,42,.25);transform:translateY(-1px)}
+.eb-teal{background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;box-shadow:0 1px 3px rgba(13,148,136,.3)}
+.eb-teal:hover{box-shadow:0 4px 14px rgba(13,148,136,.35);transform:translateY(-1px)}
+.eml-opcao{display:flex;align-items:flex-start;gap:14px;width:100%;text-align:left;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s;font-family:'DM Sans',system-ui,sans-serif}
+.eml-opcao:hover{border-color:#94a3b8;background:#f8fafc}
+.eml-opcao:last-child{margin-bottom:0}
+.eml-opcao-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.eml-opcao-icon.ic-omie{background:#eff6ff;color:#2563eb}
+.eml-opcao-icon.ic-local{background:#f0fdf4;color:#16a34a}
+.eml-opcao-icon.ic-faturar{background:#fffbeb;color:#d97706}
+.eml-opcao-icon.ic-ambos{background:#faf5ff;color:#9333ea}
+.eml-opcao-txt strong{display:block;font-size:.9rem;color:#1a1f2e;margin-bottom:2px}
+.eml-opcao-txt span{font-size:.78rem;color:#64748b;line-height:1.4;display:block}
 </style>
 
 <!-- ── ALERTA VENCIMENTO ── -->
@@ -610,7 +647,7 @@
         <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
         <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
       </svg>
-      NFS-e
+      SINCRONIZAR NFSE
     </button>
 
     <a href="{% url 'gestao_documentos' %}"
@@ -643,27 +680,67 @@
      MODAL — Sincronizar NFS-e
 ════════════════════════════════════════════════════ -->
 <div class="modal-back" id="modal-sync-nfse">
-  <div class="modal-box" style="max-width:440px;">
-    <div class="modal-header">
-      <span class="modal-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Sincronizar NFS-e
-      </span>
-      <button class="modal-close" onclick="fecharModal('modal-sync-nfse')">×</button>
+  <div class="eml-wrap" style="width:90%;max-width:460px;">
+
+    <div class="eml-header">
+      <div class="eml-hicon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </div>
+      <div>
+        <h3>Sincronizar NFS-e</h3>
+        <p>Busca notas já emitidas — contratos não são alterados</p>
+      </div>
+      <button class="eml-close" onclick="fecharModal('modal-sync-nfse')" title="Fechar">×</button>
     </div>
 
-    <div style="padding:18px 20px 20px;">
+    <div class="eml-body">
 
-      <div id="snfse-config">
-        <p style="font-size:.83rem;color:var(--muted);margin:0 0 16px;">
-          Selecione o mês e ano para buscar as NFS-e emitidas no Omie.<br>
-          <strong>Contratos não são alterados.</strong>
-        </p>
+      <!-- ── Tela de escolha ── -->
+      <div id="snfse-escolha">
+        <p style="font-size:.83rem;color:#64748b;margin:0 0 14px;">O que você quer sincronizar?</p>
 
-        <div style="display:flex;gap:10px;margin-bottom:18px;">
-          <div style="flex:1;">
-            <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">MÊS</label>
-            <select id="snfse-mes" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;">
+        <button type="button" class="eml-opcao" id="snfse-opcao-omie">
+          <div class="eml-opcao-icon ic-omie">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="eml-opcao-txt">
+            <strong>Omie</strong>
+            <span>NFS-e emitidas numa competência (mês/ano) específica.</span>
+          </div>
+        </button>
+
+        <button type="button" class="eml-opcao" id="snfse-opcao-saatri">
+          <div class="eml-opcao-icon ic-faturar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+          <div class="eml-opcao-txt">
+            <strong>SAATRI</strong>
+            <span>Resolve os RPS pendentes aguardando a SEFIN — não depende de mês/ano.</span>
+          </div>
+        </button>
+
+        <button type="button" class="eml-opcao" id="snfse-opcao-ambos">
+          <div class="eml-opcao-icon ic-ambos">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="eml-opcao-txt">
+            <strong>Ambos</strong>
+            <span>Sincroniza Omie e SAATRI de uma vez, nessa ordem.</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- ── Configuração (mês/ano) — só quando envolve a Omie ── -->
+      <div id="snfse-config" style="display:none;">
+        <button type="button" id="snfse-btn-voltar-escolha" class="eb eb-ghost" style="margin-bottom:16px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Voltar
+        </button>
+
+        <div class="eml-field">
+          <label>Competência</label>
+          <div style="display:flex;gap:10px;">
+            <select id="snfse-mes" style="flex:1;">
               <option value="1">Janeiro</option><option value="2">Fevereiro</option>
               <option value="3">Março</option><option value="4">Abril</option>
               <option value="5">Maio</option><option value="6">Junho</option>
@@ -671,65 +748,45 @@
               <option value="9">Setembro</option><option value="10">Outubro</option>
               <option value="11">Novembro</option><option value="12">Dezembro</option>
             </select>
+            <input type="number" id="snfse-ano" value="{{ hoje.year }}" min="2023" max="2030" style="flex:1;">
           </div>
-          <div style="flex:1;">
-            <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ANO</label>
-            <input type="number" id="snfse-ano" value="{{ hoje.year }}" min="2023" max="2030"
-                   style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;box-sizing:border-box;">
-          </div>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">SINCRONIZAR</label>
-          <div style="display:flex;gap:14px;font-size:.84rem;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
-              <input type="checkbox" id="snfse-fonte-omie" checked> Omie
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
-              <input type="checkbox" id="snfse-fonte-saatri" checked> SAATRI (pendentes)
-            </label>
-          </div>
+          <small>Mês/ano das NFS-e a buscar na Omie.</small>
         </div>
 
         <div id="snfse-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
 
-        <div style="display:flex;justify-content:flex-end;gap:8px;">
-          <button onclick="fecharModal('modal-sync-nfse')"
-                  style="padding:9px 18px;border:1.5px solid var(--border);border-radius:9px;background:#fff;
-                         color:var(--muted);font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
-            Cancelar
-          </button>
-          <button id="snfse-btn-confirmar" onclick="executarSyncNfse()"
-                  style="padding:9px 20px;background:var(--teal);color:#fff;border:none;border-radius:9px;
-                         font-weight:700;font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Sincronizar
-          </button>
+        <div class="eml-footer">
+          <div></div>
+          <div class="eml-fr">
+            <button type="button" class="eb eb-ghost" onclick="fecharModal('modal-sync-nfse')">Cancelar</button>
+            <button type="button" id="snfse-btn-confirmar" class="eb eb-teal" onclick="executarSyncNfse()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Sincronizar
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- ── Painel de progresso (aparece durante a sincronização) ── -->
       <div id="snfse-progresso" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <span id="snfse-progresso-titulo" style="font-size:.83rem;font-weight:700;color:var(--dark);">Sincronizando…</span>
-          <span id="snfse-progresso-eta" style="font-size:.74rem;color:var(--muted);"></span>
+          <span id="snfse-progresso-titulo" style="font-size:.83rem;font-weight:700;color:#1a1f2e;">Sincronizando…</span>
+          <span id="snfse-progresso-eta" style="font-size:.74rem;color:#94a3b8;"></span>
         </div>
         <div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;margin-bottom:12px;">
           <div id="snfse-progresso-barra" style="height:8px;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);width:0%;transition:width .3s ease;min-width:4px;"></div>
         </div>
         <div id="snfse-progresso-log"
-             style="background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;
+             style="background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:8px 10px;
                     max-height:220px;overflow-y:auto;font-size:.78rem;font-family:'JetBrains Mono','Fira Code',monospace;
                     color:#334155;line-height:1.7;"></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-          <button id="snfse-btn-fechar-progresso" onclick="fecharModal('modal-sync-nfse')"
-                  disabled
-                  style="padding:9px 18px;border:none;border-radius:9px;background:var(--teal);
-                         color:#fff;font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;opacity:.5;">
+        <div class="eml-footer" style="justify-content:flex-end;">
+          <button type="button" id="snfse-btn-fechar-progresso" class="eb eb-teal" disabled style="opacity:.5;" onclick="fecharModal('modal-sync-nfse')">
             Concluir
           </button>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -1084,6 +1141,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var _pendIds  = [];
   var _pendComp = null;
+  var _snfseFonte = 'omie'; // 'omie' | 'saatri' | 'ambos' — escolhido na tela do modal Sincronizar NFS-e
+  var _statusFatNaoFaturadosIds = []; // ids dos contratos ainda não faturados na competência checada
 
   /* ── Helpers internos ──────────────────────────────────────────── */
   // CORREÇÃO: Busca direto no documento para não perder referência após o fetch
@@ -1234,6 +1293,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var nomesFat = d.faturados.map(function (c) { return c.nome; });
       var nomesNao = d.nao_faturados.map(function (c) { return c.nome; });
       var mesNome = MESES_PT_FULL[d.mes] || d.mes;
+      _statusFatNaoFaturadosIds = d.nao_faturados.map(function (c) { return c.id; });
 
       var html = '<div style="margin-bottom:4px;">Competência de referência: <strong>' + mesNome + '/' + d.ano + '</strong></div>';
       if (nomesFat.length) {
@@ -1245,11 +1305,29 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!nomesFat.length && !nomesNao.length) {
         html = 'Nenhum contrato selecionado.';
       }
+
+      // Só oferece a escolha quando há uma mistura real dos dois — se é
+      // tudo faturado ou tudo não-faturado, não tem o que escolher.
+      if (nomesFat.length && nomesNao.length) {
+        html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0;">' +
+          '<label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;margin-bottom:4px;">' +
+          '<input type="radio" name="escopo-emissao" value="todos" checked> Emitir todos os ' + (nomesFat.length + nomesNao.length) + ' selecionados' +
+          '</label>' +
+          '<label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">' +
+          '<input type="radio" name="escopo-emissao" value="nao_faturados"> Emitir só os ' + nomesNao.length + ' ainda não faturados' +
+          '</label></div>';
+      }
+
       corpo.innerHTML = html;
     } catch (e) {
       if (meuToken !== _statusFatToken) return;
       corpo.innerHTML = '⚠️ Erro de rede ao checar status de faturamento.';
     }
+  }
+
+  function lerEscopoEmissao() {
+    var el = document.querySelector('input[name="escopo-emissao"]:checked');
+    return (el && el.value === 'nao_faturados') ? _statusFatNaoFaturadosIds.slice() : _pendIds;
   }
 
   function exibirResultadoFat(d, isFaturamento) {
@@ -1566,11 +1644,19 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
         var opcao = t.dataset.opcao;
 
         if (opcao === 'faturar_sem_editar') {
+          var idsEscolhidos = lerEscopoEmissao();
+          if (!idsEscolhidos.length) {
+            mc('conf-status-faturamento-corpo').insertAdjacentHTML(
+              'beforeend',
+              '<div style="color:#991b1b;margin-top:6px;">⚠️ Nenhum contrato nesse escopo — nada a emitir.</div>'
+            );
+            return;
+          }
           var origemConfirmar = lerOrigemEmissao();
           var msg = (_pendComp && _pendComp.mes_num)
             ? 'Emitindo contratos (competência já atualizada)…'
             : (origemConfirmar === 'saatri' ? 'Emitindo contratos direto no SAATRI…' : 'Faturando contratos no Omie…');
-          chamarFaturarLote(_pendIds, null, msg, origemConfirmar, lerFonteDados());
+          chamarFaturarLote(idsEscolhidos, null, msg, origemConfirmar, lerFonteDados());
         } else {
           await processarEmChunks();
         }
@@ -1643,6 +1729,25 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
     modalSyncNfse.addEventListener('click', function (e) {
       if (e.target === modalSyncNfse) modalSyncNfse.classList.remove('open');
     });
+
+    document.getElementById('snfse-opcao-omie').addEventListener('click', function () { snfseEscolher('omie'); });
+    document.getElementById('snfse-opcao-saatri').addEventListener('click', function () { snfseEscolher('saatri'); });
+    document.getElementById('snfse-opcao-ambos').addEventListener('click', function () { snfseEscolher('ambos'); });
+    document.getElementById('snfse-btn-voltar-escolha').addEventListener('click', function () {
+      document.getElementById('snfse-config').style.display = 'none';
+      document.getElementById('snfse-escolha').style.display = 'block';
+    });
+  }
+
+  function snfseEscolher(fonte) {
+    _snfseFonte = fonte;
+    if (fonte === 'saatri') {
+      // SAATRI não depende de mês/ano — pula direto pra sincronização
+      executarSyncNfse();
+    } else {
+      document.getElementById('snfse-escolha').style.display = 'none';
+      document.getElementById('snfse-config').style.display = 'block';
+    }
   }
 
   /* Escape fecha todos os modais */
@@ -1699,20 +1804,13 @@ function _snfseProgresso(feito, total, inicioMs) {
 }
 
 async function executarSyncNfse() {
-  var mes = parseInt(document.getElementById('snfse-mes').value);
-  var ano = parseInt(document.getElementById('snfse-ano').value);
-  var syncOmie   = document.getElementById('snfse-fonte-omie').checked;
-  var syncSaatri = document.getElementById('snfse-fonte-saatri').checked;
-  var res = document.getElementById('snfse-resultado');
-
-  if (!syncOmie && !syncSaatri) {
-    res.style.display = 'block';
-    res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fff7ed;border:1.5px solid #fed7aa;color:#92400e;';
-    res.innerHTML = '⚠️ Selecione ao menos uma origem (Omie ou SAATRI).';
-    return;
-  }
+  var syncOmie   = (_snfseFonte === 'omie' || _snfseFonte === 'ambos');
+  var syncSaatri = (_snfseFonte === 'saatri' || _snfseFonte === 'ambos');
+  var mes = syncOmie ? parseInt(document.getElementById('snfse-mes').value) : null;
+  var ano = syncOmie ? parseInt(document.getElementById('snfse-ano').value) : null;
 
   // Troca pro painel de progresso
+  document.getElementById('snfse-escolha').style.display = 'none';
   document.getElementById('snfse-config').style.display = 'none';
   document.getElementById('snfse-progresso').style.display = 'block';
   document.getElementById('snfse-progresso-log').innerHTML = '';
@@ -1807,9 +1905,11 @@ async function executarSyncNfse() {
 
 /* Reseta o modal pro estado inicial (config) quando reaberto */
 function resetModalSyncNfse() {
+  var escolha = document.getElementById('snfse-escolha');
   var cfg = document.getElementById('snfse-config');
   var prog = document.getElementById('snfse-progresso');
-  if (cfg) cfg.style.display = 'block';
+  if (escolha) escolha.style.display = 'block';
+  if (cfg) cfg.style.display = 'none';
   if (prog) prog.style.display = 'none';
   var res = document.getElementById('snfse-resultado');
   if (res) res.style.display = 'none';

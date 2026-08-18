@@ -127,6 +127,7 @@ urlpatterns = [
     path('receitas/contratos/<int:contrato_id>/documentos/modelo/<int:pk>/excluir/', views.excluir_documento_modelo, name='excluir_documento_modelo'),
     path('receitas/contratos/<int:contrato_id>/documentos/modelo/gerar-lote/', views.gerar_modelos_lote, name='gerar_modelos_lote'),
     path('receitas/notas/<int:nota_id>/baixar-pdf/', views.baixar_nfse_pdf, name='baixar_nfse_pdf'),
+    path('receitas/notas/<int:nota_id>/baixar-pdf-saatri/', views.baixar_nfse_pdf_saatri, name='baixar_nfse_pdf_saatri'),
     path('receitas/envio/<int:envio_id>/enviar/', views.enviar_dossie, name='enviar_dossie'),
     path('receitas/envio/<int:envio_id>/status/', views.alterar_status_envio, name='alterar_status_envio'),
     path('receitas/lote/competencias/', views.competencias_lote, name='competencias_lote'),

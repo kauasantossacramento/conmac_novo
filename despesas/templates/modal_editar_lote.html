@@ -1,13 +1,14 @@
 {% load humanize %}
 <style>
-.eml-wrap{font-family:'DM Sans',system-ui,sans-serif;color:#1a1f2e}
-.eml-header{background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px 14px 0 0;padding:20px 22px 18px;display:flex;align-items:center;gap:14px;position:relative}
+.eml-wrap{font-family:'DM Sans',system-ui,sans-serif;color:#1a1f2e;background:#fff;border-radius:14px;
+  max-height:min(88vh, 720px);display:flex;flex-direction:column;overflow:hidden;}
+.eml-header{background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px 14px 0 0;padding:20px 22px 18px;display:flex;align-items:center;gap:14px;position:relative;flex-shrink:0;}
 .eml-hicon{width:44px;height:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:11px;display:grid;place-items:center;flex-shrink:0}
 .eml-header h3{margin:0;font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em}
 .eml-header p{margin:3px 0 0;font-size:.76rem;color:rgba(255,255,255,.5)}
 .eml-close{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);border-radius:7px;width:28px;height:28px;display:grid;place-items:center;cursor:pointer;font-size:1.1rem;line-height:1;transition:background .15s,color .15s}
 .eml-close:hover{background:rgba(255,255,255,.16);color:#fff}
-.eml-body{padding:20px 22px 22px}
+.eml-body{padding:20px 22px 22px;overflow-y:auto;background:#fff;}
 .eml-dados{background:#f8faff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:18px}
 .eml-tag{font-size:.68rem;font-weight:800;letter-spacing:.08em;color:#3b82f6;text-transform:uppercase;margin-bottom:10px}
 .eml-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
