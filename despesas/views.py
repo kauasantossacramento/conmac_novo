@@ -5497,6 +5497,8 @@ from .models import Contrato, ServicoExtra
 # ─────────────────────────────────────────────────────────────
 @login_required #verificar coerencia
 def receitas_dashboard(request):
+    from .models import NotaFiscal
+
     hoje            = date.today()
     limite_aviso    = hoje + timedelta(days=30)
     STATUS_INATIVOS = ['99', 'Cancelado', 'Inativo', 'Suspenso']
@@ -5505,6 +5507,20 @@ def receitas_dashboard(request):
     q              = request.GET.get('q', '').strip()
     municipio_f    = request.GET.get('municipio', '').strip()
     entidade_f     = request.GET.get('entidade', '').strip()   # 'municipio' | 'camara' | ''
+
+    # Competência de referência p/ status "faturado/não faturado" — padrão
+    # é o mês mais recente (mês atual). O usuário pode escolher outro mês
+    # pra checar contratos que ficaram sem nota emitida naquele período.
+    try:
+        mes_f = int(request.GET.get('mes_fat') or hoje.month)
+        assert 1 <= mes_f <= 12
+    except (TypeError, ValueError, AssertionError):
+        mes_f = hoje.month
+    try:
+        ano_f = int(request.GET.get('ano_fat') or hoje.year)
+    except (TypeError, ValueError):
+        ano_f = hoje.year
+    apenas_nao_faturados = request.GET.get('nao_faturados') == '1'
 
     contratos_qs = Contrato.objects.all().order_by('municipio', 'tipo_entidade', 'status_omie', '-valor_mensal')
 
@@ -5528,8 +5544,18 @@ def receitas_dashboard(request):
     total_geral      = total_recorrente + total_extra
     qtd_vencendo     = ativos_qs.filter(data_vigencia_final__range=[hoje, limite_aviso]).count()
 
+    # ── Contratos faturados na competência de referência ──────
+    contratos_faturados_ids = set(
+        NotaFiscal.objects
+        .filter(competencia_mes=mes_f, competencia_ano=ano_f, status='emitida', contrato_id__isnull=False)
+        .values_list('contrato_id', flat=True)
+        .distinct()
+    )
+
     # ── Lista para template ──────────────────────────────────
     contratos_list = []
+    qtd_faturados_periodo     = 0
+    qtd_nao_faturados_periodo = 0
     for c in contratos_qs:
         is_inativo  = str(c.status_omie) in STATUS_INATIVOS
         is_vencendo = (
@@ -5537,10 +5563,21 @@ def receitas_dashboard(request):
             and c.data_vigencia_final
             and hoje <= c.data_vigencia_final <= limite_aviso
         )
+        faturado_periodo = c.id in contratos_faturados_ids
+        if not is_inativo:
+            if faturado_periodo:
+                qtd_faturados_periodo += 1
+            else:
+                qtd_nao_faturados_periodo += 1
+
+        if apenas_nao_faturados and (faturado_periodo or is_inativo):
+            continue
+
         contratos_list.append({
-            'obj':         c,
-            'is_inativo':  is_inativo,
-            'is_vencendo': is_vencendo,
+            'obj':               c,
+            'is_inativo':        is_inativo,
+            'is_vencendo':       is_vencendo,
+            'faturado_periodo':  faturado_periodo,
         })
 
     # ── Dados para os filtros ─────────────────────────────────
@@ -5551,6 +5588,12 @@ def receitas_dashboard(request):
         .distinct().order_by('municipio')
     )
     municipios_filtro = list(municipios_existentes)
+
+    MESES_NOMES = {
+        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
+        7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro',
+    }
+    anos_filtro_fat = list(range(hoje.year - 2, hoje.year + 2))
 
     context = {
         'contratos_list':       contratos_list,
@@ -5563,7 +5606,16 @@ def receitas_dashboard(request):
         'entidade_f':           entidade_f,
         'municipios_filtro':    municipios_filtro,
         'municipios_existentes': municipios_existentes,
-        'alerta_docs': get_alerta_documentos()
+        'alerta_docs': get_alerta_documentos(),
+        # Status de faturamento por competência
+        'mes_fat':                    mes_f,
+        'mes_fat_nome':               MESES_NOMES[mes_f],
+        'ano_fat':                    ano_f,
+        'meses_nomes':                MESES_NOMES,
+        'anos_filtro_fat':            anos_filtro_fat,
+        'apenas_nao_faturados':       apenas_nao_faturados,
+        'qtd_faturados_periodo':      qtd_faturados_periodo,
+        'qtd_nao_faturados_periodo':  qtd_nao_faturados_periodo,
     }
     return render(request, 'receitas_dashboard.html', context)
 
@@ -5996,12 +6048,38 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from time import sleep
 
+def _atualizar_cache_local_pos_omie(contrato, dados_response, novo_valor):
+    """
+    Atualiza os campos de cache local do Contrato a partir do retorno de
+    alterar_contrato_lote (já reflete a versão final, pós-alteração — não
+    precisa de uma segunda consulta na Omie).
+    """
+    from decimal import Decimal
+    try:
+        itens = dados_response['contratoCadastro'].get('itensContrato', [])
+        item0 = itens[0] if itens else {}
+        descr = item0.get('itemDescrServ', {}).get('descrCompleta')
+        nbs   = item0.get('itemCabecalho', {}).get('codNBS')
+        aliq  = item0.get('itemImpostos', {}).get('aliqISS')
+        if descr:
+            contrato.descricao_servico = descr
+        if nbs:
+            contrato.codigo_nbs = str(nbs).strip()
+        if aliq is not None:
+            contrato.aliquota_iss = Decimal(str(aliq))
+    except Exception:
+        pass
+    if novo_valor is not None:
+        contrato.valor_mensal = novo_valor
+    contrato.dados_locais_atualizados_em = timezone.now()
+
+
 @login_required
 def editar_lote_modal(request):
     if request.method == 'POST':
         from .forms import EdicaoLoteContratoForm
         from .models import Contrato
-        from .omie_service import OmieService
+        from .omie_service import OmieService, atualizar_competencia_em_descricao
 
         form = EdicaoLoteContratoForm(request.POST)
         if not form.is_valid():
@@ -6011,11 +6089,12 @@ def editar_lote_modal(request):
             )
             return JsonResponse({'ok': False, 'msg': erros_form or 'Formulário inválido.'})
 
-        ids_str    = form.cleaned_data['ids_selecionados']
-        novo_valor = form.cleaned_data['valor_mensal']
-        novo_nbs   = form.cleaned_data['codigo_nbs']
-        novo_mes   = form.cleaned_data['nova_competencia_mes']
-        novo_ano   = form.cleaned_data['nova_competencia_ano']
+        ids_str          = form.cleaned_data['ids_selecionados']
+        novo_valor        = form.cleaned_data['valor_mensal']
+        novo_nbs          = form.cleaned_data['codigo_nbs']
+        novo_mes          = form.cleaned_data['nova_competencia_mes']
+        novo_ano          = form.cleaned_data['nova_competencia_ano']
+        sincronizar_omie  = form.cleaned_data['sincronizar_omie']
 
         if novo_valor is None and not novo_nbs and not (novo_mes and novo_ano):
             return JsonResponse({'ok': False, 'msg': 'Preencha ao menos um campo para salvar.'})
@@ -6035,26 +6114,65 @@ def editar_lote_modal(request):
         msgs_erro = []
 
         for index, contrato in enumerate(contratos):
-            ok, msg, *extra = service.alterar_contrato_lote(
-                contrato.omie_cod_ctr,
-                novo_valor=novo_valor,
-                novo_nbs=novo_nbs,
-                nova_competencia=competencia,
-            )
-            if ok:
+            if sincronizar_omie:
+                # ── Caminho de sempre: grava na Omie e cacheia local ──────
+                ok, msg, *extra = service.alterar_contrato_lote(
+                    contrato.omie_cod_ctr,
+                    novo_valor=novo_valor,
+                    novo_nbs=novo_nbs,
+                    nova_competencia=competencia,
+                )
+                if ok:
+                    dados_response = extra[0] if extra else None
+                    if dados_response:
+                        _atualizar_cache_local_pos_omie(contrato, dados_response, novo_valor)
+                    elif novo_valor is not None:
+                        contrato.valor_mensal = novo_valor
+
+                    # Primeira vez que este contrato é sincronizado: também
+                    # busca e cacheia os dados fiscais do tomador (CNPJ,
+                    # endereço...) — precisa pra emitir via SAATRI Direto
+                    # sem depender da Omie. Só refaz se ainda não tiver.
+                    if not contrato.dados_tomador:
+                        tomador = service.consultar_cliente_completo(contrato.cliente_id_omie)
+                        if tomador:
+                            contrato.dados_tomador = tomador
+
+                    contrato.save()
+                    sucessos += 1
+                else:
+                    erros += 1
+                    msg_limpa = '<b>Ctr {}:</b> {}'.format(contrato.omie_num_ctr, msg)
+                    if msg_limpa not in msgs_erro:
+                        msgs_erro.append(msg_limpa)
+
+                # Mantém o sleep apenas entre itens (não após o último)
+                if index < len(contratos) - 1:
+                    sleep(1.5)
+
+            else:
+                # ── Sincronizar com Omie DESLIGADO: só atualiza o cache
+                # local, sem nenhuma chamada à Omie. Precisa já ter uma
+                # descrição em cache pra poder editar a competência nela.
+                if competencia and not contrato.descricao_servico:
+                    erros += 1
+                    msgs_erro.append(
+                        f"<b>Ctr {contrato.omie_num_ctr}:</b> ainda não tem descrição em cache local — "
+                        f"sincronize com a Omie pelo menos uma vez antes de editar sem sincronizar."
+                    )
+                    continue
+
                 if novo_valor is not None:
                     contrato.valor_mensal = novo_valor
+                if novo_nbs:
+                    contrato.codigo_nbs = novo_nbs
+                if competencia:
+                    contrato.descricao_servico = atualizar_competencia_em_descricao(
+                        contrato.descricao_servico, competencia['mes'].upper(), competencia['ano']
+                    )
+                contrato.dados_locais_atualizados_em = timezone.now()
                 contrato.save()
                 sucessos += 1
-            else:
-                erros += 1
-                msg_limpa = '<b>Ctr {}:</b> {}'.format(contrato.omie_num_ctr, msg)
-                if msg_limpa not in msgs_erro:
-                    msgs_erro.append(msg_limpa)
-
-            # Mantém o sleep apenas entre itens (não após o último)
-            if index < len(contratos) - 1:
-                sleep(1.5)
 
         return JsonResponse({
             'ok':        True,

@@ -13,6 +13,72 @@ URL_NFSE     = "https://app.omie.com.br/api/v1/servicos/nfse/"
 URL_OSDOCS = "https://app.omie.com.br/api/v1/servicos/osdocs/"
 URL_CONTRATO_FAT = "https://app.omie.com.br/api/v1/servicos/contratofat/"
 
+
+def atualizar_competencia_em_descricao(desc_atual, mes_upper, ano):
+    """
+    Reescreve "MÊS DE <mes> DE <ano>" na descrição do serviço e reposiciona
+    o bloco fixo (Mão de obra/Insumos + dados bancários/cláusula fiscal)
+    logo após esse trecho.
+
+    Função PURA (sem chamada de rede) — extraída de
+    OmieService.alterar_contrato_lote para poder ser reaproveitada quando o
+    usuário edita a competência SEM sincronizar com a Omie (atualiza só o
+    cache local do Contrato). Mantém exatamente o mesmo comportamento de
+    antes; qualquer ajuste no texto deve valer para os dois caminhos.
+    """
+    if not desc_atual:
+        return desc_atual
+
+    # Aceita com ou sem "DE" antes do mês (corrige erro de digitação em campo).
+    # Sempre grava o formato correto: "MÊS DE <mes> DE <ano>".
+    padrao = re.compile(
+        r"(M[EÊ]S\s+)(?:DE\s+)?([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]+)(\s+DE\s+)(\d{4})",
+        re.IGNORECASE | re.UNICODE,
+    )
+    nova_desc = padrao.sub(
+        lambda m: m.group(1).strip() + " DE " + mes_upper + " DE " + str(ano),
+        desc_atual,
+    )
+
+    BLOCO_BANCARIO = (
+        '\n\nBANCO DO BRASIL\n'
+        'AG:3025-2\n'
+        'CONTA:46061-3\n'
+        'CHAVE PIX: contato@conmac.com.br\n\n'
+        'Não incidência na fonte do IRPJ, da Contribuição Social sobre o Lucro Líquido (CSLL), '
+        'da Seguridade Social (INSS), da Contribuição para o Financiamento da Seguridade Social (COFINS), '
+        'e da Contribuição para o PIS/PASEP, a que se refere o art. 64 da Lei nº 9.430, de 27 de dezembro '
+        'de 1996, que é regularmente inscrita no Regime Especial Unificado de Arrecadação de Tributos e '
+        'Contribuições devidos pelas Microempresas e Empresas de Pequeno Porte - Simples Nacional, de que '
+        'trata o art. 12 da Lei Complementar 123, de 14 de dezembro de 2006.'
+    )
+
+    # Sempre reposiciona "Mão de obra/Insumos" logo após o ano da competência
+    nova_desc = nova_desc.replace('\r\n', '\n').replace('\r', '\n')
+    nova_desc = re.sub(r'\n?Mão de obra:[^\n]*', '', nova_desc)
+    nova_desc = re.sub(r'\n?Insumos:[^\n]*',     '', nova_desc)
+    # Remove bloco bancário/fiscal anterior para reinserir atualizado
+    nova_desc = re.sub(r'\n*BANCO DO BRASIL[\s\S]*$', '', nova_desc)
+    nova_desc = re.sub(r'\n{3,}', '\n\n', nova_desc).strip()
+
+    match_ano = re.search(
+        r'M[EÊ]S\s+DE\s+[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]+\s+DE\s+\d{4}\.?',
+        nova_desc, re.IGNORECASE | re.UNICODE,
+    )
+
+    if match_ano:
+        pos    = match_ano.end()
+        antes  = nova_desc[:pos].rstrip()
+        depois = nova_desc[pos:].lstrip()
+        nova_desc = antes + '\n\nMão de obra: 60%\nInsumos: 40%' + BLOCO_BANCARIO
+        if depois:
+            nova_desc += '\n' + depois
+    else:
+        nova_desc = nova_desc.rstrip() + '\n\nMão de obra: 60%\nInsumos: 40%' + BLOCO_BANCARIO
+
+    return nova_desc
+
+
 class OmieService:
 
     def __init__(self):
@@ -386,24 +452,13 @@ class OmieService:
             mes = nova_competencia['mes'].upper()
             ano = str(nova_competencia['ano'])
 
-            # Aceita com ou sem "DE" antes do mês (corrige erro de digitação em campo).
-            # Sempre grava o formato correto: "MÊS DE <mes> DE <ano>".
-            padrao = re.compile(
-                r"(M[EÊ]S\s+)(?:DE\s+)?([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]+)(\s+DE\s+)(\d{4})",
-                re.IGNORECASE | re.UNICODE,
-            )
-
             for item in itens:
                 descr_obj  = item.get('itemDescrServ', {})
                 desc_atual = descr_obj.get('descrCompleta', '')
                 if not desc_atual:
                     continue
 
-                # Garantindo o espaçamento perfeito ao alterar a competência
-                nova_desc = padrao.sub(
-                    lambda m: m.group(1).strip() + " DE " + mes + " DE " + ano,
-                    desc_atual,
-                )
+                nova_desc = atualizar_competencia_em_descricao(desc_atual, mes, ano)
 
                 if nova_desc != desc_atual:
                     trecho_antes  = re.search(r'.{0,20}M[EÊ]S.{0,50}', desc_atual, re.IGNORECASE)
@@ -411,49 +466,11 @@ class OmieService:
                     print(f"  ✅ Competência substituída:")
                     print(f"     antes : '{trecho_antes.group()  if trecho_antes  else desc_atual[-60:]}'")
                     print(f"     depois: '{trecho_depois.group() if trecho_depois else nova_desc[-60:]}'")
+                    descr_obj['descrCompleta'] = nova_desc
+                    alterado = True
                 else:
                     trecho = re.search(r'.{0,30}M[EÊ]S.{0,60}', desc_atual, re.IGNORECASE)
                     print(f"  ℹ️ Competência já atualizada. Trecho MÊS: '{trecho.group() if trecho else 'NÃO ENCONTRADO'}'")
-
-                BLOCO_BANCARIO = (
-                    '\n\nBANCO DO BRASIL\n'
-                    'AG:3025-2\n'
-                    'CONTA:46061-3\n'
-                    'CHAVE PIX: contato@conmac.com.br\n\n'
-                    'Não incidência na fonte do IRPJ, da Contribuição Social sobre o Lucro Líquido (CSLL), '
-                    'da Seguridade Social (INSS), da Contribuição para o Financiamento da Seguridade Social (COFINS), '
-                    'e da Contribuição para o PIS/PASEP, a que se refere o art. 64 da Lei nº 9.430, de 27 de dezembro '
-                    'de 1996, que é regularmente inscrita no Regime Especial Unificado de Arrecadação de Tributos e '
-                    'Contribuições devidos pelas Microempresas e Empresas de Pequeno Porte - Simples Nacional, de que '
-                    'trata o art. 12 da Lei Complementar 123, de 14 de dezembro de 2006.'
-                )
-
-                # Sempre reposiciona "Mão de obra/Insumos" logo após o ano da competência
-                nova_desc = nova_desc.replace('\r\n', '\n').replace('\r', '\n')
-                nova_desc = re.sub(r'\n?Mão de obra:[^\n]*', '', nova_desc)
-                nova_desc = re.sub(r'\n?Insumos:[^\n]*',     '', nova_desc)
-                # Remove bloco bancário/fiscal anterior para reinserir atualizado
-                nova_desc = re.sub(r'\n*BANCO DO BRASIL[\s\S]*$', '', nova_desc)
-                nova_desc = re.sub(r'\n{3,}', '\n\n', nova_desc).strip()
-                
-                match_ano = re.search(
-                    r'M[EÊ]S\s+DE\s+[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]+\s+DE\s+\d{4}\.?',
-                    nova_desc, re.IGNORECASE | re.UNICODE,
-                )
-                
-                if match_ano:
-                    pos    = match_ano.end()
-                    antes  = nova_desc[:pos].rstrip()
-                    depois = nova_desc[pos:].lstrip()
-                    nova_desc = antes + '\n\nMão de obra: 60%\nInsumos: 40%' + BLOCO_BANCARIO
-                    if depois:
-                        nova_desc += '\n' + depois
-                else:
-                    nova_desc = nova_desc.rstrip() + '\n\nMão de obra: 60%\nInsumos: 40%' + BLOCO_BANCARIO
-
-                if nova_desc != desc_atual:
-                    descr_obj['descrCompleta'] = nova_desc
-                    alterado = True
 
         if not alterado:
             return True, "Sem alterações."

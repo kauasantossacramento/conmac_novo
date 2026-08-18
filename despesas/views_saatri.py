@@ -46,11 +46,23 @@ def _num_dec(valor, default='0'):
         return Decimal(default)
 
 
-def _dados_emissao_do_contrato(contrato, service):
+def _dados_emissao_do_contrato(contrato, service, fonte='omie'):
     """
-    Busca o contrato atual na Omie e extrai valor/descrição/NBS/alíquota
-    do primeiro item. Retorna None se não conseguir montar os dados.
+    Extrai valor/descrição/NBS/alíquota pra emissão. `fonte='local'` lê só
+    do cache do Contrato (nenhuma chamada à Omie — rápido, sem risco de
+    REDUNDANT); `fonte='omie'` consulta ao vivo (comportamento original).
+    Retorna None se não conseguir montar os dados.
     """
+    if fonte == 'local':
+        if not contrato.descricao_servico or not contrato.valor_mensal:
+            return None
+        return {
+            'valor':         _num_dec(contrato.valor_mensal),
+            'discriminacao': contrato.descricao_servico,
+            'aliquota':      _num_dec(contrato.aliquota_iss or saatri_config.ALIQUOTA_ISS_PADRAO),
+            'codigo_nbs':    contrato.codigo_nbs or saatri_config.CODIGO_NBS_PADRAO,
+        }
+
     dados_api = service.consultar_contrato_completo(contrato.omie_cod_ctr)
     if not dados_api or 'contratoCadastro' not in dados_api:
         return None
@@ -78,6 +90,16 @@ def _dados_emissao_do_contrato(contrato, service):
         'aliquota':      _num_dec(aliquota),
         'codigo_nbs':    str(codigo_nbs).strip() if codigo_nbs else saatri_config.CODIGO_NBS_PADRAO,
     }
+
+
+def _tomador_do_contrato(contrato, service, fonte='omie'):
+    """Idem, mas pros dados fiscais do tomador (CNPJ/CPF, endereço...)."""
+    if fonte == 'local':
+        dados = contrato.dados_tomador
+        if not dados or not dados.get('cpf_cnpj') or not dados.get('codigo_municipio'):
+            return None
+        return dados
+    return service.consultar_cliente_completo(contrato.cliente_id_omie)
 
 
 def _salvar_nota_saatri(contrato, rps_saatri, nota_data):
@@ -148,6 +170,13 @@ def faturar_lote_saatri_view(request):
     if not ids:
         return JsonResponse({'ok': False, 'erro': 'Nenhum contrato informado'}, status=400)
 
+    # fonte='local' lê tudo do cache do Contrato (rápido, zero chamada à
+    # Omie — evita o throttling REDUNDANT em lotes grandes). fonte='omie'
+    # consulta ao vivo, como antes.
+    fonte = data.get('fonte') or 'omie'
+    if fonte not in ('local', 'omie'):
+        fonte = 'omie'
+
     competencia = data.get('competencia') or {}
     hoje = date.today()
     mes_comp = int(competencia.get('mes_num') or hoje.month)
@@ -161,26 +190,33 @@ def faturar_lote_saatri_view(request):
     sucessos, erros, msgs_erro = 0, 0, []
     total = len(contratos)
 
-    logger.info('--- Faturar Lote SAATRI | total=%s ---', total)
+    logger.info('--- Faturar Lote SAATRI | total=%s fonte=%s ---', total, fonte)
 
     for idx, contrato in enumerate(contratos):
         num_ctr = contrato.omie_num_ctr or str(contrato.omie_cod_ctr)
 
-        dados_emissao = _dados_emissao_do_contrato(contrato, service)
+        dados_emissao = _dados_emissao_do_contrato(contrato, service, fonte)
         if not dados_emissao:
             erros += 1
-            msgs_erro.append(f"<b>Ctr {num_ctr}:</b> Não foi possível obter valor/descrição do contrato na Omie.")
-            _throttle(idx, total)
+            fonte_txt = 'no cache local' if fonte == 'local' else 'na Omie'
+            msgs_erro.append(
+                f"<b>Ctr {num_ctr}:</b> Não foi possível obter valor/descrição do contrato {fonte_txt}."
+                + (" Sincronize este contrato com a Omie pelo menos uma vez." if fonte == 'local' else "")
+            )
+            if fonte == 'omie':
+                _throttle(idx, total)
             continue
 
-        tomador = service.consultar_cliente_completo(contrato.cliente_id_omie)
+        tomador = _tomador_do_contrato(contrato, service, fonte)
         if not tomador or not tomador.get('cpf_cnpj') or not tomador.get('codigo_municipio'):
             erros += 1
+            fonte_txt = 'no cache local' if fonte == 'local' else 'na Omie'
             msgs_erro.append(
-                f"<b>Ctr {num_ctr}:</b> Cadastro do cliente incompleto na Omie "
+                f"<b>Ctr {num_ctr}:</b> Cadastro fiscal do cliente incompleto {fonte_txt} "
                 f"(falta CNPJ/CPF ou município — necessário pro SAATRI)."
             )
-            _throttle(idx, total)
+            if fonte == 'omie':
+                _throttle(idx, total)
             continue
 
         valor_iss = (dados_emissao['valor'] * dados_emissao['aliquota'] / 100).quantize(Decimal('0.01'))

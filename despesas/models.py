@@ -935,6 +935,39 @@ class Contrato(models.Model):
         help_text="Município do cliente/contrato. Usado para agrupar NFS-e no relatório."
     )
 
+    # ── Cache local dos dados de emissão (independente da Omie) ──────────
+    # Preenchido/atualizado toda vez que o contrato é editado com
+    # "Sincronizar com Omie" ligado. Permite emitir via SAATRI Direto sem
+    # depender de uma consulta ao vivo na Omie a cada nota — evita o
+    # throttling "REDUNDANT" (65s de espera por chamada) que a Omie aplica
+    # quando o lote é grande. `valor_mensal` acima já serve como o valor de
+    # emissão; os campos abaixo completam o que falta.
+    descricao_servico = models.TextField(
+        "Descrição do Serviço (cache local)", blank=True, default="",
+        help_text="Cópia local da descrição usada na nota. Atualizada junto com a Omie "
+                   "quando 'Sincronizar com Omie' está ligado, ou só localmente quando desligado.",
+    )
+    item_lista_servico = models.CharField(
+        "Item Lista Serviço (cache local)", max_length=8, blank=True, default="17.19.01",
+    )
+    codigo_nbs = models.CharField(
+        "Código NBS (cache local)", max_length=9, blank=True, default="113022100",
+    )
+    aliquota_iss = models.DecimalField(
+        "Alíquota ISS % (cache local)", max_digits=14, decimal_places=10,
+        default=Decimal("2.00"),
+    )
+    dados_tomador = models.JSONField(
+        "Dados Fiscais do Tomador (cache local)", default=dict, blank=True,
+        help_text="Cópia local do cadastro fiscal do cliente na Omie (CNPJ/CPF, endereço, "
+                   "município IBGE, telefone, e-mail) — mesmo formato usado pelo emissor SAATRI. "
+                   "Só é atualizado quando 'Sincronizar com Omie' está ligado (é sempre lido "
+                   "da Omie, nunca editado manualmente).",
+    )
+    dados_locais_atualizados_em = models.DateTimeField(
+        "Cache local atualizado em", null=True, blank=True,
+    )
+
     class Meta:
         verbose_name = "Contrato Omie"
         verbose_name_plural = "Contratos Omie"

@@ -387,6 +387,19 @@
 </div>
 {% endif %}
 
+<!-- ── STATUS DE FATURAMENTO DA COMPETÊNCIA ── -->
+{% if qtd_nao_faturados_periodo > 0 %}
+<div style="margin:.5rem 0 .75rem;border-radius:14px;padding:11px 16px;background:#FEF2F2;border:1px solid #FCA5A5;color:#7f1d1d;display:flex;gap:.75rem;align-items:center;">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" style="flex:0 0 auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span>
+    <strong>{{ qtd_nao_faturados_periodo }} contrato{{ qtd_nao_faturados_periodo|pluralize:"s" }}</strong>
+    sem NFS-e emitida em <strong>{{ mes_fat_nome }}/{{ ano_fat }}</strong>
+    ({{ qtd_faturados_periodo }} já faturados nesse período).
+    <a href="?{% if q %}q={{ q }}&{% endif %}mes_fat={{ mes_fat }}&ano_fat={{ ano_fat }}&nao_faturados=1" style="color:#7f1d1d;font-weight:700;text-decoration:underline;">Ver só os não faturados →</a>
+  </span>
+</div>
+{% endif %}
+
 <!-- ── CABEÇALHO DE IMPRESSÃO ── -->
 <div class="print-header">
   <h2>CONMAC — Relatório de Contratos</h2>
@@ -505,12 +518,28 @@
         <option value="camara"    {% if entidade_f == 'camara'    %}selected{% endif %}>Câmara Municipal</option>
       </select>
 
+      <!-- Filtro de competência p/ status faturado/não faturado -->
+      <select name="mes_fat" class="fsel" onchange="this.form.submit()" title="Competência de referência p/ status faturado/não faturado">
+        {% for num, nome in meses_nomes.items %}
+        <option value="{{ num }}" {% if num == mes_fat %}selected{% endif %}>{{ nome }}</option>
+        {% endfor %}
+      </select>
+      <select name="ano_fat" class="fsel" onchange="this.form.submit()">
+        {% for a in anos_filtro_fat %}
+        <option value="{{ a }}" {% if a == ano_fat %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+      <label class="fsel {% if apenas_nao_faturados %}ativo{% endif %}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.83rem;">
+        <input type="checkbox" name="nao_faturados" value="1" {% if apenas_nao_faturados %}checked{% endif %} onchange="this.form.submit()">
+        Só não faturados
+      </label>
+
       <button type="submit" class="btn-grad">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Buscar
       </button>
 
-      {% if q or municipio_f or entidade_f %}
+      {% if q or municipio_f or entidade_f or apenas_nao_faturados %}
       <a href="{% url 'receitas_dashboard' %}" class="btn-outline" style="padding:9px 12px;color:var(--muted);font-size:.78rem;">✕ Limpar</a>
       {% endif %}
     </form>
@@ -674,6 +703,7 @@
         <th>Município · Entidade</th>
         <th>Vigência</th>
         <th style="text-align:center">Status</th>
+        <th style="text-align:center">Faturamento ({{ mes_fat_nome }}/{{ ano_fat }})</th>
         <th style="text-align:right">Valor Mensal</th>
         <th style="text-align:center">Ações</th>
       </tr>
@@ -734,6 +764,22 @@
         <td style="text-align:center">
           {% if item.is_inativo %}<span class="badge-st st-99">Inativo</span>
           {% else %}<span class="badge-st st-10">Ativo</span>{% endif %}
+        </td>
+
+        <td style="text-align:center">
+          {% if item.is_inativo %}
+            <span style="color:#cbd5e0">—</span>
+          {% elif item.faturado_periodo %}
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-size:.74rem;font-weight:700;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Faturado
+            </span>
+          {% else %}
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;font-size:.74rem;font-weight:700;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="9"/></svg>
+              Não faturado
+            </span>
+          {% endif %}
         </td>
 
         <td style="text-align:right"><span class="mono">R$ {{ item.obj.valor_mensal|floatformat:2|intcomma }}</span></td>
@@ -1052,9 +1098,15 @@ document.addEventListener('DOMContentLoaded', function () {
     return el ? el.value : 'omie';
   }
 
+  function lerFonteDados() {
+    var el = document.querySelector('input[name="fonte-dados"]:checked');
+    return el ? el.value : 'local';
+  }
+
   function montarResumo(comp, qtd, opcao) {
     var ehFaturamento = (opcao !== 'salvar');
     var origem = lerOrigemEmissao();
+    var fonte  = lerFonteDados();
     var acaoTexto = !ehFaturamento
       ? 'atualizados'
       : (origem === 'saatri' ? 'emitidos direto no SAATRI' : 'faturados no Omie');
@@ -1068,6 +1120,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (ehFaturamento) {
       linhas.push('📡 Emitindo via: <strong>' + (origem === 'saatri' ? 'SAATRI Direto' : 'Omie') + '</strong>.');
+      if (origem === 'saatri') {
+        linhas.push('🗄️ Dados de: <strong>' + (fonte === 'local' ? 'banco de dados próprio' : 'Omie (ao vivo)') + '</strong>.');
+      }
     }
 
     var el = mc('conf-resumo');
@@ -1075,6 +1130,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var origemBox = mc('conf-origem-emissao');
     if (origemBox) origemBox.style.display = ehFaturamento ? 'block' : 'none';
+
+    var fonteBox = mc('conf-fonte-dados');
+    if (fonteBox) fonteBox.style.display = (ehFaturamento && origem === 'saatri') ? 'block' : 'none';
 
     var avisoFat = mc('conf-aviso-faturamento');
     var avisoSalvar = mc('conf-aviso-salvar');
@@ -1118,9 +1176,10 @@ document.addEventListener('DOMContentLoaded', function () {
     mostrarPainel('painel-resultado-fat');
   }
 
-async function chamarFaturarLote(ids, comp, msgExec, origem) {
+async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
     if (!ids || !ids.length) return;
     origem = origem || 'omie';
+    fonte = fonte || 'local';
     var urlFaturar = (origem === 'saatri')
       ? '/receitas/contratos/faturar-lote-saatri/'
       : '/receitas/contratos/faturar-lote/';
@@ -1147,6 +1206,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem) {
 
       var body = { ids: chunk };
       if (comp && comp.mes_num) body.competencia = { mes_num: comp.mes_num, ano: comp.ano };
+      if (origem === 'saatri') body.fonte = fonte;
 
       try {
         var r = await fetch(urlFaturar, {
@@ -1268,7 +1328,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem) {
       if (erros === 0) {
         var origemSalvarFat = lerOrigemEmissao();
         var msgSalvarFat = 'Salvamento concluído! Iniciando ' + (origemSalvarFat === 'saatri' ? 'emissão via SAATRI…' : 'faturamento no Omie…');
-        chamarFaturarLote(todosIds, lerCompetencia(), msgSalvarFat, origemSalvarFat);
+        chamarFaturarLote(todosIds, lerCompetencia(), msgSalvarFat, origemSalvarFat, lerFonteDados());
       } else {
         exibirResultadoFat({ ok: false, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
       }
@@ -1296,9 +1356,22 @@ async function chamarFaturarLote(ids, comp, msgExec, origem) {
   /* ── Re-renderiza o resumo ao trocar Omie/SAATRI ────── */
   if (mContent) {
     mContent.addEventListener('change', function (e) {
-      if (e.target.name === 'origem-emissao') {
+      if (e.target.name === 'origem-emissao' || e.target.name === 'fonte-dados') {
         var opcaoAtual = mc('btn-confirmar-faturar')?.dataset.opcao;
         if (opcaoAtual) montarResumo(_pendComp, _pendIds.length, opcaoAtual);
+      }
+      if (e.target.id === 'id_sincronizar_omie') {
+        var status = mc('eml-sync-status');
+        var desc   = mc('eml-sync-desc');
+        if (status) {
+          status.textContent = e.target.checked ? 'LIGADO' : 'DESLIGADO';
+          status.style.color = e.target.checked ? '#16a34a' : '#94a3b8';
+        }
+        if (desc) {
+          desc.textContent = e.target.checked
+            ? 'Grava as alterações na Omie e atualiza o cache local. Desligue para editar só localmente (mais rápido, sem esperar a Omie).'
+            : 'Só atualiza o cache local deste sistema — nada é enviado à Omie. Exige que o contrato já tenha sido sincronizado ao menos uma vez antes.';
+        }
       }
     });
   }
@@ -1364,7 +1437,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem) {
           var msg = (_pendComp && _pendComp.mes_num)
             ? 'Emitindo contratos (competência já atualizada)…'
             : (origemConfirmar === 'saatri' ? 'Emitindo contratos direto no SAATRI…' : 'Faturando contratos no Omie…');
-          chamarFaturarLote(_pendIds, null, msg, origemConfirmar);
+          chamarFaturarLote(_pendIds, null, msg, origemConfirmar, lerFonteDados());
         } else {
           await processarEmChunks(opcao === 'salvar_e_faturar');
         }

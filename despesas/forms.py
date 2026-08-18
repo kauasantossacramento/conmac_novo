@@ -666,6 +666,14 @@ class EdicaoLoteContratoForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    # Liga = grava na Omie (AlterarContrato) E atualiza o cache local do
+    # Contrato. Desliga = atualiza só o cache local, sem chamar a Omie —
+    # evita o throttling "REDUNDANT" (65s por chamada) em lotes grandes.
+    # Default True: preserva o comportamento de antes pra quem não mexer.
+    sincronizar_omie = forms.BooleanField(
+        required=False, initial=True, label="Sincronizar com a Omie",
+    )
+
 class ServicoExtraForm(forms.ModelForm):
     class Meta:
         model = ServicoExtra
