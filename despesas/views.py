@@ -12159,6 +12159,8 @@ from .views_saatri import (
     faturar_lote_saatri_view,
     sincronizar_saatri_pendentes_view,
     sincronizar_saatri_pendentes,
+    saatri_pendentes_listar,
+    saatri_pendentes_resolver_chunk,
 )
 
 #MÓDULO DE PRESTAÇÃO DE CONTAS - IMPORTAÇÃO:

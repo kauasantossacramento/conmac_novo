@@ -294,17 +294,36 @@ def faturar_lote_saatri_view(request):
     })
 
 
+def _resolver_rps_saatri(rps_saatri):
+    """
+    Tenta resolver um único RpsSaatri pendente (status='enviado'): consulta
+    de novo no SAATRI e, se já saiu, salva a NotaFiscal + baixa o PDF.
+    Retorna (resolvido: bool, msg: str).
+    """
+    try:
+        resultado = saatri_client.consultar_nfse_por_rps(rps_saatri.numero, rps_saatri.serie, rps_saatri.tipo)
+    except Exception as e:
+        print(f"  ❌ RPS {rps_saatri.numero}: erro ao consultar — {e}")
+        return False, f'Erro ao consultar: {e}'
+
+    if resultado.get('notas'):
+        _salvar_nota_saatri(rps_saatri.contrato, rps_saatri, resultado['notas'][0])
+        print(f"  ✅ RPS {rps_saatri.numero}: NFS-e resolvida")
+        return True, 'NFS-e resolvida'
+
+    print(f"  ⏳ RPS {rps_saatri.numero}: ainda aguardando a SEFIN")
+    return False, 'Ainda aguardando a SEFIN'
+
+
 def sincronizar_saatri_pendentes():
     """
-    Para todo RpsSaatri com status='enviado' (aceito pela DPS, aguardando a
-    SEFIN gerar a NFS-e no Ambiente Nacional — leva ~5min), consulta de novo
-    e, se já saiu, salva a NotaFiscal + baixa o PDF (DANFSe) automaticamente
-    — o mesmo PDF que o envio de dossiê por e-mail (enviar_lote_dashboard)
-    depois anexa via NotaFiscalPDF.
+    Resolve TODOS os RpsSaatri pendentes de uma vez (bloqueante — pode levar
+    minutos se houver muitos, cada um faz uma chamada SOAP + download de
+    PDF). Chamada embutida em sincronizar_nfse/sincronizar_nfse_ajax.
 
-    Chamada tanto pela sincronização manual do SAATRI quanto embutida nas
-    views de sincronizar NFS-e da Omie (sincronizar_nfse / sincronizar_nfse_ajax),
-    pra ficar tudo num clique só, igual já funcionava só com a Omie.
+    Pra acompanhamento item a item com barra de progresso, ver os endpoints
+    saatri_pendentes_listar/saatri_pendentes_resolver_chunk (usados pelo
+    modal "Sincronizar NFS-e" no dashboard).
 
     Retorna (total, resolvidos, ainda_pendentes).
     """
@@ -316,21 +335,11 @@ def sincronizar_saatri_pendentes():
     print(f"--- Sync SAATRI pendentes | total={total} ---")
 
     for idx, rps_saatri in enumerate(pendentes):
-        try:
-            resultado = saatri_client.consultar_nfse_por_rps(rps_saatri.numero, rps_saatri.serie, rps_saatri.tipo)
-        except Exception as e:
-            print(f"  ❌ RPS {rps_saatri.numero}: erro ao consultar — {e}")
-            ainda_pendentes += 1
-            _throttle(idx, total)
-            continue
-
-        if resultado.get('notas'):
-            _salvar_nota_saatri(rps_saatri.contrato, rps_saatri, resultado['notas'][0])
+        ok, _msg = _resolver_rps_saatri(rps_saatri)
+        if ok:
             resolvidos += 1
-            print(f"  ✅ RPS {rps_saatri.numero}: NFS-e resolvida")
         else:
             ainda_pendentes += 1
-            print(f"  ⏳ RPS {rps_saatri.numero}: ainda aguardando a SEFIN")
         _throttle(idx, total)
 
     print(f"--- Sync SAATRI pendentes End | resolvidos={resolvidos} ainda_pendentes={ainda_pendentes} ---")
@@ -344,3 +353,55 @@ def sincronizar_saatri_pendentes_view(request):
     return JsonResponse({
         'ok': True, 'total': total, 'resolvidos': resolvidos, 'ainda_pendentes': ainda_pendentes,
     })
+
+
+@login_required
+def saatri_pendentes_listar(request):
+    """
+    GET /receitas/contratos/saatri/pendentes/
+
+    Lista os RpsSaatri pendentes (status='enviado') — usado pelo modal de
+    sincronização pra montar a barra de progresso ANTES de começar a
+    resolver (precisa saber o total e os IDs pra dividir em chunks).
+    """
+    pendentes = (
+        RpsSaatri.objects.filter(status='enviado')
+        .select_related('contrato')
+        .order_by('numero')
+    )
+    itens = [
+        {'id': r.id, 'numero': r.numero, 'contrato_nome': r.contrato.cliente_nome or r.contrato.omie_num_ctr}
+        for r in pendentes
+    ]
+    return JsonResponse({'ok': True, 'total': len(itens), 'itens': itens})
+
+
+@login_required
+@require_POST
+def saatri_pendentes_resolver_chunk(request):
+    """
+    POST /receitas/contratos/saatri/resolver-chunk/
+    Body: { "ids": [12, 13, 14] }  (PKs de RpsSaatri, não números de RPS)
+
+    Resolve só esse pedaço — usado pelo modal de sincronização pra reportar
+    progresso item a item em vez de travar minutos numa única requisição.
+    """
+    try:
+        data = json.loads(request.body)
+        ids = [int(i) for i in data.get('ids', [])]
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return JsonResponse({'ok': False, 'erro': 'IDs inválidos'}, status=400)
+
+    if not ids:
+        return JsonResponse({'ok': False, 'erro': 'Nenhum RPS informado'}, status=400)
+
+    resultados = []
+    for rps_saatri in RpsSaatri.objects.filter(id__in=ids, status='enviado').select_related('contrato'):
+        ok, msg = _resolver_rps_saatri(rps_saatri)
+        resultados.append({
+            'id': rps_saatri.id, 'numero': rps_saatri.numero,
+            'contrato_nome': rps_saatri.contrato.cliente_nome or rps_saatri.contrato.omie_num_ctr,
+            'resolvido': ok, 'msg': msg,
+        })
+
+    return JsonResponse({'ok': True, 'resultados': resultados})

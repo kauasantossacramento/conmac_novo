@@ -643,7 +643,7 @@
      MODAL — Sincronizar NFS-e
 ════════════════════════════════════════════════════ -->
 <div class="modal-back" id="modal-sync-nfse">
-  <div class="modal-box" style="max-width:380px;">
+  <div class="modal-box" style="max-width:440px;">
     <div class="modal-header">
       <span class="modal-title">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;margin-right:6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -653,56 +653,82 @@
     </div>
 
     <div style="padding:18px 20px 20px;">
-      <p style="font-size:.83rem;color:var(--muted);margin:0 0 16px;">
-        Selecione o mês e ano para buscar as NFS-e emitidas no Omie.<br>
-        <strong>Contratos não são alterados.</strong>
-      </p>
 
-      <div style="display:flex;gap:10px;margin-bottom:18px;">
-        <div style="flex:1;">
-          <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">MÊS</label>
-          <select id="snfse-mes" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;">
-            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
-            <option value="3">Março</option><option value="4">Abril</option>
-            <option value="5">Maio</option><option value="6">Junho</option>
-            <option value="7">Julho</option><option value="8">Agosto</option>
-            <option value="9">Setembro</option><option value="10">Outubro</option>
-            <option value="11">Novembro</option><option value="12">Dezembro</option>
-          </select>
+      <div id="snfse-config">
+        <p style="font-size:.83rem;color:var(--muted);margin:0 0 16px;">
+          Selecione o mês e ano para buscar as NFS-e emitidas no Omie.<br>
+          <strong>Contratos não são alterados.</strong>
+        </p>
+
+        <div style="display:flex;gap:10px;margin-bottom:18px;">
+          <div style="flex:1;">
+            <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">MÊS</label>
+            <select id="snfse-mes" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+              <option value="3">Março</option><option value="4">Abril</option>
+              <option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option>
+              <option value="9">Setembro</option><option value="10">Outubro</option>
+              <option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ANO</label>
+            <input type="number" id="snfse-ano" value="{{ hoje.year }}" min="2023" max="2030"
+                   style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;box-sizing:border-box;">
+          </div>
         </div>
-        <div style="flex:1;">
-          <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ANO</label>
-          <input type="number" id="snfse-ano" value="{{ hoje.year }}" min="2023" max="2030"
-                 style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:'Sora',sans-serif;box-sizing:border-box;">
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">SINCRONIZAR</label>
+          <div style="display:flex;gap:14px;font-size:.84rem;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+              <input type="checkbox" id="snfse-fonte-omie" checked> Omie
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+              <input type="checkbox" id="snfse-fonte-saatri" checked> SAATRI (pendentes)
+            </label>
+          </div>
+        </div>
+
+        <div id="snfse-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onclick="fecharModal('modal-sync-nfse')"
+                  style="padding:9px 18px;border:1.5px solid var(--border);border-radius:9px;background:#fff;
+                         color:var(--muted);font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
+            Cancelar
+          </button>
+          <button id="snfse-btn-confirmar" onclick="executarSyncNfse()"
+                  style="padding:9px 20px;background:var(--teal);color:#fff;border:none;border-radius:9px;
+                         font-weight:700;font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Sincronizar
+          </button>
         </div>
       </div>
 
-      <div style="margin-bottom:16px;">
-        <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">SINCRONIZAR</label>
-        <div style="display:flex;gap:14px;font-size:.84rem;">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
-            <input type="checkbox" id="snfse-fonte-omie" checked> Omie
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
-            <input type="checkbox" id="snfse-fonte-saatri" checked> SAATRI (pendentes)
-          </label>
+      <!-- ── Painel de progresso (aparece durante a sincronização) ── -->
+      <div id="snfse-progresso" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <span id="snfse-progresso-titulo" style="font-size:.83rem;font-weight:700;color:var(--dark);">Sincronizando…</span>
+          <span id="snfse-progresso-eta" style="font-size:.74rem;color:var(--muted);"></span>
         </div>
-      </div>
-
-      <div id="snfse-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
-
-      <div style="display:flex;justify-content:flex-end;gap:8px;">
-        <button onclick="fecharModal('modal-sync-nfse')"
-                style="padding:9px 18px;border:1.5px solid var(--border);border-radius:9px;background:#fff;
-                       color:var(--muted);font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
-          Cancelar
-        </button>
-        <button id="snfse-btn-confirmar" onclick="executarSyncNfse()"
-                style="padding:9px 20px;background:var(--teal);color:#fff;border:none;border-radius:9px;
-                       font-weight:700;font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Sincronizar
-        </button>
+        <div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;margin-bottom:12px;">
+          <div id="snfse-progresso-barra" style="height:8px;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);width:0%;transition:width .3s ease;min-width:4px;"></div>
+        </div>
+        <div id="snfse-progresso-log"
+             style="background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;
+                    max-height:220px;overflow-y:auto;font-size:.78rem;font-family:'JetBrains Mono','Fira Code',monospace;
+                    color:#334155;line-height:1.7;"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+          <button id="snfse-btn-fechar-progresso" onclick="fecharModal('modal-sync-nfse')"
+                  disabled
+                  style="padding:9px 18px;border:none;border-radius:9px;background:var(--teal);
+                         color:#fff;font-size:.83rem;cursor:pointer;font-family:'Sora',sans-serif;opacity:.5;">
+            Concluir
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1573,7 +1599,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
     var selMes   = document.getElementById('snfse-mes');
     if (selMes) selMes.value = String(mesAtual);
     btnSyncNfse.addEventListener('click', function () {
-      document.getElementById('snfse-resultado').style.display = 'none';
+      resetModalSyncNfse();
       modalSyncNfse.classList.add('open');
     });
     modalSyncNfse.addEventListener('click', function (e) {
@@ -1603,14 +1629,42 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
 }); // fim DOMContentLoaded
 
 /* ════════════════════════════════════════
-   SINCRONIZAR NFS-e
+   SINCRONIZAR NFS-e (com progresso item a item pro SAATRI —
+   cada RPS pendente leva alguns segundos: consulta + download do PDF)
 ════════════════════════════════════════ */
+function _snfseLog(msg) {
+  var log = document.getElementById('snfse-progresso-log');
+  if (!log) return;
+  var linha = document.createElement('div');
+  linha.innerHTML = msg;
+  log.appendChild(linha);
+  log.scrollTop = log.scrollHeight;
+}
+
+function _snfseProgresso(feito, total, inicioMs) {
+  var barra = document.getElementById('snfse-progresso-barra');
+  var eta   = document.getElementById('snfse-progresso-eta');
+  var pct   = total ? Math.round((feito / total) * 100) : 100;
+  if (barra) barra.style.width = Math.max(pct, 3) + '%';
+
+  if (eta && feito > 0 && feito < total) {
+    var decorridoMs   = Date.now() - inicioMs;
+    var msPorItem     = decorridoMs / feito;
+    var restantesMs   = msPorItem * (total - feito);
+    var restantesMin  = restantesMs / 60000;
+    eta.textContent = restantesMin < 1
+      ? '~' + Math.max(1, Math.round(restantesMs / 1000)) + 's restantes'
+      : '~' + restantesMin.toFixed(1).replace('.0', '') + ' min restantes';
+  } else if (eta) {
+    eta.textContent = feito >= total ? 'Concluído' : '';
+  }
+}
+
 async function executarSyncNfse() {
   var mes = parseInt(document.getElementById('snfse-mes').value);
   var ano = parseInt(document.getElementById('snfse-ano').value);
   var syncOmie   = document.getElementById('snfse-fonte-omie').checked;
   var syncSaatri = document.getElementById('snfse-fonte-saatri').checked;
-  var btn = document.getElementById('snfse-btn-confirmar');
   var res = document.getElementById('snfse-resultado');
 
   if (!syncOmie && !syncSaatri) {
@@ -1620,48 +1674,107 @@ async function executarSyncNfse() {
     return;
   }
 
-  btn.disabled = true; btn.textContent = 'Sincronizando…';
-  res.style.display = 'none';
-  try {
-    var r = await fetch('/receitas/sincronizar-nfse/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ mes: mes, ano: ano, sincronizar_omie: syncOmie, sincronizar_saatri: syncSaatri }),
-    });
-    if (!r.ok) {
-      res.style.display = 'block';
-      res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
-      res.innerHTML = '❌ Erro HTTP ' + r.status + ' ao sincronizar. Veja o log do servidor.';
-      btn.disabled  = false;
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar';
-      return;
-    }
-    var d = await r.json();
-    res.style.display = 'block';
-    if (d.ok) {
-      res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#f0fdf4;border:1.5px solid #86efac;color:#166534;';
-      var msgSync = [];
-      if (syncOmie) msgSync.push('Omie: <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas');
-      if (syncSaatri) {
-        msgSync.push(
-          d.saatri_total
-            ? 'SAATRI: <strong>' + d.saatri_resolvidas + '/' + d.saatri_total + '</strong> resolvidas' +
-              (d.saatri_pendentes ? ' (' + d.saatri_pendentes + ' ainda aguardando a SEFIN)' : '')
-            : 'SAATRI: nada pendente'
-        );
+  // Troca pro painel de progresso
+  document.getElementById('snfse-config').style.display = 'none';
+  document.getElementById('snfse-progresso').style.display = 'block';
+  document.getElementById('snfse-progresso-log').innerHTML = '';
+  document.getElementById('snfse-btn-fechar-progresso').disabled = true;
+  document.getElementById('snfse-btn-fechar-progresso').style.opacity = '.5';
+
+  var inicioMs = Date.now();
+
+  // ── 1) Omie: uma chamada só (não é item a item, mas costuma ser rápida) ──
+  if (syncOmie) {
+    document.getElementById('snfse-progresso-titulo').textContent = 'Sincronizando com a Omie…';
+    _snfseLog('⏳ Consultando NFS-e na Omie (' + mes + '/' + ano + ')…');
+    try {
+      var r = await fetch('/receitas/sincronizar-nfse/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ mes: mes, ano: ano, sincronizar_omie: true, sincronizar_saatri: false }),
+      });
+      var d = await r.json();
+      if (r.ok && d.ok) {
+        _snfseLog('✅ Omie: <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas');
+      } else {
+        _snfseLog('❌ Omie: ' + (d.erro || ('HTTP ' + r.status)));
       }
-      res.innerHTML = '✅ ' + msgSync.join(' · ');
-    } else {
-      res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
-      res.innerHTML = '❌ ' + (d.erro || 'Erro ao sincronizar.');
+    } catch (e) {
+      _snfseLog('❌ Omie: erro de conexão — a requisição não completou.');
     }
-  } catch (e) {
-    res.style.display = 'block';
-    res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
-    res.textContent = '❌ Erro de conexão (a requisição não completou — confira sua internet ou tente de novo).';
   }
-  btn.disabled  = false;
-  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar';
+
+  // ── 2) SAATRI: item a item, com barra de progresso e ETA ──
+  if (syncSaatri) {
+    document.getElementById('snfse-progresso-titulo').textContent = 'Verificando RPS pendentes no SAATRI…';
+    try {
+      var rList = await fetch('/receitas/contratos/saatri/pendentes/');
+      var dList = await rList.json();
+      if (!rList.ok || !dList.ok) throw new Error(dList.erro || ('HTTP ' + rList.status));
+
+      var itens = dList.itens || [];
+      var total = itens.length;
+
+      if (total === 0) {
+        _snfseLog('✅ SAATRI: nada pendente.');
+        _snfseProgresso(1, 1, inicioMs);
+      } else {
+        document.getElementById('snfse-progresso-titulo').textContent =
+          'Sincronizando SAATRI — 0 de ' + total + '…';
+        _snfseLog('📋 ' + total + ' RPS aguardando a SEFIN — cada um leva alguns segundos (consulta + baixa o PDF).');
+
+        var CHUNK = 2; // pequeno de propósito: cada item já é lento (2-8s)
+        var feito = 0;
+        for (var i = 0; i < total; i += CHUNK) {
+          var chunk = itens.slice(i, i + CHUNK).map(function (it) { return it.id; });
+          try {
+            var rChunk = await fetch('/receitas/contratos/saatri/resolver-chunk/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+              body: JSON.stringify({ ids: chunk }),
+            });
+            var dChunk = await rChunk.json();
+            if (rChunk.ok && dChunk.ok) {
+              dChunk.resultados.forEach(function (res_item) {
+                feito++;
+                var icone = res_item.resolvido ? '✅' : '⏳';
+                _snfseLog(icone + ' RPS ' + res_item.numero + ' (' + res_item.contrato_nome + '): ' + res_item.msg);
+              });
+            } else {
+              feito += chunk.length;
+              _snfseLog('❌ Lote com erro: ' + (dChunk.erro || ('HTTP ' + rChunk.status)));
+            }
+          } catch (e) {
+            feito += chunk.length;
+            _snfseLog('❌ Erro de conexão num lote — pulando pro próximo.');
+          }
+
+          document.getElementById('snfse-progresso-titulo').textContent =
+            'Sincronizando SAATRI — ' + Math.min(feito, total) + ' de ' + total + '…';
+          _snfseProgresso(feito, total, inicioMs);
+        }
+      }
+    } catch (e) {
+      _snfseLog('❌ SAATRI: ' + (e.message || 'erro ao listar pendentes.'));
+    }
+  }
+
+  document.getElementById('snfse-progresso-titulo').textContent = '✅ Sincronização concluída';
+  document.getElementById('snfse-progresso-eta').textContent = '';
+  document.getElementById('snfse-progresso-barra').style.width = '100%';
+  var btnFechar = document.getElementById('snfse-btn-fechar-progresso');
+  btnFechar.disabled = false;
+  btnFechar.style.opacity = '1';
+}
+
+/* Reseta o modal pro estado inicial (config) quando reaberto */
+function resetModalSyncNfse() {
+  var cfg = document.getElementById('snfse-config');
+  var prog = document.getElementById('snfse-progresso');
+  if (cfg) cfg.style.display = 'block';
+  if (prog) prog.style.display = 'none';
+  var res = document.getElementById('snfse-resultado');
+  if (res) res.style.display = 'none';
 }
 
 /* ════════════════════════════════════════
