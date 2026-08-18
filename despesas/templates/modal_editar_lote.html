@@ -170,6 +170,19 @@
     <div id="painel-confirmacao" style="display:none">
           <div class="eml-resumo-card" id="conf-resumo"></div>
 
+          <div class="eml-field" id="conf-origem-emissao" style="display:none">
+            <label>Emitir via</label>
+            <div style="display:flex; gap:16px; font-size:.86rem; margin-top:2px;">
+              <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+                <input type="radio" name="origem-emissao" value="omie" checked> Omie (padrão)
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+                <input type="radio" name="origem-emissao" value="saatri"> SAATRI Direto
+              </label>
+            </div>
+            <small>SAATRI Direto emite a NFS-e direto na prefeitura (Oliveira dos Brejinhos), sem passar pela Omie — a Omie continua sendo consultada só para pegar valor/descrição/tomador atuais.</small>
+          </div>
+
           <div class="eml-warn-box" id="conf-aviso-faturamento">
             ⚠️ Esta ação <strong>gera Ordens de Serviço</strong> no Omie e <strong>não pode ser desfeita</strong>. Revise antes de confirmar.
           </div>

@@ -994,10 +994,28 @@ class NotaFiscal(models.Model):
         verbose_name='Contrato',
     )
 
+    # ── Origem da emissão ──
+    ORIGEM_CHOICES = [
+        ('omie',   'Omie'),
+        ('saatri', 'SAATRI Direto'),
+    ]
+    origem = models.CharField(
+        max_length=10, choices=ORIGEM_CHOICES, default='omie',
+        verbose_name='Origem da Emissão',
+        help_text="'omie' = faturada/emitida pela Omie (fluxo padrão). "
+                   "'saatri' = emitida direto no Web Service SAATRI, sem passar pela Omie.",
+    )
+
     # ── Identificadores Omie ──
-    omie_nfse_id = models.BigIntegerField(unique=True, verbose_name='ID NFS-e Omie')
+    # Nula para notas emitidas via SAATRI Direto (origem='saatri'), que não
+    # têm nenhum ID Omie associado.
+    omie_nfse_id = models.BigIntegerField(unique=True, null=True, blank=True, verbose_name='ID NFS-e Omie')
     numero_nfse  = models.CharField(max_length=40, blank=True, null=True, verbose_name='Número NFS-e')
     omie_os_id   = models.BigIntegerField(null=True, blank=True, verbose_name='ID OS Omie')
+
+    # ── Identificadores SAATRI (só para origem='saatri') ──
+    codigo_verificacao = models.CharField(max_length=100, blank=True, null=True, verbose_name='Código de Verificação SAATRI')
+    xml_completo        = models.TextField(blank=True, null=True, verbose_name='XML Completo (SAATRI)')
 
     # ── Dados da Nota ──
     cliente_nome  = models.CharField(max_length=255, blank=True, null=True)
@@ -1060,6 +1078,118 @@ class NotaFiscal(models.Model):
         if rec and rec.confirmado:
             return rec.valor_recebido or self.valor_liquido
         return Decimal('0.00')
+
+    def get_link_visualizacao_saatri(self):
+        """Link público de visualização (PDF) — só válido para origem='saatri'."""
+        base = "https://oliveiradosbrejinhos.saatri.com.br"
+        return f"{base}/Relatorio/VisualizarNotaFiscal?numero={self.numero_nfse}&codigoVerificacao={self.codigo_verificacao}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  EMISSÃO SAATRI DIRETO (bypassa a Omie, fala direto com o Web Service da
+#  prefeitura — ver despesas/saatri/). RpsSaatri é o equivalente ao "Rps" do
+#  projeto nfse_project: registra cada TENTATIVA de emissão (uma malsucedida
+#  fica com status='erro' e pode ser reenviada reaproveitando o mesmo número,
+#  sem "queimar" numeração nova a cada erro). Quando dá certo, gera/atualiza
+#  uma NotaFiscal (origem='saatri').
+# ─────────────────────────────────────────────────────────────────────────────
+class SaatriNumeracao(models.Model):
+    """
+    Singleton com o próximo número de RPS disponível para a série 9000
+    (Web Service). Começa em 3260 — folga de segurança acima do RPS 3255,
+    já usado nos testes reais do nfse_project (NFS-e 3254 emitida).
+    """
+    proximo_numero_rps = models.PositiveIntegerField(default=3260)
+
+    class Meta:
+        verbose_name = "Numeração RPS SAATRI"
+        verbose_name_plural = "Numeração RPS SAATRI"
+
+    def __str__(self):
+        return f"Próximo RPS: {self.proximo_numero_rps}"
+
+    @classmethod
+    def obter(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def incrementar(self):
+        numero = self.proximo_numero_rps
+        self.proximo_numero_rps += 1
+        self.save(update_fields=['proximo_numero_rps'])
+        return numero
+
+
+class RpsSaatri(models.Model):
+    """Uma tentativa de emissão avulsa de NFS-e via SAATRI Direto."""
+
+    STATUS_CHOICES = [
+        ('rascunho',   'Rascunho'),
+        ('enviado',    'Enviado (aguardando SEFIN)'),
+        ('convertido', 'Convertido em NFS-e'),
+        ('erro',       'Erro'),
+    ]
+
+    contrato = models.ForeignKey(
+        'Contrato', on_delete=models.PROTECT, related_name='rps_saatri_list',
+        verbose_name='Contrato',
+    )
+    nota_fiscal = models.OneToOneField(
+        NotaFiscal, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='rps_saatri',
+    )
+
+    numero = models.PositiveIntegerField('Número do RPS')
+    serie  = models.CharField('Série', max_length=5, default='9000')
+    tipo   = models.CharField('Tipo', max_length=1, default='1')
+
+    competencia_mes = models.PositiveSmallIntegerField()
+    competencia_ano = models.PositiveSmallIntegerField()
+
+    valor_servicos = models.DecimalField(max_digits=12, decimal_places=2)
+    aliquota       = models.DecimalField(max_digits=14, decimal_places=10, default=0)
+    valor_iss      = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discriminacao  = models.TextField()
+    item_lista_servico = models.CharField(max_length=8)
+    codigo_nbs         = models.CharField(max_length=9, blank=True)
+
+    status        = models.CharField(max_length=12, choices=STATUS_CHOICES, default='rascunho')
+    mensagem_erro = models.TextField(blank=True)
+
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "RPS SAATRI"
+        verbose_name_plural = "RPS SAATRI"
+        ordering = ['-criado_em']
+        unique_together = ('numero', 'serie', 'tipo')
+
+    def __str__(self):
+        return f"RPS {self.numero}/{self.serie} — {self.contrato.cliente_nome}"
+
+
+class LogSaatri(models.Model):
+    """Auditoria de cada chamada SOAP ao Web Service SAATRI."""
+
+    metodo      = models.CharField('Método SOAP', max_length=60)
+    url         = models.URLField('URL Endpoint')
+    xml_envio   = models.TextField('XML Enviado')
+    xml_retorno = models.TextField('XML Retornado', blank=True)
+    http_status = models.IntegerField('HTTP Status', null=True)
+    sucesso     = models.BooleanField('Sucesso', default=False)
+    erro        = models.TextField('Erro', blank=True)
+    duracao_ms  = models.IntegerField('Duração (ms)', null=True)
+    criado_em   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Log SAATRI"
+        verbose_name_plural = "Logs SAATRI"
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        status = "OK" if self.sucesso else "ERRO"
+        return f"[{status}] {self.metodo} — {self.criado_em:%d/%m/%Y %H:%M}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

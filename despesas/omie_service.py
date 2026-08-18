@@ -65,6 +65,48 @@ class OmieService:
             return dados.get("nome_fantasia") or dados.get("razao_social")
         return "-"
 
+    def consultar_cliente_completo(self, codigo_cliente_omie):
+        """
+        Busca o cadastro completo do cliente na Omie e devolve já no
+        formato esperado pelo despesas.saatri.xml_builder ("tomador"):
+        cpf_cnpj, is_cpf, razao_social, endereco, numero, bairro,
+        codigo_municipio (IBGE), uf, cep, telefone, email, etc.
+
+        Usado pelo fluxo de emissão SAATRI Direto — a Omie já guarda o
+        cadastro fiscal completo do cliente (endereço, CNPJ/CPF, IM),
+        então buscamos ao vivo em vez de manter um cadastro duplicado.
+        """
+        params = {"codigo_cliente_omie": codigo_cliente_omie}
+        dados  = self._request(URL_CLIENTE, "ConsultarCliente", params)
+        if not dados or dados.get("faultstring") or "cnpj_cpf" not in dados:
+            return None
+
+        cpf_cnpj = re.sub(r"\D", "", dados.get("cnpj_cpf", ""))
+        is_cpf   = (dados.get("pessoa_fisica") == "S") or len(cpf_cnpj) == 11
+
+        ddd      = (dados.get("telefone1_ddd") or "").strip()
+        numero_t = (dados.get("telefone1_numero") or "").strip()
+        telefone = re.sub(r"\D", "", f"{ddd}{numero_t}") if (ddd or numero_t) else ""
+
+        numero_end = (dados.get("endereco_numero") or "").strip() or "S/N"
+
+        return {
+            "cpf_cnpj":       cpf_cnpj,
+            "is_cpf":         is_cpf,
+            "razao_social":   dados.get("razao_social") or dados.get("nome_fantasia") or "",
+            "logradouro":     dados.get("endereco", ""),
+            "numero":         numero_end,
+            "complemento":    dados.get("complemento", "") or "",
+            "bairro":         dados.get("bairro", ""),
+            "codigo_municipio": (dados.get("cidade_ibge") or "").strip(),
+            "uf":             dados.get("estado", ""),
+            "codigo_pais":    "1058",
+            "cep":            re.sub(r"\D", "", dados.get("cep", "")),
+            "telefone":       telefone,
+            "email":          dados.get("email", "") or "",
+            "inscricao_municipal": dados.get("inscricao_municipal", "") or "",
+        }
+
     # ── Contratos ────────────────────────────────────────────
     def listar_contratos_api(self, pagina=1):
         params = {

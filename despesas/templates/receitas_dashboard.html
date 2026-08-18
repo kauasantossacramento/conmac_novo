@@ -1047,8 +1047,17 @@ document.addEventListener('DOMContentLoaded', function () {
     return { mes_nome: mesVal, mes_num: mesNum, ano: anoVal };
   }
 
+  function lerOrigemEmissao() {
+    var el = document.querySelector('input[name="origem-emissao"]:checked');
+    return el ? el.value : 'omie';
+  }
+
   function montarResumo(comp, qtd, opcao) {
-    var acaoTexto = (opcao === 'salvar') ? 'atualizados' : 'faturados no Omie';
+    var ehFaturamento = (opcao !== 'salvar');
+    var origem = lerOrigemEmissao();
+    var acaoTexto = !ehFaturamento
+      ? 'atualizados'
+      : (origem === 'saatri' ? 'emitidos direto no SAATRI' : 'faturados no Omie');
     var linhas = ['📋 <strong>' + qtd + ' contrato(s)</strong> serão ' + acaoTexto + '.'];
 
     if (opcao === 'salvar_e_faturar') {
@@ -1057,9 +1066,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (comp && comp.mes_num && comp.ano) {
       linhas.push('📅 Nova Competência: <strong>' + MESES_PT_FULL[comp.mes_num] + ' / ' + comp.ano + '</strong>.');
     }
+    if (ehFaturamento) {
+      linhas.push('📡 Emitindo via: <strong>' + (origem === 'saatri' ? 'SAATRI Direto' : 'Omie') + '</strong>.');
+    }
 
     var el = mc('conf-resumo');
     if (el) el.innerHTML = linhas.map(function (l) { return '<div>' + l + '</div>'; }).join('');
+
+    var origemBox = mc('conf-origem-emissao');
+    if (origemBox) origemBox.style.display = ehFaturamento ? 'block' : 'none';
 
     var avisoFat = mc('conf-aviso-faturamento');
     var avisoSalvar = mc('conf-aviso-salvar');
@@ -1103,34 +1118,38 @@ document.addEventListener('DOMContentLoaded', function () {
     mostrarPainel('painel-resultado-fat');
   }
 
-async function chamarFaturarLote(ids, comp, msgExec) {
+async function chamarFaturarLote(ids, comp, msgExec, origem) {
     if (!ids || !ids.length) return;
+    origem = origem || 'omie';
+    var urlFaturar = (origem === 'saatri')
+      ? '/receitas/contratos/faturar-lote-saatri/'
+      : '/receitas/contratos/faturar-lote/';
 
     var execMsg = mc('exec-msg');
-    if (execMsg) execMsg.textContent = msgExec || 'Faturando contratos no Omie…';
+    if (execMsg) execMsg.textContent = msgExec || (origem === 'saatri' ? 'Emitindo contratos direto no SAATRI…' : 'Faturando contratos no Omie…');
     mostrarPainel('painel-executando');
 
     var total = ids.length;
-    var CHUNK_SIZE_FAT = 5; // Blocos menores (5) porque a Omie demora mais para faturar
+    var CHUNK_SIZE_FAT = 5; // Blocos menores (5) porque a Omie/SAATRI demoram para processar
     var chunks = [];
 
     for (let i = 0; i < total; i += CHUNK_SIZE_FAT) {
       chunks.push(ids.slice(i, i + CHUNK_SIZE_FAT));
     }
 
-    atualizarProgresso(0, total, `Iniciando faturamento (${total} contratos em ${chunks.length} lotes)…`);
+    atualizarProgresso(0, total, `Iniciando emissão (${total} contratos em ${chunks.length} lotes)…`);
 
     let sucessos = 0, erros = 0, msgsErro = [];
 
     for (let ci = 0; ci < chunks.length; ci++) {
       var chunk = chunks[ci];
-      atualizarProgresso(ci * CHUNK_SIZE_FAT, total, `Faturando lote ${ci + 1} de ${chunks.length} — ${chunk.length} contrato(s)…`);
+      atualizarProgresso(ci * CHUNK_SIZE_FAT, total, `Lote ${ci + 1} de ${chunks.length} — ${chunk.length} contrato(s)…`);
 
       var body = { ids: chunk };
       if (comp && comp.mes_num) body.competencia = { mes_num: comp.mes_num, ano: comp.ano };
 
       try {
-        var r = await fetch('/receitas/contratos/faturar-lote/', {
+        var r = await fetch(urlFaturar, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
           body: JSON.stringify(body),
@@ -1247,7 +1266,9 @@ async function chamarFaturarLote(ids, comp, msgExec) {
     /* --- FINAL DO PROCESSAMENTO DOS CHUNKS --- */
     if (faturarApos) {
       if (erros === 0) {
-        chamarFaturarLote(todosIds, lerCompetencia(), 'Salvamento concluído! Iniciando faturamento...');
+        var origemSalvarFat = lerOrigemEmissao();
+        var msgSalvarFat = 'Salvamento concluído! Iniciando ' + (origemSalvarFat === 'saatri' ? 'emissão via SAATRI…' : 'faturamento no Omie…');
+        chamarFaturarLote(todosIds, lerCompetencia(), msgSalvarFat, origemSalvarFat);
       } else {
         exibirResultadoFat({ ok: false, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
       }
@@ -1270,6 +1291,16 @@ async function chamarFaturarLote(ids, comp, msgExec) {
       return false;
     }
     return true;
+  }
+
+  /* ── Re-renderiza o resumo ao trocar Omie/SAATRI ────── */
+  if (mContent) {
+    mContent.addEventListener('change', function (e) {
+      if (e.target.name === 'origem-emissao') {
+        var opcaoAtual = mc('btn-confirmar-faturar')?.dataset.opcao;
+        if (opcaoAtual) montarResumo(_pendComp, _pendIds.length, opcaoAtual);
+      }
+    });
   }
 
   /* ── Delegação de eventos sobre mContent ────────────── */
@@ -1329,8 +1360,11 @@ async function chamarFaturarLote(ids, comp, msgExec) {
         var opcao = t.dataset.opcao;
 
         if (opcao === 'faturar_sem_editar') {
-          var msg = (_pendComp && _pendComp.mes_num) ? 'Faturando contratos (competência já atualizada)…' : 'Faturando contratos no Omie…';
-          chamarFaturarLote(_pendIds, null, msg);
+          var origemConfirmar = lerOrigemEmissao();
+          var msg = (_pendComp && _pendComp.mes_num)
+            ? 'Emitindo contratos (competência já atualizada)…'
+            : (origemConfirmar === 'saatri' ? 'Emitindo contratos direto no SAATRI…' : 'Faturando contratos no Omie…');
+          chamarFaturarLote(_pendIds, null, msg, origemConfirmar);
         } else {
           await processarEmChunks(opcao === 'salvar_e_faturar');
         }
@@ -1446,7 +1480,12 @@ async function executarSyncNfse() {
     res.style.display = 'block';
     if (d.ok) {
       res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#f0fdf4;border:1.5px solid #86efac;color:#166534;';
-      res.innerHTML = '✅ <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas';
+      var msgSync = '✅ <strong>' + d.criadas + '</strong> novas · <strong>' + d.atualizadas + '</strong> atualizadas';
+      if (d.saatri_total) {
+        msgSync += ' · SAATRI: <strong>' + d.saatri_resolvidas + '/' + d.saatri_total + '</strong> resolvidas';
+        if (d.saatri_pendentes) msgSync += ' (' + d.saatri_pendentes + ' ainda aguardando a SEFIN)';
+      }
+      res.innerHTML = msgSync;
     } else {
       res.style.cssText = 'display:block;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;';
       res.innerHTML = '❌ ' + (d.erro || 'Erro ao sincronizar.');

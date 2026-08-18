@@ -155,6 +155,8 @@ urlpatterns = [
         name='adicionar_email_municipio',
     ),
     path('receitas/contratos/faturar-lote/', views.faturar_lote_view, name='faturar_lote'),
+    path('receitas/contratos/faturar-lote-saatri/', views.faturar_lote_saatri_view, name='faturar_lote_saatri'),
+    path('receitas/contratos/saatri/sincronizar-pendentes/', views.sincronizar_saatri_pendentes_view, name='sincronizar_saatri_pendentes'),
 
     path('envios/<int:envio_id>/prefetch-nfse/',
          views.prefetch_nfse_pdf,

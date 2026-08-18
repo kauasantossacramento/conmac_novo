@@ -7291,10 +7291,15 @@ def sincronizar_nfse(request):
     try:
         service = OmieService()
         criadas, atualizadas = service.sincronizar_nfse(mes=int(mes), ano=int(ano))
-        messages.success(
-            request,
-            f'✅ NFS-e sincronizadas: {criadas} novas · {atualizadas} atualizadas ({int(mes):02d}/{ano})'
-        )
+
+        # Resolve também os RPS SAATRI Direto pendentes (aceitos pela DPS,
+        # aguardando a SEFIN gerar a NFS-e) — mesmo clique, um só sync.
+        total_saatri, resolvidos_saatri, _ = sincronizar_saatri_pendentes()
+
+        msg = f'✅ NFS-e sincronizadas: {criadas} novas · {atualizadas} atualizadas ({int(mes):02d}/{ano})'
+        if total_saatri:
+            msg += f' · SAATRI: {resolvidos_saatri}/{total_saatri} resolvidas'
+        messages.success(request, msg)
     except Exception as e:
         messages.error(request, f'❌ Erro na sincronização: {e}')
 
@@ -9261,20 +9266,35 @@ def enviar_lote_dashboard(request):
 
             if pdf_nf is None or not pdf_nf.arquivo:
                 try:
-                    from .omie_service import OmieService
-                    url_pdf = OmieService().obter_link_pdf_nfse(nota_fiscal.omie_nfse_id)
-                    if url_pdf:
-                        hdrs = {'User-Agent': 'Mozilla/5.0'}
-                        resp = requests.get(url_pdf, headers=hdrs, stream=True, timeout=20)
-                        if resp.ok and 'pdf' in resp.headers.get('Content-Type', '').lower():
-                            pdf_bytes_nf = b''.join(resp.iter_content(8192))
+                    if nota_fiscal.origem == 'saatri':
+                        # NFS-e emitida via SAATRI Direto — não tem omie_nfse_id,
+                        # o PDF (DANFSe) é público no portal da prefeitura.
+                        from .saatri import client as saatri_client
+                        pdf_bytes_nf = saatri_client.baixar_pdf_nfse(
+                            nota_fiscal.numero_nfse, nota_fiscal.codigo_verificacao
+                        )
+                        if pdf_bytes_nf:
                             if pdf_nf is None:
                                 pdf_nf = NotaFiscalPDF(nota=nota_fiscal)
-                            nome_nf = f'nfse_{nota_fiscal.numero_nfse or nota_fiscal.omie_nfse_id}.pdf'
+                            nome_nf = f'nfse_saatri_{nota_fiscal.numero_nfse}.pdf'
                             pdf_nf.arquivo     = ContentFile(pdf_bytes_nf, name=nome_nf)
-                            pdf_nf.url_omie    = url_pdf
                             pdf_nf.baixado_por = request.user
                             pdf_nf.save()
+                    else:
+                        from .omie_service import OmieService
+                        url_pdf = OmieService().obter_link_pdf_nfse(nota_fiscal.omie_nfse_id)
+                        if url_pdf:
+                            hdrs = {'User-Agent': 'Mozilla/5.0'}
+                            resp = requests.get(url_pdf, headers=hdrs, stream=True, timeout=20)
+                            if resp.ok and 'pdf' in resp.headers.get('Content-Type', '').lower():
+                                pdf_bytes_nf = b''.join(resp.iter_content(8192))
+                                if pdf_nf is None:
+                                    pdf_nf = NotaFiscalPDF(nota=nota_fiscal)
+                                nome_nf = f'nfse_{nota_fiscal.numero_nfse or nota_fiscal.omie_nfse_id}.pdf'
+                                pdf_nf.arquivo     = ContentFile(pdf_bytes_nf, name=nome_nf)
+                                pdf_nf.url_omie    = url_pdf
+                                pdf_nf.baixado_por = request.user
+                                pdf_nf.save()
                 except Exception as e_dl:
                     print(f"Auto-download NFS-e lote {contrato.omie_num_ctr}: {e_dl}")
 
@@ -9356,7 +9376,16 @@ def sincronizar_nfse_ajax(request):
         from .omie_service import OmieService
         service = OmieService()
         criadas, atualizadas = service.sincronizar_nfse(mes=mes, ano=ano)
-        return JsonResponse({'ok': True, 'criadas': criadas, 'atualizadas': atualizadas})
+
+        # Resolve também os RPS SAATRI Direto pendentes — mesmo clique do
+        # modal "NFS-e", sem precisar de um botão separado.
+        total_saatri, resolvidos_saatri, ainda_pendentes_saatri = sincronizar_saatri_pendentes()
+
+        return JsonResponse({
+            'ok': True, 'criadas': criadas, 'atualizadas': atualizadas,
+            'saatri_total': total_saatri, 'saatri_resolvidas': resolvidos_saatri,
+            'saatri_pendentes': ainda_pendentes_saatri,
+        })
     except Exception as e:
         return JsonResponse({'ok': False, 'erro': str(e)})
 
@@ -11920,6 +11949,14 @@ def tcm_monitor(request):
         'tipos_count':  tipos_count,
     }
     return render(request, 'boletos/monitor_tcm.html', context)
+
+# MÓDULO DE EMISSÃO SAATRI DIRETO (bypassa a Omie) - IMPORTAÇÃO:
+
+from .views_saatri import (
+    faturar_lote_saatri_view,
+    sincronizar_saatri_pendentes_view,
+    sincronizar_saatri_pendentes,
+)
 
 #MÓDULO DE PRESTAÇÃO DE CONTAS - IMPORTAÇÃO:
 
