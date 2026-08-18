@@ -567,7 +567,7 @@
 
     <button id="btn-editar-lote" data-base-url="{% url 'receitas_editar_lote' %}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Editar (<span id="count-sel">0</span>)
+      Gerenciar (<span id="count-sel">0</span>)
     </button>
 
     <button id="btn-docs-lote"
@@ -1090,10 +1090,15 @@ document.addEventListener('DOMContentLoaded', function () {
   function mc(id) { return document.getElementById(id); }
 
   function mostrarPainel(id) {
-    ['painel-edicao','painel-confirmacao','painel-executando','painel-resultado-fat'].forEach(function (p) {
+    ['painel-escolha','painel-edicao','painel-confirmacao','painel-executando','painel-resultado-fat'].forEach(function (p) {
       var el = mc(p);
       if (el) el.style.display = (p === id) ? '' : 'none';
     });
+  }
+
+  function fecharModalGerenciar() {
+    modal.classList.remove('open');
+    window.location.reload();
   }
 
   function mostrarFeedback(msg, tipo) {
@@ -1279,6 +1284,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     el.innerHTML = html;
     mostrarPainel('painel-resultado-fat');
+
+    // Depois de um SALVAMENTO bem-sucedido (não faturamento), oferece ir
+    // direto faturar em seguida, sem precisar reabrir o modal do zero.
+    var btnFatApos = mc('btn-faturar-apos-resultado');
+    if (btnFatApos) btnFatApos.remove();
+    if (!isFaturamento && !temErr && _pendIds && _pendIds.length) {
+      var footer = document.querySelector('#painel-resultado-fat .eml-footer');
+      if (footer) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'btn-faturar-apos-resultado';
+        btn.className = 'eb eb-amber';
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Faturar agora';
+        btn.addEventListener('click', function () {
+          montarResumo(_pendComp, _pendIds.length, 'faturar_sem_editar');
+          mc('btn-confirmar-faturar').dataset.opcao = 'faturar_sem_editar';
+          mostrarPainel('painel-confirmacao');
+        });
+        footer.insertBefore(btn, footer.firstChild);
+      }
+    }
   }
 
 async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
@@ -1379,7 +1405,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
     }
   }
 
-  async function processarEmChunks(faturarApos) {
+  async function processarEmChunks() {
     var form = mc('form-edicao-lote');
     if (!form) return;
 
@@ -1430,21 +1456,10 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
       if (ci < chunks.length - 1) await new Promise(r => setTimeout(r, 800));
     }
 
-    /* --- FINAL DO PROCESSAMENTO DOS CHUNKS --- */
-    if (faturarApos) {
-      if (erros === 0) {
-        var origemSalvarFat = lerOrigemEmissao();
-        var msgSalvarFat = 'Salvamento concluído! Iniciando ' + (origemSalvarFat === 'saatri' ? 'emissão via SAATRI…' : 'faturamento no Omie…');
-        chamarFaturarLote(todosIds, lerCompetencia(), msgSalvarFat, origemSalvarFat, lerFonteDados());
-      } else {
-        exibirResultadoFat({ ok: false, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
-      }
-    } else {
-      exibirResultadoFat({ ok: erros === 0, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
-      if (erros === 0) {
-        setTimeout(function() { window.location.reload(); }, 1500);
-      }
-    }
+    /* --- FINAL DO PROCESSAMENTO DOS CHUNKS ---
+       Sem auto-reload: o usuário decide — "Faturar agora" (aparece se deu
+       tudo certo) ou "Fechar" (recarrega a página com os dados novos). */
+    exibirResultadoFat({ ok: erros === 0, sucessos: sucessos, erros: erros, msgs_erro: msgsErro }, false);
   }
 
   function validarFormLote() {
@@ -1495,8 +1510,24 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
         return;
       }
 
-      /* ── Faturar sem editar ── */
-      if (t.id === 'btn-faturar-sem-editar') {
+      /* ── Tela de escolha: Editar (sincroniza com a Omie) ── */
+      if (t.id === 'opcao-editar-omie') {
+        var chkOmie = mc('id_sincronizar_omie');
+        if (chkOmie && !chkOmie.checked) { chkOmie.checked = true; chkOmie.dispatchEvent(new Event('change')); }
+        mostrarPainel('painel-edicao');
+        return;
+      }
+
+      /* ── Tela de escolha: Editar (só base local) ── */
+      if (t.id === 'opcao-editar-local') {
+        var chkLocal = mc('id_sincronizar_omie');
+        if (chkLocal && chkLocal.checked) { chkLocal.checked = false; chkLocal.dispatchEvent(new Event('change')); }
+        mostrarPainel('painel-edicao');
+        return;
+      }
+
+      /* ── Tela de escolha: Faturar / Emitir direto ── */
+      if (t.id === 'opcao-faturar') {
         _pendIds = lerIds();
         _pendComp = null;
         montarResumo(null, _pendIds.length, 'faturar_sem_editar');
@@ -1505,7 +1536,14 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
         return;
       }
 
-      /* ── Salvar Alterações ── */
+      /* ── Voltar da edição pra tela de escolha ── */
+      if (t.id === 'btn-voltar-escolha') {
+        ocultarFeedback();
+        mostrarPainel('painel-escolha');
+        return;
+      }
+
+      /* ── Salvar Alterações (edição — Omie ou local, conforme o toggle) ── */
       if (t.id === 'btn-salvar') {
         ocultarFeedback();
         if (!validarFormLote()) return;
@@ -1517,21 +1555,9 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
         return;
       }
 
-      /* ── Salvar e Faturar ── */
-      if (t.id === 'btn-salvar-e-faturar') {
-        ocultarFeedback();
-        if (!validarFormLote()) return;
-        _pendIds = lerIds();
-        _pendComp = lerCompetencia();
-        montarResumo(_pendComp, _pendIds.length, 'salvar_e_faturar');
-        mc('btn-confirmar-faturar').dataset.opcao = 'salvar_e_faturar';
-        mostrarPainel('painel-confirmacao');
-        return;
-      }
-
-      /* ── Voltar ── */
+      /* ── Voltar (da confirmação) ── */
       if (t.id === 'btn-voltar-para-edicao') {
-        mostrarPainel('painel-edicao');
+        mostrarPainel('painel-escolha');
         return;
       }
 
@@ -1546,7 +1572,7 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
             : (origemConfirmar === 'saatri' ? 'Emitindo contratos direto no SAATRI…' : 'Faturando contratos no Omie…');
           chamarFaturarLote(_pendIds, null, msg, origemConfirmar, lerFonteDados());
         } else {
-          await processarEmChunks(opcao === 'salvar_e_faturar');
+          await processarEmChunks();
         }
         return;
       }

@@ -72,6 +72,17 @@
 .eml-switch input:checked + .eml-switch-track::before{transform:translateX(20px)}
 .eml-switch input:focus-visible + .eml-switch-track{outline:2px solid #6366f1;outline-offset:2px}
 .eml-sync-status{font-size:.72rem;font-weight:700;letter-spacing:.02em;flex-shrink:0;width:38px;text-align:right}
+
+/* ── Tela de escolha (Gerenciar) ── */
+.eml-opcao{display:flex;align-items:flex-start;gap:14px;width:100%;text-align:left;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s;font-family:'DM Sans',system-ui,sans-serif}
+.eml-opcao:hover{border-color:#94a3b8;background:#f8fafc}
+.eml-opcao:last-child{margin-bottom:0}
+.eml-opcao-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.eml-opcao-icon.ic-omie{background:#eff6ff;color:#2563eb}
+.eml-opcao-icon.ic-local{background:#f0fdf4;color:#16a34a}
+.eml-opcao-icon.ic-faturar{background:#fffbeb;color:#d97706}
+.eml-opcao-txt strong{display:block;font-size:.9rem;color:#1a1f2e;margin-bottom:2px}
+.eml-opcao-txt span{font-size:.78rem;color:#64748b;line-height:1.4;display:block}
 </style>
 
 <div class="eml-wrap">
@@ -85,7 +96,7 @@
       </svg>
     </div>
     <div>
-      <h3>{% if detalhes %}Edição de Contrato{% else %}Edição em Lote{% endif %}</h3>
+      <h3>{% if detalhes %}Gerenciar Contrato{% else %}Gerenciar Contratos{% endif %}</h3>
       <p>{% if detalhes %}Dados carregados do Omie{% else %}{{ qtd }} contrato(s) selecionado(s){% endif %}</p>
     </div>
     <button class="eml-close" data-close-modal title="Fechar">×</button>
@@ -93,7 +104,45 @@
 
   <div class="eml-body">
 
-    <div id="painel-edicao">
+    <div id="painel-escolha">
+      <p style="font-size:.83rem;color:var(--muted);margin:0 0 14px;color:#64748b;">O que você quer fazer com {% if qtd == 1 %}este contrato{% else %}estes {{ qtd }} contratos{% endif %}?</p>
+
+      <button type="button" class="eml-opcao" id="opcao-editar-omie">
+        <div class="eml-opcao-icon ic-omie">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <div class="eml-opcao-txt">
+          <strong>Editar competência — sincroniza com a Omie</strong>
+          <span>Atualiza a Omie e o cache local. Pode ser mais lento — é a Omie que às vezes trava com "REDUNDANT".</span>
+        </div>
+      </button>
+
+      <button type="button" class="eml-opcao" id="opcao-editar-local">
+        <div class="eml-opcao-icon ic-local">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <div class="eml-opcao-txt">
+          <strong>Editar competência — só base própria</strong>
+          <span>Atualiza só este sistema, sem falar com a Omie. Rápido e não trava. Exige que o contrato já tenha sido sincronizado antes.</span>
+        </div>
+      </button>
+
+      <button type="button" class="eml-opcao" id="opcao-faturar">
+        <div class="eml-opcao-icon ic-faturar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+        <div class="eml-opcao-txt">
+          <strong>Faturar / Emitir nota</strong>
+          <span>Emite direto com os dados que já estão salvos (Omie ou SAATRI) — não edita nada agora.</span>
+        </div>
+      </button>
+    </div>
+
+    <div id="painel-edicao" style="display:none">
+      <button type="button" id="btn-voltar-escolha" class="eb eb-ghost" style="margin-bottom:16px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar
+      </button>
 
       {% if detalhes %}
       <div class="eml-dados">
@@ -166,13 +215,7 @@
 
       <div id="painel-edicao-feedback" style="display:none;margin-bottom:14px"></div>
 
-      <div class="eml-footer">
-        <button type="button" id="btn-faturar-sem-editar" class="eb eb-amber-ghost">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-          </svg>
-          Faturar sem editar
-        </button>
+      <div class="eml-footer" style="justify-content:flex-end;">
         <div class="eml-fr">
           <button type="button" class="eb eb-ghost" data-close-modal>Cancelar</button>
           <button type="button" id="btn-salvar" class="eb eb-dark">
@@ -181,12 +224,6 @@
               <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
             </svg>
             Salvar Alterações
-          </button>
-          <button type="button" id="btn-salvar-e-faturar" class="eb eb-amber">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-            </svg>
-            Salvar e Faturar
           </button>
         </div>
       </div>
@@ -277,7 +314,7 @@
     <div id="painel-resultado-fat" style="display:none">
       <div id="resultado-fat-html"></div>
       <div class="eml-footer" style="justify-content:flex-end;padding-top:14px;margin-top:4px">
-        <button type="button" class="eb eb-ghost" data-close-modal>Fechar</button>
+        <button type="button" class="eb eb-ghost" onclick="fecharModalGerenciar()">Fechar</button>
       </div>
     </div>
 
