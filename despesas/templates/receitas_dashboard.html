@@ -2357,7 +2357,9 @@ async function executarConsultarNotas() {
     }
 
     if (!d.notas.length) {
-      info.textContent = 'Nenhuma nota encontrada com esses filtros.';
+      info.innerHTML = 'Nenhuma nota encontrada com esses filtros aqui no sistema.<br>' +
+        '<small style="color:#94a3b8;">Essa busca olha só as notas já salvas localmente. Se a nota existe mas ainda não foi importada, ' +
+        'use "Importar Nota Fiscal" informando o número dela.</small>';
       return;
     }
 
@@ -2365,16 +2367,20 @@ async function executarConsultarNotas() {
 
     var ORIGEM_LABEL = { omie: 'Omie', saatri: 'SAATRI', manual: 'Manual' };
     lista.innerHTML = d.notas.map(function (n) {
+      var btnPdf = n.codigo_verificacao
+        ? '<button type="button" class="eb eb-ghost" onclick="verPdfNotaSaatri(\'' + n.numero_nfse + '\',\'' + n.codigo_verificacao + '\')">Ver PDF</button>'
+        : '<button type="button" class="eb eb-ghost" disabled style="opacity:.5;" title="Sem código de verificação salvo">Ver PDF</button>';
       return '<div style="border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:.82rem;">' +
         '<div style="display:flex;justify-content:space-between;gap:8px;">' +
           '<strong>Nº ' + (n.numero_nfse || '—') + '</strong>' +
           '<span style="color:#64748b;">' + (n.competencia || '') + '</span>' +
         '</div>' +
         '<div style="color:#334155;margin:3px 0;">' + (n.cliente_nome || '—') + (n.avulsa ? ' <em style="color:#94a3b8;">(avulsa)</em>' : '') + '</div>' +
-        '<div style="display:flex;justify-content:space-between;color:#64748b;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;color:#64748b;margin-bottom:8px;">' +
           '<span>' + (ORIGEM_LABEL[n.origem] || n.origem) + '</span>' +
           '<strong style="color:#16a34a;">R$ ' + n.valor_liquido + '</strong>' +
         '</div>' +
+        btnPdf +
       '</div>';
     }).join('');
   } catch (e) {

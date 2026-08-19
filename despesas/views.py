@@ -6678,14 +6678,15 @@ def consultar_notas_fiscais(request):
     qs = qs.order_by('-competencia_ano', '-competencia_mes', '-data_emissao')[:200]
 
     itens = [{
-        'id':             n.id,
-        'numero_nfse':    n.numero_nfse,
-        'cliente_nome':   n.cliente_nome,
-        'origem':         n.origem,
-        'competencia':    f'{n.competencia_mes:02d}/{n.competencia_ano}',
-        'valor_liquido':  str(n.valor_liquido),
-        'data_emissao':   n.data_emissao.isoformat() if n.data_emissao else None,
-        'avulsa':         n.contrato_id is None,
+        'id':                 n.id,
+        'numero_nfse':        n.numero_nfse,
+        'cliente_nome':       n.cliente_nome,
+        'origem':             n.origem,
+        'competencia':        f'{n.competencia_mes:02d}/{n.competencia_ano}',
+        'valor_liquido':      str(n.valor_liquido),
+        'data_emissao':       n.data_emissao.isoformat() if n.data_emissao else None,
+        'avulsa':             n.contrato_id is None,
+        'codigo_verificacao': n.codigo_verificacao,
     } for n in qs]
 
     return JsonResponse({'ok': True, 'total': len(itens), 'notas': itens})
