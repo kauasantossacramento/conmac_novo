@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 METODOS = {
     "GerarNfse": ("http://nfse.abrasf.org.br/Infse/GerarNfse", "GerarNfseRequest"),
     "ConsultarNfsePorRps": ("http://nfse.abrasf.org.br/Infse/ConsultarNfsePorRps", "ConsultarNfsePorRpsRequest"),
+    "ConsultarNfsePorFaixa": ("http://nfse.abrasf.org.br/Infse/ConsultarNfsePorFaixa", "ConsultarNfsePorFaixaRequest"),
 }
 
 TIMEOUT = 60
@@ -40,7 +41,7 @@ def _enviar_soap(metodo, dados_xml):
 
     log = LogSaatri(metodo=metodo, url=endpoint, xml_envio=envelope)
     inicio = time.time()
-    print(f"--- SAATRI {metodo} → {endpoint} ---")
+    print(f"--- SAATRI {metodo} -> {endpoint} ---")
 
     try:
         resp = requests.post(endpoint, data=envelope.encode("utf-8"), headers=headers, timeout=TIMEOUT)
@@ -55,21 +56,21 @@ def _enviar_soap(metodo, dados_xml):
             log.sucesso = len(erros) == 0
             if erros:
                 log.erro = "; ".join(f"[{e['codigo']}] {e['mensagem']}" for e in erros)
-                print(f"  ❌ SAATRI {metodo}: {log.erro}")
+                print(f"  [ERRO] SAATRI {metodo}: {log.erro}")
             else:
-                print(f"  ✅ SAATRI {metodo}: HTTP 200 ({log.duracao_ms}ms)")
+                print(f"  [OK] SAATRI {metodo}: HTTP 200 ({log.duracao_ms}ms)")
         else:
             log.sucesso = False
             log.erro = f"HTTP {resp.status_code}"
             xml_negocio = resp.text
-            print(f"  ❌ SAATRI {metodo}: HTTP {resp.status_code}")
+            print(f"  [ERRO] SAATRI {metodo}: HTTP {resp.status_code}")
 
     except requests.RequestException as e:
         log.duracao_ms = int((time.time() - inicio) * 1000)
         log.sucesso = False
         log.erro = str(e)
         xml_negocio = ""
-        print(f"  ❌ SAATRI {metodo}: erro de conexão — {e}")
+        print(f"  [ERRO] SAATRI {metodo}: erro de conexao - {e}")
 
     log.save()
     return xml_negocio, log
@@ -97,6 +98,21 @@ def consultar_nfse_por_rps(numero_rps, serie, tipo="1"):
     return resultado
 
 
+def consultar_nfse_por_faixa(numero_nfse):
+    """
+    Busca uma NFS-e pelo próprio número (não pelo RPS) — usado quando só
+    se conhece o número da nota (ex.: notas antigas da Omie, sem
+    codigo_verificacao salvo localmente). Retorna o dict de
+    parse_resposta_generica normalmente ("notas" com a nota completa,
+    incluindo codigo_verificacao, se encontrada).
+    """
+    dados = xml_builder.build_consultar_nfse_faixa(numero_nfse, numero_nfse)
+    xml_resp, log = _enviar_soap("ConsultarNfsePorFaixa", dados)
+    resultado = xml_parser.parse_resposta_generica(xml_resp)
+    resultado["log"] = log
+    return resultado
+
+
 def baixar_pdf_nfse(numero_nfse, codigo_verificacao):
     """
     Baixa o DANFSe (PDF) público do portal SAATRI. Retorna bytes do PDF ou
@@ -107,7 +123,7 @@ def baixar_pdf_nfse(numero_nfse, codigo_verificacao):
     try:
         resp = requests.get(url, timeout=30, allow_redirects=True)
     except requests.RequestException as e:
-        print(f"  ❌ Erro ao baixar PDF da NFS-e {numero_nfse}: {e}")
+        print(f"  [ERRO] Erro ao baixar PDF da NFS-e {numero_nfse}: {e}")
         return None
 
     if resp.status_code == 200 and "pdf" in resp.headers.get("Content-Type", "").lower():

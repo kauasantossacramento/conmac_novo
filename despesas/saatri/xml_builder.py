@@ -218,3 +218,30 @@ def build_consultar_nfse_por_rps(numero_rps, serie, tipo="1"):
         "</Prestador>"
         "</ConsultarNfseRpsEnvio>"
     )
+
+
+def build_consultar_nfse_faixa(nfse_inicial, nfse_final=None, pagina=1):
+    """
+    Consulta por FAIXA de número da própria NFS-e (não RPS) — útil quando
+    só se sabe o número da nota (ex.: notas antigas sincronizadas da Omie,
+    que não têm o código de verificação salvo localmente). Passando
+    inicial=final=<número desejado>, devolve só essa nota, com o
+    CompNfse completo (inclui CodigoVerificacao).
+    """
+    prestador = config.PRESTADOR
+    nfse_final = nfse_final if nfse_final is not None else nfse_inicial
+    return (
+        '<ConsultarNfseFaixaEnvio xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
+        'xmlns:xsd="http://www.w3.org/2001/XMLSchema" '
+        'xmlns="http://www.abrasf.org.br/nfse.xsd">'
+        "<Prestador>"
+        f"<CpfCnpj><Cnpj>{prestador['cnpj']}</Cnpj></CpfCnpj>"
+        f"<InscricaoMunicipal>{prestador['inscricao_municipal']}</InscricaoMunicipal>"
+        "</Prestador>"
+        "<Faixa>"
+        f"<NumeroNfseInicial>{nfse_inicial}</NumeroNfseInicial>"
+        f"<NumeroNfseFinal>{nfse_final}</NumeroNfseFinal>"
+        "</Faixa>"
+        f"<Pagina>{pagina}</Pagina>"
+        "</ConsultarNfseFaixaEnvio>"
+    )

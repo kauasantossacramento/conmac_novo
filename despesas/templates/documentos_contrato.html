@@ -725,7 +725,7 @@
                   ↓ baixar Omie
                 </button>
                 <button class="btn-mini baixar"
-                  title="{% if nota.codigo_verificacao %}Consulta direto no portal do SAATRI{% else %}Esta nota não tem código de verificação salvo{% endif %}"
+                  title="Consulta direto no portal do SAATRI pelo número da nota"
                   onclick="baixarNfsePdfSaatri({{ nota.id|stringformat:"d" }}, this)">
                   ↓ baixar SAATRI
                 </button>

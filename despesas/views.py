@@ -9092,26 +9092,46 @@ def baixar_nfse_pdf(request, nota_id):
 def baixar_nfse_pdf_saatri(request, nota_id):
     """
     POST — baixa o PDF (DANFSe) direto do portal público do SAATRI, usando
-    numero_nfse + codigo_verificacao já salvos na NotaFiscal.
+    numero_nfse + codigo_verificacao.
 
-    Serve pra qualquer nota (origem Omie ou SAATRI Direto) desde que tenha
-    codigo_verificacao salvo — é a ferramenta de consulta alternativa pra
-    quando o PDF não foi baixado (ou o caminho normal via Omie falhar).
-    Notas antigas emitidas antes desse campo existir não têm
-    codigo_verificacao e não podem usar essa via.
+    Serve pra qualquer nota (origem Omie ou SAATRI Direto) que tenha
+    numero_nfse — é a ferramenta de consulta alternativa pra quando o PDF
+    não foi baixado (ou o caminho normal via Omie falhar). A maioria das
+    notas sincronizadas da Omie não tem codigo_verificacao salvo (a Omie
+    não devolve esse campo na sincronização); nesse caso, busca a nota
+    pelo próprio número via ConsultarNfsePorFaixa (inicial=final=número
+    desejado) — o SAATRI devolve a nota completa, código de verificação
+    incluso — e salva pra não precisar consultar de novo da próxima vez.
     """
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
 
     nota = get_object_or_404(NotaFiscal, pk=nota_id)
 
-    if not nota.numero_nfse or not nota.codigo_verificacao:
+    if not nota.numero_nfse:
         return JsonResponse({
             'ok': False,
-            'erro': 'Esta nota não tem código de verificação salvo — não dá pra consultar direto no SAATRI. Tente "Baixar Omie".',
+            'erro': 'Esta nota não tem número de NFS-e salvo — não dá pra consultar no SAATRI.',
         })
 
     from .saatri import client as saatri_client
+
+    if not nota.codigo_verificacao:
+        resultado = saatri_client.consultar_nfse_por_faixa(nota.numero_nfse)
+        notas_encontradas = resultado.get('notas') or []
+        if not notas_encontradas:
+            erros = resultado.get('erros') or []
+            msg_erro = ('; '.join(f"[{e['codigo']}] {e['mensagem']}" for e in erros)
+                        if erros else 'SAATRI não encontrou essa NFS-e pelo número.')
+            return JsonResponse({'ok': False, 'erro': msg_erro})
+
+        codigo_encontrado = notas_encontradas[0].get('codigo_verificacao')
+        if not codigo_encontrado:
+            return JsonResponse({'ok': False, 'erro': 'SAATRI encontrou a nota, mas sem código de verificação na resposta.'})
+
+        nota.codigo_verificacao = codigo_encontrado
+        nota.save(update_fields=['codigo_verificacao'])
+
     pdf_bytes = saatri_client.baixar_pdf_nfse(nota.numero_nfse, nota.codigo_verificacao)
 
     if not pdf_bytes:
