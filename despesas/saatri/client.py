@@ -98,15 +98,18 @@ def consultar_nfse_por_rps(numero_rps, serie, tipo="1"):
     return resultado
 
 
-def consultar_nfse_por_faixa(numero_nfse):
+def consultar_nfse_por_faixa(numero_nfse, numero_final=None):
     """
-    Busca uma NFS-e pelo próprio número (não pelo RPS) — usado quando só
-    se conhece o número da nota (ex.: notas antigas da Omie, sem
-    codigo_verificacao salvo localmente). Retorna o dict de
-    parse_resposta_generica normalmente ("notas" com a nota completa,
-    incluindo codigo_verificacao, se encontrada).
+    Busca NFS-e pelo próprio número (não pelo RPS) — usado quando só se
+    conhece o número da nota (ex.: notas antigas da Omie, sem
+    codigo_verificacao salvo localmente), ou pra trazer uma faixa inteira
+    de números de uma vez (ex.: Importar Nota Fiscal). Se `numero_final`
+    não for informado, busca só a nota `numero_nfse`. Retorna o dict de
+    parse_resposta_generica normalmente ("notas" com a(s) nota(s)
+    completa(s), incluindo codigo_verificacao, se encontrada(s)).
     """
-    dados = xml_builder.build_consultar_nfse_faixa(numero_nfse, numero_nfse)
+    numero_final = numero_final if numero_final is not None else numero_nfse
+    dados = xml_builder.build_consultar_nfse_faixa(numero_nfse, numero_final)
     xml_resp, log = _enviar_soap("ConsultarNfsePorFaixa", dados)
     resultado = xml_parser.parse_resposta_generica(xml_resp)
     resultado["log"] = log

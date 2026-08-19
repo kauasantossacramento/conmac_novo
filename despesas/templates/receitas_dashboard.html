@@ -758,22 +758,33 @@
           Voltar
         </button>
 
-        <!-- passo 1: número -->
+        <!-- passo 1: número (ou faixa) -->
         <div id="snfimp-passo1">
           <div class="eml-field">
-            <label>Número da NFS-e</label>
-            <div style="display:flex;gap:8px;">
-              <input type="text" id="snfimp-numero-busca" placeholder="Ex.: 2995" style="flex:1;">
-              <button type="button" id="snfimp-btn-buscar" class="eb eb-dark" onclick="buscarNotaSaatriParaImportar()">Buscar</button>
+            <label>Número da NFS-e (ou faixa)</label>
+            <div style="display:flex;gap:10px;">
+              <input type="text" id="snfimp-numero-inicial" placeholder="Nº inicial — ex.: 2995" style="flex:1;">
+              <input type="text" id="snfimp-numero-final" placeholder="Nº final (opcional)" style="flex:1;">
             </div>
-            <small id="snfimp-busca-status">Consultamos direto no SAATRI pelo número — tomador, valores e competência vêm automaticamente.</small>
+            <small id="snfimp-busca-status">Consultamos direto no SAATRI — deixe "Nº final" em branco pra buscar só uma nota, ou preencha pra trazer uma faixa.</small>
           </div>
           <div class="eml-footer">
             <div></div>
             <div class="eml-fr">
               <button type="button" class="eb eb-ghost" onclick="fecharModal('modal-sync-nfse')">Cancelar</button>
+              <button type="button" id="snfimp-btn-buscar" class="eb eb-dark" onclick="buscarNotaSaatriParaImportar()">Buscar</button>
             </div>
           </div>
+        </div>
+
+        <!-- lista de notas encontradas -->
+        <div id="snfimp-lista-wrap" style="display:none;">
+          <button type="button" id="snfimp-btn-nova-busca" class="eb eb-ghost" style="margin-bottom:12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Nova busca
+          </button>
+          <div id="snfimp-lista-info" style="font-size:.78rem;color:#94a3b8;margin-bottom:10px;"></div>
+          <div id="snfimp-lista"></div>
         </div>
 
         <!-- passo 2: conferir e confirmar -->
@@ -836,7 +847,7 @@
           <div id="snfimp-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
 
           <div class="eml-footer">
-            <button type="button" id="snfimp-btn-voltar-passo1" class="eb eb-ghost">← Trocar número</button>
+            <button type="button" id="snfimp-btn-voltar-lista" class="eb eb-ghost">← Voltar à lista</button>
             <div class="eml-fr">
               <button type="button" id="snfimp-btn-confirmar" class="eb eb-teal" onclick="executarImportarNota()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1911,15 +1922,20 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
       document.getElementById('snfse-escolha').style.display = 'none';
       document.getElementById('snfse-import').style.display = 'block';
       document.getElementById('snfimp-passo1').style.display = 'block';
+      document.getElementById('snfimp-lista-wrap').style.display = 'none';
       document.getElementById('snfimp-passo2').style.display = 'none';
     });
     document.getElementById('snfse-btn-voltar-import').addEventListener('click', function () {
       document.getElementById('snfse-import').style.display = 'none';
       document.getElementById('snfse-escolha').style.display = 'block';
     });
-    document.getElementById('snfimp-btn-voltar-passo1').addEventListener('click', function () {
-      document.getElementById('snfimp-passo2').style.display = 'none';
+    document.getElementById('snfimp-btn-nova-busca').addEventListener('click', function () {
+      document.getElementById('snfimp-lista-wrap').style.display = 'none';
       document.getElementById('snfimp-passo1').style.display = 'block';
+    });
+    document.getElementById('snfimp-btn-voltar-lista').addEventListener('click', function () {
+      document.getElementById('snfimp-passo2').style.display = 'none';
+      document.getElementById('snfimp-lista-wrap').style.display = 'block';
     });
 
     document.getElementById('snfse-opcao-consultar').addEventListener('click', function () {
@@ -2112,10 +2128,15 @@ function resetModalSyncNfse() {
   if (res) res.style.display = 'none';
 
   document.getElementById('snfimp-passo1').style.display = 'block';
+  document.getElementById('snfimp-lista-wrap').style.display = 'none';
   document.getElementById('snfimp-passo2').style.display = 'none';
-  document.getElementById('snfimp-numero-busca').value = '';
+  document.getElementById('snfimp-numero-inicial').value = '';
+  document.getElementById('snfimp-numero-final').value = '';
   document.getElementById('snfimp-busca-status').textContent =
-    'Consultamos direto no SAATRI pelo número — tomador, valores e competência vêm automaticamente.';
+    'Consultamos direto no SAATRI — deixe "Nº final" em branco pra buscar só uma nota, ou preencha pra trazer uma faixa.';
+  document.getElementById('snfimp-lista').innerHTML = '';
+  document.getElementById('snfimp-lista-info').textContent = '';
+  _snfimpNotasEncontradas = [];
 
   ['snfimp-numero','snfimp-cnpj-tomador','snfimp-cliente-nome','snfimp-codigo-verificacao','snfimp-valor-bruto',
    'snfimp-valor-iss','snfimp-valor-liquido','snfimp-descricao','snfimp-data-emissao'].forEach(function (id) {
@@ -2155,60 +2176,107 @@ async function carregarContratosParaImportacao() {
   }
 }
 
+var _snfimpNotasEncontradas = [];
+
+function verPdfNotaSaatri(numero, codigoVerificacao) {
+  if (!codigoVerificacao) { alert('Essa nota não tem código de verificação — não é possível montar o link do PDF.'); return; }
+  var base = 'https://oliveiradosbrejinhos.saatri.com.br';
+  window.open(base + '/Relatorio/VisualizarNotaFiscal?numero=' + encodeURIComponent(numero) +
+    '&codigoVerificacao=' + encodeURIComponent(codigoVerificacao), '_blank');
+}
+
 async function buscarNotaSaatriParaImportar() {
-  var numero = document.getElementById('snfimp-numero-busca').value.trim();
+  var numInicial = document.getElementById('snfimp-numero-inicial').value.trim();
+  var numFinal   = document.getElementById('snfimp-numero-final').value.trim();
   var status = document.getElementById('snfimp-busca-status');
   var btn = document.getElementById('snfimp-btn-buscar');
-  if (!numero) { status.textContent = 'Informe o número da NFS-e.'; return; }
+  if (!numInicial) { status.textContent = 'Informe ao menos o número inicial da NFS-e.'; return; }
 
   btn.disabled = true;
   status.textContent = 'Consultando o SAATRI…';
 
   try {
-    var r = await fetch('/receitas/notas/consultar-saatri/?numero=' + encodeURIComponent(numero));
+    var params = new URLSearchParams({ numero_inicial: numInicial, numero_final: numFinal });
+    var r = await fetch('/receitas/notas/consultar-saatri/?' + params.toString());
     var d = await r.json();
     if (!r.ok || !d.ok) {
       status.textContent = '❌ ' + (d.erro || ('HTTP ' + r.status));
       return;
     }
 
-    var n = d.nota;
+    _snfimpNotasEncontradas = d.notas;
     await carregarContratosParaImportacao();
 
-    document.getElementById('snfimp-numero').value = n.numero_nfse || '';
-    document.getElementById('snfimp-cnpj-tomador').value = n.cnpj_tomador || '';
-    document.getElementById('snfimp-cliente-nome').value = n.cliente_nome || '';
-    document.getElementById('snfimp-codigo-verificacao').value = n.codigo_verificacao || '';
-    document.getElementById('snfimp-mes').value = n.competencia_mes || (new Date().getMonth() + 1);
-    document.getElementById('snfimp-ano').value = n.competencia_ano || new Date().getFullYear();
-    document.getElementById('snfimp-data-emissao').value = n.data_emissao || '';
-    document.getElementById('snfimp-valor-bruto').value = n.valor_bruto || '';
-    document.getElementById('snfimp-valor-iss').value = n.valor_iss || '';
-    document.getElementById('snfimp-valor-liquido').value = n.valor_liquido || '';
-    document.getElementById('snfimp-descricao').value = n.descricao || '';
+    document.getElementById('snfimp-lista-info').textContent =
+      d.notas.length + ' nota(s) encontrada(s) no SAATRI.';
 
-    var contratoStatus = document.getElementById('snfimp-contrato-status');
-    var selContrato = document.getElementById('snfimp-contrato');
-    if (d.contrato_sugerido) {
-      selContrato.value = String(d.contrato_sugerido.id);
-      contratoStatus.textContent = '✅ Tomador associado automaticamente ao contrato: ' + d.contrato_sugerido.nome;
-    } else {
-      selContrato.value = '';
-      contratoStatus.textContent = 'Nenhum contrato com esse CNPJ — a nota será importada avulsa (ou selecione um contrato manualmente).';
-    }
-
-    document.getElementById('snfimp-preview').innerHTML =
-      '<strong>✅ Nota ' + (n.numero_nfse || numero) + ' encontrada no SAATRI</strong><br>' +
-      'Tomador: <strong>' + (n.cliente_nome || '—') + '</strong> · CNPJ/CPF: ' + (n.cnpj_tomador || '—') + '<br>' +
-      'Valor líquido: R$ ' + (n.valor_liquido || '0') + ' · Competência: ' + (n.competencia_mes || '?') + '/' + (n.competencia_ano || '?');
+    document.getElementById('snfimp-lista').innerHTML = d.notas.map(function (n, i) {
+      var badge = n.ja_importada
+        ? '<span style="color:#94a3b8;">já importada</span>'
+        : (n.contrato_sugerido
+            ? '<span style="color:#16a34a;">✅ ' + n.contrato_sugerido.nome + '</span>'
+            : '<span style="color:#d97706;">avulsa — sem contrato</span>');
+      var btnImportar = n.ja_importada
+        ? '<button type="button" class="eb eb-ghost" disabled style="opacity:.5;">Já importada</button>'
+        : '<button type="button" class="eb eb-teal" onclick="selecionarNotaParaImportar(' + i + ')">Importar</button>';
+      return '<div style="border:1.5px solid #e2e8f0;border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:.82rem;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;">' +
+          '<strong>Nº ' + (n.numero_nfse || '—') + '</strong>' +
+          '<span style="color:#64748b;">' + (n.competencia_mes || '?') + '/' + (n.competencia_ano || '?') + '</span>' +
+        '</div>' +
+        '<div style="color:#334155;margin:3px 0;">' + (n.cliente_nome || '—') + '</div>' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">' +
+          '<strong style="color:#16a34a;">R$ ' + n.valor_liquido + '</strong>' + badge +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button type="button" class="eb eb-ghost" onclick="verPdfNotaSaatri(\'' + n.numero_nfse + '\',\'' + n.codigo_verificacao + '\')">Ver PDF</button>' +
+          btnImportar +
+        '</div>' +
+      '</div>';
+    }).join('');
 
     document.getElementById('snfimp-passo1').style.display = 'none';
-    document.getElementById('snfimp-passo2').style.display = 'block';
+    document.getElementById('snfimp-lista-wrap').style.display = 'block';
   } catch (e) {
     status.textContent = '❌ Erro de conexão — a requisição não completou.';
   } finally {
     btn.disabled = false;
   }
+}
+
+function selecionarNotaParaImportar(indice) {
+  var n = _snfimpNotasEncontradas[indice];
+  if (!n) return;
+
+  document.getElementById('snfimp-numero').value = n.numero_nfse || '';
+  document.getElementById('snfimp-cnpj-tomador').value = n.cnpj_tomador || '';
+  document.getElementById('snfimp-cliente-nome').value = n.cliente_nome || '';
+  document.getElementById('snfimp-codigo-verificacao').value = n.codigo_verificacao || '';
+  document.getElementById('snfimp-mes').value = n.competencia_mes || (new Date().getMonth() + 1);
+  document.getElementById('snfimp-ano').value = n.competencia_ano || new Date().getFullYear();
+  document.getElementById('snfimp-data-emissao').value = n.data_emissao || '';
+  document.getElementById('snfimp-valor-bruto').value = n.valor_bruto || '';
+  document.getElementById('snfimp-valor-iss').value = n.valor_iss || '';
+  document.getElementById('snfimp-valor-liquido').value = n.valor_liquido || '';
+  document.getElementById('snfimp-descricao').value = n.descricao || '';
+
+  var contratoStatus = document.getElementById('snfimp-contrato-status');
+  var selContrato = document.getElementById('snfimp-contrato');
+  if (n.contrato_sugerido) {
+    selContrato.value = String(n.contrato_sugerido.id);
+    contratoStatus.textContent = '✅ Tomador associado automaticamente ao contrato: ' + n.contrato_sugerido.nome;
+  } else {
+    selContrato.value = '';
+    contratoStatus.textContent = 'Nenhum contrato com esse CNPJ — a nota será importada avulsa (ou selecione um contrato manualmente).';
+  }
+
+  document.getElementById('snfimp-preview').innerHTML =
+    '<strong>✅ Nota ' + (n.numero_nfse || '') + ' encontrada no SAATRI</strong><br>' +
+    'Tomador: <strong>' + (n.cliente_nome || '—') + '</strong> · CNPJ/CPF: ' + (n.cnpj_tomador || '—') + '<br>' +
+    'Valor líquido: R$ ' + (n.valor_liquido || '0') + ' · Competência: ' + (n.competencia_mes || '?') + '/' + (n.competencia_ano || '?');
+
+  document.getElementById('snfimp-lista-wrap').style.display = 'none';
+  document.getElementById('snfimp-passo2').style.display = 'block';
 }
 
 async function executarImportarNota() {

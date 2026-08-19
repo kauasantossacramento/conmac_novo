@@ -6473,44 +6473,52 @@ def listar_contratos_selecao(request):
 @login_required
 def consultar_nota_saatri_para_importar(request):
     """
-    GET JSON — 1º passo do "Importar Nota Fiscal": dado só o número da
-    NFS-e, consulta o SAATRI (ConsultarNfsePorFaixa — mesma rota do "Baixar
-    SAATRI") e devolve os dados completos da nota (tomador, valores,
-    competência, descrição) já prontos pra conferência/importação, mais o
-    Contrato sugerido por CNPJ (se achar).
+    GET JSON — 1º passo do "Importar Nota Fiscal": dado o número (ou uma
+    faixa de números) da NFS-e, consulta o SAATRI (ConsultarNfsePorFaixa —
+    mesma rota do "Baixar SAATRI") e devolve a lista de notas encontradas,
+    cada uma já com os dados completos (tomador, valores, competência,
+    descrição) prontos pra conferência/importação, o Contrato sugerido por
+    CNPJ (se achar) e se já foi importada antes.
 
-    Params: ?numero=2995
+    Params: ?numero_inicial=2995&numero_final=3000 (numero_final opcional —
+            sem ele, busca só a nota `numero_inicial`)
     """
-    numero = (request.GET.get('numero') or '').strip()
-    if not numero:
-        return JsonResponse({'ok': False, 'erro': 'Informe o número da NFS-e.'})
+    numero_inicial = (request.GET.get('numero_inicial') or request.GET.get('numero') or '').strip()
+    numero_final   = (request.GET.get('numero_final') or '').strip() or numero_inicial
+    if not numero_inicial:
+        return JsonResponse({'ok': False, 'erro': 'Informe o número (ou a faixa) da NFS-e.'})
 
+    from .models import NotaFiscal
     from .saatri import client as saatri_client
 
-    resultado = saatri_client.consultar_nfse_por_faixa(numero)
+    resultado = saatri_client.consultar_nfse_por_faixa(numero_inicial, numero_final)
     notas = resultado.get('notas') or []
     if not notas:
         erros = resultado.get('erros') or []
         msg = ('; '.join(f"[{e['codigo']}] {e['mensagem']}" for e in erros)
-               if erros else 'SAATRI não encontrou nenhuma NFS-e com esse número.')
+               if erros else 'SAATRI não encontrou nenhuma NFS-e nesse número/faixa.')
         return JsonResponse({'ok': False, 'erro': msg})
 
-    n = notas[0]
-    cnpj_tomador = _digits(n.get('cnpj_tomador', ''))
-    contrato = _achar_contrato_por_cnpj(cnpj_tomador)
+    numeros_encontrados = [n.get('numero') for n in notas]
+    ja_importadas = set(
+        NotaFiscal.objects.filter(numero_nfse__in=numeros_encontrados).values_list('numero_nfse', flat=True)
+    )
 
-    data_emissao_raw = n.get('data_emissao') or ''
-    competencia_raw  = n.get('competencia') or data_emissao_raw
-    comp_mes = comp_ano = None
-    try:
-        comp_ano = int(competencia_raw[0:4])
-        comp_mes = int(competencia_raw[5:7])
-    except (ValueError, IndexError):
-        pass
+    itens = []
+    for n in notas:
+        cnpj_tomador = _digits(n.get('cnpj_tomador', ''))
+        contrato = _achar_contrato_por_cnpj(cnpj_tomador)
 
-    return JsonResponse({
-        'ok': True,
-        'nota': {
+        data_emissao_raw = n.get('data_emissao') or ''
+        competencia_raw  = n.get('competencia') or data_emissao_raw
+        comp_mes = comp_ano = None
+        try:
+            comp_ano = int(competencia_raw[0:4])
+            comp_mes = int(competencia_raw[5:7])
+        except (ValueError, IndexError):
+            pass
+
+        itens.append({
             'numero_nfse':        n.get('numero'),
             'codigo_verificacao': n.get('codigo_verificacao'),
             'cnpj_tomador':       cnpj_tomador,
@@ -6522,12 +6530,14 @@ def consultar_nota_saatri_para_importar(request):
             'data_emissao':       data_emissao_raw[:10] if data_emissao_raw else '',
             'competencia_mes':    comp_mes,
             'competencia_ano':    comp_ano,
-        },
-        'contrato_sugerido': (
-            {'id': contrato.id, 'nome': contrato.cliente_nome or contrato.omie_num_ctr or f'Contrato {contrato.id}'}
-            if contrato else None
-        ),
-    })
+            'ja_importada':       n.get('numero') in ja_importadas,
+            'contrato_sugerido': (
+                {'id': contrato.id, 'nome': contrato.cliente_nome or contrato.omie_num_ctr or f'Contrato {contrato.id}'}
+                if contrato else None
+            ),
+        })
+
+    return JsonResponse({'ok': True, 'notas': itens})
 
 
 @login_required
