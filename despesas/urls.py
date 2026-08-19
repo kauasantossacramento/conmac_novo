@@ -161,6 +161,9 @@ urlpatterns = [
     path('receitas/contratos/saatri/sincronizar-pendentes/', views.sincronizar_saatri_pendentes_view, name='sincronizar_saatri_pendentes'),
     path('receitas/contratos/saatri/pendentes/', views.saatri_pendentes_listar, name='saatri_pendentes_listar'),
     path('receitas/contratos/saatri/resolver-chunk/', views.saatri_pendentes_resolver_chunk, name='saatri_pendentes_resolver_chunk'),
+    path('receitas/contratos/buscar-por-cnpj/', views.buscar_contrato_por_cnpj, name='buscar_contrato_por_cnpj'),
+    path('receitas/contratos/listar-selecao/', views.listar_contratos_selecao, name='listar_contratos_selecao'),
+    path('receitas/notas/importar/', views.importar_nota_fiscal, name='importar_nota_fiscal'),
 
     path('envios/<int:envio_id>/prefetch-nfse/',
          views.prefetch_nfse_pdf,

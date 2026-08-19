@@ -1031,12 +1031,14 @@ class NotaFiscal(models.Model):
     ORIGEM_CHOICES = [
         ('omie',   'Omie'),
         ('saatri', 'SAATRI Direto'),
+        ('manual', 'Importada Manualmente'),
     ]
     origem = models.CharField(
         max_length=10, choices=ORIGEM_CHOICES, default='omie',
         verbose_name='Origem da Emissão',
         help_text="'omie' = faturada/emitida pela Omie (fluxo padrão). "
-                   "'saatri' = emitida direto no Web Service SAATRI, sem passar pela Omie.",
+                   "'saatri' = emitida direto no Web Service SAATRI, sem passar pela Omie. "
+                   "'manual' = nota já existente cadastrada à mão (ex.: emitida fora do sistema).",
     )
 
     # ── Identificadores Omie ──

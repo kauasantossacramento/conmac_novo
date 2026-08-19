@@ -389,7 +389,7 @@
 .eml-field{margin-bottom:16px}
 .eml-field>label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:6px}
 .eml-field small{font-size:.73rem;color:#94a3b8;margin-top:4px;display:block}
-.eml-wrap input[type=text],.eml-wrap input[type=number],.eml-wrap select{border-radius:8px!important;border:1.5px solid #e2e8f0!important;padding:8px 11px!important;font-size:.88rem!important;transition:border-color .15s,box-shadow .15s!important;width:100%;box-sizing:border-box;font-family:'Sora',sans-serif;}
+.eml-wrap input[type=text],.eml-wrap input[type=number],.eml-wrap input[type=date],.eml-wrap select{border-radius:8px!important;border:1.5px solid #e2e8f0!important;padding:8px 11px!important;font-size:.88rem!important;transition:border-color .15s,box-shadow .15s!important;width:100%;box-sizing:border-box;font-family:'Sora',sans-serif;}
 .eml-wrap input:focus,.eml-wrap select:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.12)!important;outline:none!important}
 .eml-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid #f1f5f9}
 .eml-fr{display:flex;gap:8px;align-items:center}
@@ -728,6 +728,93 @@
             <span>Sincroniza Omie e SAATRI de uma vez, nessa ordem.</span>
           </div>
         </button>
+
+        <button type="button" class="eml-opcao" id="snfse-opcao-importar">
+          <div class="eml-opcao-icon ic-local">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="eml-opcao-txt">
+            <strong>Importar Nota Fiscal</strong>
+            <span>Cadastra à mão uma nota que já existe mas não está no sistema.</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- ── Importar Nota Fiscal (manual) ── -->
+      <div id="snfse-import" style="display:none;">
+        <button type="button" id="snfse-btn-voltar-import" class="eb eb-ghost" style="margin-bottom:16px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Voltar
+        </button>
+
+        <div class="eml-field">
+          <label>CNPJ/CPF do tomador</label>
+          <input type="text" id="snfimp-cnpj" placeholder="00.000.000/0000-00">
+          <small id="snfimp-cnpj-status">Digite o CNPJ e saia do campo — tentamos achar o contrato automaticamente.</small>
+        </div>
+
+        <div class="eml-field">
+          <label>Contrato (tomador)</label>
+          <select id="snfimp-contrato"><option value="">Carregando contratos…</option></select>
+        </div>
+
+        <div class="eml-field">
+          <label>Número da NFS-e</label>
+          <input type="text" id="snfimp-numero" placeholder="Ex.: 2995">
+        </div>
+
+        <div class="eml-field">
+          <label>Código de verificação <small style="font-weight:400;">(opcional)</small></label>
+          <input type="text" id="snfimp-codigo-verificacao">
+        </div>
+
+        <div class="eml-field">
+          <label>Competência</label>
+          <div style="display:flex;gap:10px;">
+            <select id="snfimp-mes" style="flex:1;">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+              <option value="3">Março</option><option value="4">Abril</option>
+              <option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option>
+              <option value="9">Setembro</option><option value="10">Outubro</option>
+              <option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+            <input type="number" id="snfimp-ano" value="{{ hoje.year }}" min="2015" max="2030" style="flex:1;">
+          </div>
+        </div>
+
+        <div class="eml-field">
+          <label>Data de emissão</label>
+          <input type="date" id="snfimp-data-emissao">
+        </div>
+
+        <div class="eml-field">
+          <label>Valores</label>
+          <div style="display:flex;gap:10px;">
+            <input type="number" step="0.01" id="snfimp-valor-bruto" placeholder="Valor bruto" style="flex:1;">
+            <input type="number" step="0.01" id="snfimp-valor-iss" placeholder="Valor ISS" style="flex:1;">
+            <input type="number" step="0.01" id="snfimp-valor-liquido" placeholder="Valor líquido" style="flex:1;">
+          </div>
+          <small>Se deixar o valor líquido em branco, usamos o valor bruto.</small>
+        </div>
+
+        <div class="eml-field">
+          <label>Descrição <small style="font-weight:400;">(opcional)</small></label>
+          <input type="text" id="snfimp-descricao" placeholder="Descrição do serviço prestado">
+        </div>
+
+        <div id="snfimp-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
+
+        <div class="eml-footer">
+          <div></div>
+          <div class="eml-fr">
+            <button type="button" class="eb eb-ghost" onclick="fecharModal('modal-sync-nfse')">Cancelar</button>
+            <button type="button" id="snfimp-btn-confirmar" class="eb eb-teal" onclick="executarImportarNota()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Importar
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- ── Configuração (mês/ano) — só quando envolve a Omie ── -->
@@ -1745,6 +1832,17 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
       document.getElementById('snfse-config').style.display = 'none';
       document.getElementById('snfse-escolha').style.display = 'block';
     });
+
+    document.getElementById('snfse-opcao-importar').addEventListener('click', function () {
+      document.getElementById('snfse-escolha').style.display = 'none';
+      document.getElementById('snfse-import').style.display = 'block';
+      carregarContratosParaImportacao();
+    });
+    document.getElementById('snfse-btn-voltar-import').addEventListener('click', function () {
+      document.getElementById('snfse-import').style.display = 'none';
+      document.getElementById('snfse-escolha').style.display = 'block';
+    });
+    document.getElementById('snfimp-cnpj').addEventListener('blur', buscarContratoPorCnpjImportacao);
   }
 
   function snfseEscolher(fonte) {
@@ -1916,11 +2014,113 @@ function resetModalSyncNfse() {
   var escolha = document.getElementById('snfse-escolha');
   var cfg = document.getElementById('snfse-config');
   var prog = document.getElementById('snfse-progresso');
+  var imp = document.getElementById('snfse-import');
   if (escolha) escolha.style.display = 'block';
   if (cfg) cfg.style.display = 'none';
   if (prog) prog.style.display = 'none';
+  if (imp) imp.style.display = 'none';
   var res = document.getElementById('snfse-resultado');
   if (res) res.style.display = 'none';
+
+  ['snfimp-cnpj','snfimp-numero','snfimp-codigo-verificacao','snfimp-valor-bruto',
+   'snfimp-valor-iss','snfimp-valor-liquido','snfimp-descricao','snfimp-data-emissao'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var status = document.getElementById('snfimp-cnpj-status');
+  if (status) status.textContent = 'Digite o CNPJ e saia do campo — tentamos achar o contrato automaticamente.';
+  var impRes = document.getElementById('snfimp-resultado');
+  if (impRes) impRes.style.display = 'none';
+  _snfimpContratosCarregados = false;
+}
+
+/* ── Importar Nota Fiscal (manual) ─────────────────────────────── */
+var _snfimpContratosCarregados = false;
+
+async function carregarContratosParaImportacao() {
+  if (_snfimpContratosCarregados) return;
+  var sel = document.getElementById('snfimp-contrato');
+  try {
+    var r = await fetch('/receitas/contratos/listar-selecao/');
+    var d = await r.json();
+    if (d.ok) {
+      sel.innerHTML = '<option value="">Selecione o contrato…</option>' +
+        d.contratos.map(function (c) { return '<option value="' + c.id + '">' + c.nome + '</option>'; }).join('');
+      _snfimpContratosCarregados = true;
+    } else {
+      sel.innerHTML = '<option value="">Erro ao carregar contratos</option>';
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">Erro ao carregar contratos</option>';
+  }
+}
+
+async function buscarContratoPorCnpjImportacao() {
+  var cnpj = document.getElementById('snfimp-cnpj').value.trim();
+  var status = document.getElementById('snfimp-cnpj-status');
+  if (!cnpj) return;
+  status.textContent = 'Buscando contrato…';
+  await carregarContratosParaImportacao();
+  try {
+    var r = await fetch('/receitas/contratos/buscar-por-cnpj/?cnpj=' + encodeURIComponent(cnpj));
+    var d = await r.json();
+    if (d.ok && d.contrato) {
+      document.getElementById('snfimp-contrato').value = String(d.contrato.id);
+      status.textContent = '✅ Contrato encontrado: ' + d.contrato.nome;
+    } else {
+      status.textContent = 'Nenhum contrato com esse CNPJ — selecione manualmente na lista abaixo.';
+    }
+  } catch (e) {
+    status.textContent = 'Erro ao buscar — selecione o contrato manualmente.';
+  }
+}
+
+async function executarImportarNota() {
+  var btn = document.getElementById('snfimp-btn-confirmar');
+  var resDiv = document.getElementById('snfimp-resultado');
+
+  var payload = {
+    contrato_id:         document.getElementById('snfimp-contrato').value,
+    numero_nfse:         document.getElementById('snfimp-numero').value.trim(),
+    codigo_verificacao:  document.getElementById('snfimp-codigo-verificacao').value.trim(),
+    competencia_mes:     document.getElementById('snfimp-mes').value,
+    competencia_ano:     document.getElementById('snfimp-ano').value,
+    data_emissao:        document.getElementById('snfimp-data-emissao').value,
+    valor_bruto:         document.getElementById('snfimp-valor-bruto').value,
+    valor_iss:           document.getElementById('snfimp-valor-iss').value,
+    valor_liquido:       document.getElementById('snfimp-valor-liquido').value,
+    descricao:           document.getElementById('snfimp-descricao').value.trim(),
+  };
+
+  btn.disabled = true;
+  resDiv.style.display = 'none';
+
+  try {
+    var r = await fetch('/receitas/notas/importar/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(payload),
+    });
+    var d = await r.json();
+    resDiv.style.display = 'block';
+    if (r.ok && d.ok) {
+      resDiv.style.background = '#f0fdf4';
+      resDiv.style.color = '#16a34a';
+      resDiv.textContent = '✅ Nota importada com sucesso.';
+      setTimeout(function () { location.reload(); }, 1200);
+    } else {
+      resDiv.style.background = '#fef2f2';
+      resDiv.style.color = '#dc2626';
+      resDiv.textContent = '❌ ' + (d.erro || ('HTTP ' + r.status));
+    }
+  } catch (e) {
+    resDiv.style.display = 'block';
+    resDiv.style.background = '#fef2f2';
+    resDiv.style.color = '#dc2626';
+    resDiv.textContent = '❌ Erro de conexão — a requisição não completou.';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /* ════════════════════════════════════════
