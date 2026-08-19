@@ -304,11 +304,11 @@ class OmieService:
                 sit    = cab.get('cStatusNFSe', 'N')
                 status_nuvem = 'cancelada' if sit == 'C' else 'emitida'
 
-                # VERIFICA O STATUS LOCAL PARA PRESERVÁ-LO CASO ESTEJA EXCLUÍDA/CANCELADA
+                # Preserva o status local quando ele já reflete uma decisão manual
+                # (inativada ou cancelada) — sincronizar não pode reverter isso.
                 nota_local = NotaFiscal.objects.filter(omie_nfse_id=nfse_id).first()
 
-                # Ajuste os nomes 'cancelada' ou 'excluida' para os status exatos usados no seu sistema
-                if nota_local and nota_local.status in ['cancelada', 'excluida']:
+                if nota_local and nota_local.status in ['cancelada', 'inativa']:
                     status_final = nota_local.status
                 else:
                     status_final = status_nuvem

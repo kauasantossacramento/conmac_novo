@@ -696,6 +696,9 @@
             <td style="text-align:center" id="st-{{ item.nota.id|stringformat:'d' }}" class="col-st">
               {% if item.nota.status == 'inativa' %}
                 <span class="pill pill-inativa">🚫 Inativa</span>
+                {% if item.nota.motivo_inativacao %}
+                  <br><small style="color:var(--muted);font-size:.71rem;font-style:italic;">{{ item.nota.motivo_inativacao }}</small>
+                {% endif %}
               {% elif item.paga %}
                 <span class="pill pill-paga">✓ Recebida</span>
               {% else %}
@@ -1816,7 +1819,10 @@ async function confirmarInativacao() {
       const row = document.getElementById('row-' + notaId);
       row.style.transition = 'opacity .4s'; row.style.opacity = '0';
       setTimeout(() => { row.classList.add('row-inativa'); row.style.opacity = '1'; }, 400);
-      document.getElementById('st-' + notaId).innerHTML = '<span class="pill pill-inativa">🚫 Inativa</span>';
+      var motivoTexto = (motivo && motivo.trim()) ? motivo.trim() : 'Inativada manualmente';
+      var motivoHtml = '<br><small style="color:var(--muted);font-size:.71rem;font-style:italic;">' +
+        motivoTexto.replace(/</g, '&lt;') + '</small>';
+      document.getElementById('st-' + notaId).innerHTML = '<span class="pill pill-inativa">🚫 Inativa</span>' + motivoHtml;
       const acoes = row.querySelector('td.col-acoes');
       if (acoes) acoes.innerHTML = `<button class="btn-reativar" data-nota="${notaId}" onclick="reativarNota(this)">↩ Reativar</button>`;
     } else alert('Erro ao inativar.');
