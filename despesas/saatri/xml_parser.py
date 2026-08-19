@@ -85,6 +85,16 @@ def parse_lista_nfse(xml_text):
             nota["rps_serie"] = _safe_text(rps_el, "nfse:Serie")
             nota["rps_tipo"] = _safe_text(rps_el, "nfse:Tipo")
 
+        # ── Dados do tomador e do serviço (usados na Importação Manual) ──
+        cnpj_tomador = _safe_text(inf, ".//nfse:Tomador/nfse:IdentificacaoTomador/nfse:CpfCnpj/nfse:Cnpj")
+        if not cnpj_tomador:
+            cnpj_tomador = _safe_text(inf, ".//nfse:Tomador/nfse:IdentificacaoTomador/nfse:CpfCnpj/nfse:Cpf")
+        nota["cnpj_tomador"] = cnpj_tomador
+        nota["cliente_nome"] = _safe_text(inf, ".//nfse:Tomador/nfse:RazaoSocial")
+        nota["descricao"] = _safe_text(inf, ".//nfse:Servico/nfse:Discriminacao")
+        nota["valor_bruto"] = _safe_decimal(_safe_text(inf, ".//nfse:Servico/nfse:Valores/nfse:ValorServicos", "0"))
+        nota["competencia"] = _safe_text(inf, ".//nfse:Competencia") or nota["data_emissao"]
+
         nota["xml_completo"] = etree.tostring(comp, encoding="unicode", pretty_print=True)
         notas.append(nota)
 

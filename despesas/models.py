@@ -1054,6 +1054,11 @@ class NotaFiscal(models.Model):
 
     # ── Dados da Nota ──
     cliente_nome  = models.CharField(max_length=255, blank=True, null=True)
+    cnpj_tomador  = models.CharField(
+        max_length=20, blank=True, null=True, verbose_name='CNPJ/CPF do Tomador (cache)',
+        help_text="Preenchido nas notas importadas manualmente (essencial nas 'avulsas', sem "
+                   "Contrato associado) — permite localizar por CNPJ na Consulta de Notas.",
+    )
     descricao     = models.TextField(blank=True, null=True)
     valor_bruto   = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     valor_iss     = models.DecimalField(max_digits=12, decimal_places=2, default=0)

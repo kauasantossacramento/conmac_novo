@@ -389,7 +389,7 @@
 .eml-field{margin-bottom:16px}
 .eml-field>label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:6px}
 .eml-field small{font-size:.73rem;color:#94a3b8;margin-top:4px;display:block}
-.eml-wrap input[type=text],.eml-wrap input[type=number],.eml-wrap input[type=date],.eml-wrap select{border-radius:8px!important;border:1.5px solid #e2e8f0!important;padding:8px 11px!important;font-size:.88rem!important;transition:border-color .15s,box-shadow .15s!important;width:100%;box-sizing:border-box;font-family:'Sora',sans-serif;}
+.eml-wrap input[type=text],.eml-wrap input[type=number],.eml-wrap input[type=date],.eml-wrap input[type=month],.eml-wrap select{border-radius:8px!important;border:1.5px solid #e2e8f0!important;padding:8px 11px!important;font-size:.88rem!important;transition:border-color .15s,box-shadow .15s!important;width:100%;box-sizing:border-box;font-family:'Sora',sans-serif;}
 .eml-wrap input:focus,.eml-wrap select:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.12)!important;outline:none!important}
 .eml-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid #f1f5f9}
 .eml-fr{display:flex;gap:8px;align-items:center}
@@ -409,6 +409,7 @@
 .eml-opcao-icon.ic-local{background:#f0fdf4;color:#16a34a}
 .eml-opcao-icon.ic-faturar{background:#fffbeb;color:#d97706}
 .eml-opcao-icon.ic-ambos{background:#faf5ff;color:#9333ea}
+.eml-opcao-icon.ic-consultar{background:#fdf2f8;color:#db2777}
 .eml-opcao-txt strong{display:block;font-size:.9rem;color:#1a1f2e;margin-bottom:2px}
 .eml-opcao-txt span{font-size:.78rem;color:#64748b;line-height:1.4;display:block}
 </style>
@@ -735,86 +736,159 @@
           </div>
           <div class="eml-opcao-txt">
             <strong>Importar Nota Fiscal</strong>
-            <span>Cadastra à mão uma nota que já existe mas não está no sistema.</span>
+            <span>Busca uma NFS-e no SAATRI pelo número e cadastra no sistema.</span>
+          </div>
+        </button>
+
+        <button type="button" class="eml-opcao" id="snfse-opcao-consultar">
+          <div class="eml-opcao-icon ic-consultar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="eml-opcao-txt">
+            <strong>Consultar Notas</strong>
+            <span>Busca notas já no sistema por tomador, CNPJ, competência ou valor.</span>
           </div>
         </button>
       </div>
 
-      <!-- ── Importar Nota Fiscal (manual) ── -->
+      <!-- ── Importar Nota Fiscal (manual, via SAATRI) ── -->
       <div id="snfse-import" style="display:none;">
         <button type="button" id="snfse-btn-voltar-import" class="eb eb-ghost" style="margin-bottom:16px;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           Voltar
         </button>
 
-        <div class="eml-field">
-          <label>CNPJ/CPF do tomador</label>
-          <input type="text" id="snfimp-cnpj" placeholder="00.000.000/0000-00">
-          <small id="snfimp-cnpj-status">Digite o CNPJ e saia do campo — tentamos achar o contrato automaticamente.</small>
-        </div>
-
-        <div class="eml-field">
-          <label>Contrato (tomador)</label>
-          <select id="snfimp-contrato"><option value="">Carregando contratos…</option></select>
-        </div>
-
-        <div class="eml-field">
-          <label>Número da NFS-e</label>
-          <input type="text" id="snfimp-numero" placeholder="Ex.: 2995">
-        </div>
-
-        <div class="eml-field">
-          <label>Código de verificação <small style="font-weight:400;">(opcional)</small></label>
-          <input type="text" id="snfimp-codigo-verificacao">
-        </div>
-
-        <div class="eml-field">
-          <label>Competência</label>
-          <div style="display:flex;gap:10px;">
-            <select id="snfimp-mes" style="flex:1;">
-              <option value="1">Janeiro</option><option value="2">Fevereiro</option>
-              <option value="3">Março</option><option value="4">Abril</option>
-              <option value="5">Maio</option><option value="6">Junho</option>
-              <option value="7">Julho</option><option value="8">Agosto</option>
-              <option value="9">Setembro</option><option value="10">Outubro</option>
-              <option value="11">Novembro</option><option value="12">Dezembro</option>
-            </select>
-            <input type="number" id="snfimp-ano" value="{{ hoje.year }}" min="2015" max="2030" style="flex:1;">
+        <!-- passo 1: número -->
+        <div id="snfimp-passo1">
+          <div class="eml-field">
+            <label>Número da NFS-e</label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="snfimp-numero-busca" placeholder="Ex.: 2995" style="flex:1;">
+              <button type="button" id="snfimp-btn-buscar" class="eb eb-dark" onclick="buscarNotaSaatriParaImportar()">Buscar</button>
+            </div>
+            <small id="snfimp-busca-status">Consultamos direto no SAATRI pelo número — tomador, valores e competência vêm automaticamente.</small>
+          </div>
+          <div class="eml-footer">
+            <div></div>
+            <div class="eml-fr">
+              <button type="button" class="eb eb-ghost" onclick="fecharModal('modal-sync-nfse')">Cancelar</button>
+            </div>
           </div>
         </div>
 
-        <div class="eml-field">
-          <label>Data de emissão</label>
-          <input type="date" id="snfimp-data-emissao">
-        </div>
+        <!-- passo 2: conferir e confirmar -->
+        <div id="snfimp-passo2" style="display:none;">
+          <div id="snfimp-preview" style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:.83rem;line-height:1.7;"></div>
 
-        <div class="eml-field">
-          <label>Valores</label>
-          <div style="display:flex;gap:10px;">
-            <input type="number" step="0.01" id="snfimp-valor-bruto" placeholder="Valor bruto" style="flex:1;">
-            <input type="number" step="0.01" id="snfimp-valor-iss" placeholder="Valor ISS" style="flex:1;">
-            <input type="number" step="0.01" id="snfimp-valor-liquido" placeholder="Valor líquido" style="flex:1;">
+          <div class="eml-field">
+            <label>Contrato associado</label>
+            <select id="snfimp-contrato"><option value="">Carregando contratos…</option></select>
+            <small id="snfimp-contrato-status">Se nenhum contrato for selecionado, a nota é salva avulsa (identificada pelo CNPJ do tomador).</small>
           </div>
-          <small>Se deixar o valor líquido em branco, usamos o valor bruto.</small>
+
+          <div class="eml-field">
+            <label>Nome do tomador <small style="font-weight:400;">(usado se a nota ficar avulsa)</small></label>
+            <input type="text" id="snfimp-cliente-nome">
+          </div>
+
+          <div class="eml-field">
+            <label>Código de verificação</label>
+            <input type="text" id="snfimp-codigo-verificacao">
+          </div>
+
+          <div class="eml-field">
+            <label>Competência</label>
+            <div style="display:flex;gap:10px;">
+              <select id="snfimp-mes" style="flex:1;">
+                <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+                <option value="3">Março</option><option value="4">Abril</option>
+                <option value="5">Maio</option><option value="6">Junho</option>
+                <option value="7">Julho</option><option value="8">Agosto</option>
+                <option value="9">Setembro</option><option value="10">Outubro</option>
+                <option value="11">Novembro</option><option value="12">Dezembro</option>
+              </select>
+              <input type="number" id="snfimp-ano" value="{{ hoje.year }}" min="2015" max="2030" style="flex:1;">
+            </div>
+          </div>
+
+          <div class="eml-field">
+            <label>Data de emissão</label>
+            <input type="date" id="snfimp-data-emissao">
+          </div>
+
+          <div class="eml-field">
+            <label>Valores</label>
+            <div style="display:flex;gap:10px;">
+              <input type="number" step="0.01" id="snfimp-valor-bruto" placeholder="Valor bruto" style="flex:1;">
+              <input type="number" step="0.01" id="snfimp-valor-iss" placeholder="Valor ISS" style="flex:1;">
+              <input type="number" step="0.01" id="snfimp-valor-liquido" placeholder="Valor líquido" style="flex:1;">
+            </div>
+          </div>
+
+          <div class="eml-field">
+            <label>Descrição <small style="font-weight:400;">(opcional)</small></label>
+            <input type="text" id="snfimp-descricao" placeholder="Descrição do serviço prestado">
+          </div>
+
+          <input type="hidden" id="snfimp-numero">
+          <input type="hidden" id="snfimp-cnpj-tomador">
+
+          <div id="snfimp-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
+
+          <div class="eml-footer">
+            <button type="button" id="snfimp-btn-voltar-passo1" class="eb eb-ghost">← Trocar número</button>
+            <div class="eml-fr">
+              <button type="button" id="snfimp-btn-confirmar" class="eb eb-teal" onclick="executarImportarNota()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Importar
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- ── Consultar Notas ── -->
+      <div id="snfse-consultar" style="display:none;">
+        <button type="button" id="snfse-btn-voltar-consultar" class="eb eb-ghost" style="margin-bottom:16px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Voltar
+        </button>
 
         <div class="eml-field">
-          <label>Descrição <small style="font-weight:400;">(opcional)</small></label>
-          <input type="text" id="snfimp-descricao" placeholder="Descrição do serviço prestado">
+          <label>Nome do tomador</label>
+          <input type="text" id="snfcons-nome" placeholder="Parte do nome…">
+        </div>
+        <div class="eml-field">
+          <label>CNPJ/CPF</label>
+          <input type="text" id="snfcons-cnpj" placeholder="00.000.000/0000-00">
+        </div>
+        <div class="eml-field">
+          <label>Competência (de / até)</label>
+          <div style="display:flex;gap:10px;">
+            <input type="month" id="snfcons-comp-ini" style="flex:1;">
+            <input type="month" id="snfcons-comp-fim" style="flex:1;">
+          </div>
+        </div>
+        <div class="eml-field">
+          <label>Valor líquido (mín. / máx.)</label>
+          <div style="display:flex;gap:10px;">
+            <input type="number" step="0.01" id="snfcons-valor-min" placeholder="Mínimo" style="flex:1;">
+            <input type="number" step="0.01" id="snfcons-valor-max" placeholder="Máximo" style="flex:1;">
+          </div>
         </div>
 
-        <div id="snfimp-resultado" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:.82rem;"></div>
-
-        <div class="eml-footer">
+        <div class="eml-footer" style="border-top:none;padding-top:0;">
           <div></div>
           <div class="eml-fr">
-            <button type="button" class="eb eb-ghost" onclick="fecharModal('modal-sync-nfse')">Cancelar</button>
-            <button type="button" id="snfimp-btn-confirmar" class="eb eb-teal" onclick="executarImportarNota()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Importar
+            <button type="button" class="eb eb-teal" onclick="executarConsultarNotas()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Buscar
             </button>
           </div>
         </div>
+
+        <div id="snfcons-resultado-info" style="font-size:.78rem;color:#94a3b8;margin:12px 0 6px;"></div>
+        <div id="snfcons-lista" style="max-height:280px;overflow-y:auto;"></div>
       </div>
 
       <!-- ── Configuração (mês/ano) — só quando envolve a Omie ── -->
@@ -1836,13 +1910,26 @@ async function chamarFaturarLote(ids, comp, msgExec, origem, fonte) {
     document.getElementById('snfse-opcao-importar').addEventListener('click', function () {
       document.getElementById('snfse-escolha').style.display = 'none';
       document.getElementById('snfse-import').style.display = 'block';
-      carregarContratosParaImportacao();
+      document.getElementById('snfimp-passo1').style.display = 'block';
+      document.getElementById('snfimp-passo2').style.display = 'none';
     });
     document.getElementById('snfse-btn-voltar-import').addEventListener('click', function () {
       document.getElementById('snfse-import').style.display = 'none';
       document.getElementById('snfse-escolha').style.display = 'block';
     });
-    document.getElementById('snfimp-cnpj').addEventListener('blur', buscarContratoPorCnpjImportacao);
+    document.getElementById('snfimp-btn-voltar-passo1').addEventListener('click', function () {
+      document.getElementById('snfimp-passo2').style.display = 'none';
+      document.getElementById('snfimp-passo1').style.display = 'block';
+    });
+
+    document.getElementById('snfse-opcao-consultar').addEventListener('click', function () {
+      document.getElementById('snfse-escolha').style.display = 'none';
+      document.getElementById('snfse-consultar').style.display = 'block';
+    });
+    document.getElementById('snfse-btn-voltar-consultar').addEventListener('click', function () {
+      document.getElementById('snfse-consultar').style.display = 'none';
+      document.getElementById('snfse-escolha').style.display = 'block';
+    });
   }
 
   function snfseEscolher(fonte) {
@@ -2015,26 +2102,39 @@ function resetModalSyncNfse() {
   var cfg = document.getElementById('snfse-config');
   var prog = document.getElementById('snfse-progresso');
   var imp = document.getElementById('snfse-import');
+  var cons = document.getElementById('snfse-consultar');
   if (escolha) escolha.style.display = 'block';
   if (cfg) cfg.style.display = 'none';
   if (prog) prog.style.display = 'none';
   if (imp) imp.style.display = 'none';
+  if (cons) cons.style.display = 'none';
   var res = document.getElementById('snfse-resultado');
   if (res) res.style.display = 'none';
 
-  ['snfimp-cnpj','snfimp-numero','snfimp-codigo-verificacao','snfimp-valor-bruto',
+  document.getElementById('snfimp-passo1').style.display = 'block';
+  document.getElementById('snfimp-passo2').style.display = 'none';
+  document.getElementById('snfimp-numero-busca').value = '';
+  document.getElementById('snfimp-busca-status').textContent =
+    'Consultamos direto no SAATRI pelo número — tomador, valores e competência vêm automaticamente.';
+
+  ['snfimp-numero','snfimp-cnpj-tomador','snfimp-cliente-nome','snfimp-codigo-verificacao','snfimp-valor-bruto',
    'snfimp-valor-iss','snfimp-valor-liquido','snfimp-descricao','snfimp-data-emissao'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
-  var status = document.getElementById('snfimp-cnpj-status');
-  if (status) status.textContent = 'Digite o CNPJ e saia do campo — tentamos achar o contrato automaticamente.';
   var impRes = document.getElementById('snfimp-resultado');
   if (impRes) impRes.style.display = 'none';
   _snfimpContratosCarregados = false;
+
+  ['snfcons-nome','snfcons-cnpj','snfcons-comp-ini','snfcons-comp-fim','snfcons-valor-min','snfcons-valor-max'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('snfcons-lista').innerHTML = '';
+  document.getElementById('snfcons-resultado-info').textContent = '';
 }
 
-/* ── Importar Nota Fiscal (manual) ─────────────────────────────── */
+/* ── Importar Nota Fiscal (manual, via SAATRI) ─────────────────── */
 var _snfimpContratosCarregados = false;
 
 async function carregarContratosParaImportacao() {
@@ -2044,7 +2144,7 @@ async function carregarContratosParaImportacao() {
     var r = await fetch('/receitas/contratos/listar-selecao/');
     var d = await r.json();
     if (d.ok) {
-      sel.innerHTML = '<option value="">Selecione o contrato…</option>' +
+      sel.innerHTML = '<option value="">— Nenhum (nota avulsa) —</option>' +
         d.contratos.map(function (c) { return '<option value="' + c.id + '">' + c.nome + '</option>'; }).join('');
       _snfimpContratosCarregados = true;
     } else {
@@ -2055,23 +2155,59 @@ async function carregarContratosParaImportacao() {
   }
 }
 
-async function buscarContratoPorCnpjImportacao() {
-  var cnpj = document.getElementById('snfimp-cnpj').value.trim();
-  var status = document.getElementById('snfimp-cnpj-status');
-  if (!cnpj) return;
-  status.textContent = 'Buscando contrato…';
-  await carregarContratosParaImportacao();
+async function buscarNotaSaatriParaImportar() {
+  var numero = document.getElementById('snfimp-numero-busca').value.trim();
+  var status = document.getElementById('snfimp-busca-status');
+  var btn = document.getElementById('snfimp-btn-buscar');
+  if (!numero) { status.textContent = 'Informe o número da NFS-e.'; return; }
+
+  btn.disabled = true;
+  status.textContent = 'Consultando o SAATRI…';
+
   try {
-    var r = await fetch('/receitas/contratos/buscar-por-cnpj/?cnpj=' + encodeURIComponent(cnpj));
+    var r = await fetch('/receitas/notas/consultar-saatri/?numero=' + encodeURIComponent(numero));
     var d = await r.json();
-    if (d.ok && d.contrato) {
-      document.getElementById('snfimp-contrato').value = String(d.contrato.id);
-      status.textContent = '✅ Contrato encontrado: ' + d.contrato.nome;
-    } else {
-      status.textContent = 'Nenhum contrato com esse CNPJ — selecione manualmente na lista abaixo.';
+    if (!r.ok || !d.ok) {
+      status.textContent = '❌ ' + (d.erro || ('HTTP ' + r.status));
+      return;
     }
+
+    var n = d.nota;
+    await carregarContratosParaImportacao();
+
+    document.getElementById('snfimp-numero').value = n.numero_nfse || '';
+    document.getElementById('snfimp-cnpj-tomador').value = n.cnpj_tomador || '';
+    document.getElementById('snfimp-cliente-nome').value = n.cliente_nome || '';
+    document.getElementById('snfimp-codigo-verificacao').value = n.codigo_verificacao || '';
+    document.getElementById('snfimp-mes').value = n.competencia_mes || (new Date().getMonth() + 1);
+    document.getElementById('snfimp-ano').value = n.competencia_ano || new Date().getFullYear();
+    document.getElementById('snfimp-data-emissao').value = n.data_emissao || '';
+    document.getElementById('snfimp-valor-bruto').value = n.valor_bruto || '';
+    document.getElementById('snfimp-valor-iss').value = n.valor_iss || '';
+    document.getElementById('snfimp-valor-liquido').value = n.valor_liquido || '';
+    document.getElementById('snfimp-descricao').value = n.descricao || '';
+
+    var contratoStatus = document.getElementById('snfimp-contrato-status');
+    var selContrato = document.getElementById('snfimp-contrato');
+    if (d.contrato_sugerido) {
+      selContrato.value = String(d.contrato_sugerido.id);
+      contratoStatus.textContent = '✅ Tomador associado automaticamente ao contrato: ' + d.contrato_sugerido.nome;
+    } else {
+      selContrato.value = '';
+      contratoStatus.textContent = 'Nenhum contrato com esse CNPJ — a nota será importada avulsa (ou selecione um contrato manualmente).';
+    }
+
+    document.getElementById('snfimp-preview').innerHTML =
+      '<strong>✅ Nota ' + (n.numero_nfse || numero) + ' encontrada no SAATRI</strong><br>' +
+      'Tomador: <strong>' + (n.cliente_nome || '—') + '</strong> · CNPJ/CPF: ' + (n.cnpj_tomador || '—') + '<br>' +
+      'Valor líquido: R$ ' + (n.valor_liquido || '0') + ' · Competência: ' + (n.competencia_mes || '?') + '/' + (n.competencia_ano || '?');
+
+    document.getElementById('snfimp-passo1').style.display = 'none';
+    document.getElementById('snfimp-passo2').style.display = 'block';
   } catch (e) {
-    status.textContent = 'Erro ao buscar — selecione o contrato manualmente.';
+    status.textContent = '❌ Erro de conexão — a requisição não completou.';
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -2082,6 +2218,8 @@ async function executarImportarNota() {
   var payload = {
     contrato_id:         document.getElementById('snfimp-contrato').value,
     numero_nfse:         document.getElementById('snfimp-numero').value.trim(),
+    cnpj_tomador:        document.getElementById('snfimp-cnpj-tomador').value.trim(),
+    cliente_nome:        document.getElementById('snfimp-cliente-nome').value.trim(),
     codigo_verificacao:  document.getElementById('snfimp-codigo-verificacao').value.trim(),
     competencia_mes:     document.getElementById('snfimp-mes').value,
     competencia_ano:     document.getElementById('snfimp-ano').value,
@@ -2106,7 +2244,9 @@ async function executarImportarNota() {
     if (r.ok && d.ok) {
       resDiv.style.background = '#f0fdf4';
       resDiv.style.color = '#16a34a';
-      resDiv.textContent = '✅ Nota importada com sucesso.';
+      resDiv.textContent = d.avulsa
+        ? '✅ Nota importada como avulsa (sem contrato associado).'
+        : '✅ Nota importada e associada ao contrato.';
       setTimeout(function () { location.reload(); }, 1200);
     } else {
       resDiv.style.background = '#fef2f2';
@@ -2120,6 +2260,57 @@ async function executarImportarNota() {
     resDiv.textContent = '❌ Erro de conexão — a requisição não completou.';
   } finally {
     btn.disabled = false;
+  }
+}
+
+/* ── Consultar Notas ────────────────────────────────────────────── */
+async function executarConsultarNotas() {
+  var lista = document.getElementById('snfcons-lista');
+  var info  = document.getElementById('snfcons-resultado-info');
+
+  var params = new URLSearchParams({
+    nome:      document.getElementById('snfcons-nome').value.trim(),
+    cnpj:      document.getElementById('snfcons-cnpj').value.trim(),
+    comp_ini:  document.getElementById('snfcons-comp-ini').value,
+    comp_fim:  document.getElementById('snfcons-comp-fim').value,
+    valor_min: document.getElementById('snfcons-valor-min').value,
+    valor_max: document.getElementById('snfcons-valor-max').value,
+  });
+
+  info.textContent = 'Buscando…';
+  lista.innerHTML = '';
+
+  try {
+    var r = await fetch('/receitas/notas/consultar/?' + params.toString());
+    var d = await r.json();
+    if (!r.ok || !d.ok) {
+      info.textContent = '❌ ' + (d.erro || ('HTTP ' + r.status));
+      return;
+    }
+
+    if (!d.notas.length) {
+      info.textContent = 'Nenhuma nota encontrada com esses filtros.';
+      return;
+    }
+
+    info.textContent = d.total + ' nota(s) encontrada(s)' + (d.total === 200 ? ' (limitado a 200)' : '') + '.';
+
+    var ORIGEM_LABEL = { omie: 'Omie', saatri: 'SAATRI', manual: 'Manual' };
+    lista.innerHTML = d.notas.map(function (n) {
+      return '<div style="border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:.82rem;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;">' +
+          '<strong>Nº ' + (n.numero_nfse || '—') + '</strong>' +
+          '<span style="color:#64748b;">' + (n.competencia || '') + '</span>' +
+        '</div>' +
+        '<div style="color:#334155;margin:3px 0;">' + (n.cliente_nome || '—') + (n.avulsa ? ' <em style="color:#94a3b8;">(avulsa)</em>' : '') + '</div>' +
+        '<div style="display:flex;justify-content:space-between;color:#64748b;">' +
+          '<span>' + (ORIGEM_LABEL[n.origem] || n.origem) + '</span>' +
+          '<strong style="color:#16a34a;">R$ ' + n.valor_liquido + '</strong>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    info.textContent = '❌ Erro de conexão — a requisição não completou.';
   }
 }
 

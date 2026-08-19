@@ -164,6 +164,8 @@ urlpatterns = [
     path('receitas/contratos/buscar-por-cnpj/', views.buscar_contrato_por_cnpj, name='buscar_contrato_por_cnpj'),
     path('receitas/contratos/listar-selecao/', views.listar_contratos_selecao, name='listar_contratos_selecao'),
     path('receitas/notas/importar/', views.importar_nota_fiscal, name='importar_nota_fiscal'),
+    path('receitas/notas/consultar-saatri/', views.consultar_nota_saatri_para_importar, name='consultar_nota_saatri_para_importar'),
+    path('receitas/notas/consultar/', views.consultar_notas_fiscais, name='consultar_notas_fiscais'),
 
     path('envios/<int:envio_id>/prefetch-nfse/',
          views.prefetch_nfse_pdf,

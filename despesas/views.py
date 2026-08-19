@@ -6420,28 +6420,37 @@ def _digits(s):
     return re.sub(r'\D', '', s or '')
 
 
+def _achar_contrato_por_cnpj(cnpj_digits):
+    """
+    Tenta achar o Contrato cujo tomador (cache local `dados_tomador.cpf_cnpj`)
+    bate com o CNPJ/CPF informado. Compara em Python (dígitos only) em vez de
+    fazer lookup de chave JSON no banco, pra não depender de suporte a JSON1
+    no SQLite de produção.
+    """
+    if not cnpj_digits:
+        return None
+    for c in Contrato.objects.exclude(dados_tomador={}).only('id', 'cliente_nome', 'omie_num_ctr', 'dados_tomador'):
+        if _digits((c.dados_tomador or {}).get('cpf_cnpj', '')) == cnpj_digits:
+            return c
+    return None
+
+
 @login_required
 def buscar_contrato_por_cnpj(request):
     """
-    GET JSON — usado pelo "Importar Nota Fiscal" (modal Sincronizar NFS-e):
-    dado o CNPJ/CPF do tomador digitado, tenta achar o Contrato correspondente
-    comparando com o cache local `dados_tomador.cpf_cnpj`. Compara em Python
-    (dígitos only) em vez de fazer lookup de chave JSON no banco, pra não
-    depender de suporte a JSON1 no SQLite de produção.
-
-    Params: ?cnpj=00.000.000/0000-00 (aceita com ou sem máscara)
+    GET JSON — dado o CNPJ/CPF do tomador, tenta achar o Contrato
+    correspondente. Params: ?cnpj=00.000.000/0000-00 (com ou sem máscara)
     """
     cnpj = _digits(request.GET.get('cnpj', ''))
     if not cnpj:
         return JsonResponse({'ok': False, 'erro': 'Informe um CNPJ/CPF.'})
 
-    for c in Contrato.objects.exclude(dados_tomador={}).only('id', 'cliente_nome', 'omie_num_ctr', 'dados_tomador'):
-        if _digits((c.dados_tomador or {}).get('cpf_cnpj', '')) == cnpj:
-            return JsonResponse({
-                'ok': True,
-                'contrato': {'id': c.id, 'nome': c.cliente_nome or c.omie_num_ctr or f'Contrato {c.id}'},
-            })
-
+    contrato = _achar_contrato_por_cnpj(cnpj)
+    if contrato:
+        return JsonResponse({
+            'ok': True,
+            'contrato': {'id': contrato.id, 'nome': contrato.cliente_nome or contrato.omie_num_ctr or f'Contrato {contrato.id}'},
+        })
     return JsonResponse({'ok': True, 'contrato': None})
 
 
@@ -6449,8 +6458,9 @@ def buscar_contrato_por_cnpj(request):
 def listar_contratos_selecao(request):
     """
     GET JSON — lista simples (id + nome) de todos os contratos, pra povoar o
-    <select> de escolha manual no "Importar Nota Fiscal" quando o CNPJ do
-    tomador não bate automaticamente com nenhum contrato cacheado.
+    <select> de associação manual no "Importar Nota Fiscal" (usado quando o
+    CNPJ do tomador não bate automaticamente com nenhum contrato cacheado, ou
+    pra corrigir a sugestão automática).
     """
     contratos = Contrato.objects.order_by('cliente_nome').values('id', 'cliente_nome', 'omie_num_ctr')
     itens = [
@@ -6461,12 +6471,74 @@ def listar_contratos_selecao(request):
 
 
 @login_required
+def consultar_nota_saatri_para_importar(request):
+    """
+    GET JSON — 1º passo do "Importar Nota Fiscal": dado só o número da
+    NFS-e, consulta o SAATRI (ConsultarNfsePorFaixa — mesma rota do "Baixar
+    SAATRI") e devolve os dados completos da nota (tomador, valores,
+    competência, descrição) já prontos pra conferência/importação, mais o
+    Contrato sugerido por CNPJ (se achar).
+
+    Params: ?numero=2995
+    """
+    numero = (request.GET.get('numero') or '').strip()
+    if not numero:
+        return JsonResponse({'ok': False, 'erro': 'Informe o número da NFS-e.'})
+
+    from .saatri import client as saatri_client
+
+    resultado = saatri_client.consultar_nfse_por_faixa(numero)
+    notas = resultado.get('notas') or []
+    if not notas:
+        erros = resultado.get('erros') or []
+        msg = ('; '.join(f"[{e['codigo']}] {e['mensagem']}" for e in erros)
+               if erros else 'SAATRI não encontrou nenhuma NFS-e com esse número.')
+        return JsonResponse({'ok': False, 'erro': msg})
+
+    n = notas[0]
+    cnpj_tomador = _digits(n.get('cnpj_tomador', ''))
+    contrato = _achar_contrato_por_cnpj(cnpj_tomador)
+
+    data_emissao_raw = n.get('data_emissao') or ''
+    competencia_raw  = n.get('competencia') or data_emissao_raw
+    comp_mes = comp_ano = None
+    try:
+        comp_ano = int(competencia_raw[0:4])
+        comp_mes = int(competencia_raw[5:7])
+    except (ValueError, IndexError):
+        pass
+
+    return JsonResponse({
+        'ok': True,
+        'nota': {
+            'numero_nfse':        n.get('numero'),
+            'codigo_verificacao': n.get('codigo_verificacao'),
+            'cnpj_tomador':       cnpj_tomador,
+            'cliente_nome':       n.get('cliente_nome'),
+            'descricao':          n.get('descricao'),
+            'valor_bruto':        str(n.get('valor_bruto') or 0),
+            'valor_iss':          str(n.get('valor_iss') or 0),
+            'valor_liquido':      str(n.get('valor_liquido') or 0),
+            'data_emissao':       data_emissao_raw[:10] if data_emissao_raw else '',
+            'competencia_mes':    comp_mes,
+            'competencia_ano':    comp_ano,
+        },
+        'contrato_sugerido': (
+            {'id': contrato.id, 'nome': contrato.cliente_nome or contrato.omie_num_ctr or f'Contrato {contrato.id}'}
+            if contrato else None
+        ),
+    })
+
+
+@login_required
 def importar_nota_fiscal(request):
     """
-    POST JSON — cria uma NotaFiscal com origem='manual': cadastro à mão de
-    uma nota que já existe (emitida fora do sistema, ou de um período
-    anterior ao início do controle local) e que precisa aparecer nos
-    relatórios/recebimentos junto com as demais.
+    POST JSON — cria uma NotaFiscal com origem='manual': cadastro de uma nota
+    que já existe (emitida fora do sistema, ou de um período anterior ao
+    início do controle local) e que precisa aparecer nos relatórios junto
+    com as demais. `contrato_id` é opcional — quando o tomador não bate com
+    nenhum Contrato cadastrado, a nota é salva "avulsa" (sem contrato),
+    identificada pelo `cnpj_tomador` salvo diretamente na nota.
     """
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
@@ -6479,15 +6551,15 @@ def importar_nota_fiscal(request):
     except (ValueError, TypeError):
         return JsonResponse({'ok': False, 'erro': 'Corpo da requisição inválido.'})
 
-    contrato_id = dados.get('contrato_id')
-    numero_nfse = (dados.get('numero_nfse') or '').strip()
-    competencia_mes = dados.get('competencia_mes')
-    competencia_ano = dados.get('competencia_ano')
-    data_emissao = (dados.get('data_emissao') or '').strip()
-    valor_bruto = dados.get('valor_bruto')
+    contrato_id      = dados.get('contrato_id') or None
+    numero_nfse      = (dados.get('numero_nfse') or '').strip()
+    cnpj_tomador     = _digits(dados.get('cnpj_tomador', ''))
+    cliente_nome     = (dados.get('cliente_nome') or '').strip()
+    competencia_mes  = dados.get('competencia_mes')
+    competencia_ano  = dados.get('competencia_ano')
+    data_emissao     = (dados.get('data_emissao') or '').strip()
+    valor_bruto      = dados.get('valor_bruto')
 
-    if not contrato_id:
-        return JsonResponse({'ok': False, 'erro': 'Selecione o contrato (tomador) da nota.'})
     if not numero_nfse:
         return JsonResponse({'ok': False, 'erro': 'Informe o número da NFS-e.'})
     if not competencia_mes or not competencia_ano:
@@ -6497,12 +6569,17 @@ def importar_nota_fiscal(request):
     if valor_bruto in (None, ''):
         return JsonResponse({'ok': False, 'erro': 'Informe o valor bruto da nota.'})
 
-    contrato = Contrato.objects.filter(pk=contrato_id).first()
-    if not contrato:
-        return JsonResponse({'ok': False, 'erro': 'Contrato não encontrado.'})
+    contrato = None
+    if contrato_id:
+        contrato = Contrato.objects.filter(pk=contrato_id).first()
+        if not contrato:
+            return JsonResponse({'ok': False, 'erro': 'Contrato não encontrado.'})
+        cliente_nome = cliente_nome or contrato.cliente_nome
+    elif not cliente_nome:
+        return JsonResponse({'ok': False, 'erro': 'Sem contrato associado — informe ao menos o nome do tomador (nota avulsa).'})
 
-    if NotaFiscal.objects.filter(contrato_id=contrato_id, numero_nfse=numero_nfse).exists():
-        return JsonResponse({'ok': False, 'erro': f'Já existe uma nota nº {numero_nfse} importada para esse contrato.'})
+    if NotaFiscal.objects.filter(numero_nfse=numero_nfse).exists():
+        return JsonResponse({'ok': False, 'erro': f'Já existe uma nota nº {numero_nfse} importada no sistema.'})
 
     try:
         valor_bruto   = Decimal(str(valor_bruto))
@@ -6516,7 +6593,8 @@ def importar_nota_fiscal(request):
         origem='manual',
         numero_nfse=numero_nfse,
         codigo_verificacao=(dados.get('codigo_verificacao') or '').strip() or None,
-        cliente_nome=(dados.get('cliente_nome') or '').strip() or contrato.cliente_nome,
+        cnpj_tomador=cnpj_tomador or None,
+        cliente_nome=cliente_nome,
         descricao=(dados.get('descricao') or '').strip(),
         valor_bruto=valor_bruto,
         valor_iss=valor_iss,
@@ -6527,7 +6605,80 @@ def importar_nota_fiscal(request):
         status='emitida',
     )
 
-    return JsonResponse({'ok': True, 'nota_id': nota.id})
+    return JsonResponse({'ok': True, 'nota_id': nota.id, 'avulsa': contrato is None})
+
+
+@login_required
+def consultar_notas_fiscais(request):
+    """
+    GET JSON — busca em NotaFiscal por nome do tomador, CNPJ, competência
+    (de/até) e faixa de valor. Novo item "Consultar Notas" do modal
+    Sincronizar NFS-e — cobre tanto notas normais (com Contrato) quanto
+    avulsas (importadas manualmente sem Contrato).
+
+    Params (todos opcionais): ?nome=&cnpj=&comp_ini=2026-01&comp_fim=2026-12
+                               &valor_min=&valor_max=
+    """
+    from .models import NotaFiscal
+
+    qs = NotaFiscal.objects.select_related('contrato').filter(status='emitida')
+
+    nome = (request.GET.get('nome') or '').strip()
+    if nome:
+        qs = qs.filter(cliente_nome__icontains=nome)
+
+    cnpj = _digits(request.GET.get('cnpj', ''))
+    if cnpj:
+        cond = Q(cnpj_tomador=cnpj)
+        contrato_match = _achar_contrato_por_cnpj(cnpj)
+        if contrato_match:
+            cond |= Q(contrato_id=contrato_match.id)
+        qs = qs.filter(cond)
+
+    comp_ini = (request.GET.get('comp_ini') or '').strip()
+    if comp_ini:
+        try:
+            ano_i, mes_i = (int(p) for p in comp_ini.split('-'))
+            qs = qs.filter(Q(competencia_ano__gt=ano_i) | Q(competencia_ano=ano_i, competencia_mes__gte=mes_i))
+        except ValueError:
+            pass
+
+    comp_fim = (request.GET.get('comp_fim') or '').strip()
+    if comp_fim:
+        try:
+            ano_f, mes_f = (int(p) for p in comp_fim.split('-'))
+            qs = qs.filter(Q(competencia_ano__lt=ano_f) | Q(competencia_ano=ano_f, competencia_mes__lte=mes_f))
+        except ValueError:
+            pass
+
+    valor_min = request.GET.get('valor_min')
+    if valor_min:
+        try:
+            qs = qs.filter(valor_liquido__gte=Decimal(valor_min))
+        except Exception:
+            pass
+
+    valor_max = request.GET.get('valor_max')
+    if valor_max:
+        try:
+            qs = qs.filter(valor_liquido__lte=Decimal(valor_max))
+        except Exception:
+            pass
+
+    qs = qs.order_by('-competencia_ano', '-competencia_mes', '-data_emissao')[:200]
+
+    itens = [{
+        'id':             n.id,
+        'numero_nfse':    n.numero_nfse,
+        'cliente_nome':   n.cliente_nome,
+        'origem':         n.origem,
+        'competencia':    f'{n.competencia_mes:02d}/{n.competencia_ano}',
+        'valor_liquido':  str(n.valor_liquido),
+        'data_emissao':   n.data_emissao.isoformat() if n.data_emissao else None,
+        'avulsa':         n.contrato_id is None,
+    } for n in qs]
+
+    return JsonResponse({'ok': True, 'total': len(itens), 'notas': itens})
 
 
 @login_required
