@@ -647,7 +647,7 @@
         <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
         <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
       </svg>
-      SINCRONIZAR NFSE
+      Sincronizar NFSE
     </button>
 
     <a href="{% url 'gestao_documentos' %}"
@@ -1085,6 +1085,15 @@ const MESES_PT_MIN  = ['','janeiro','fevereiro','março','abril','maio','junho',
 const MESES_PT_FULL = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                         'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+/* Precisa ser global: escolhida dentro do DOMContentLoaded (snfseEscolher),
+   mas lida por executarSyncNfse(), que fica fora desse escopo. */
+var _snfseFonte = 'omie'; // 'omie' | 'saatri' | 'ambos'
+
+function fecharModal(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
+
 /* ════════════════════════════════════════════════
    SELEÇÃO EM LOTE
 ════════════════════════════════════════════════ */
@@ -1141,7 +1150,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var _pendIds  = [];
   var _pendComp = null;
-  var _snfseFonte = 'omie'; // 'omie' | 'saatri' | 'ambos' — escolhido na tela do modal Sincronizar NFS-e
   var _statusFatNaoFaturadosIds = []; // ids dos contratos ainda não faturados na competência checada
 
   /* ── Helpers internos ──────────────────────────────────────────── */
